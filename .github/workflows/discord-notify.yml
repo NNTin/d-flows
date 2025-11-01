@@ -56,7 +56,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Send Discord Notification
-        if: ${{ secrets.webhook_url || inputs.webhook_url }}
         shell: bash
         env:
           WEBHOOK_URL: ${{ secrets.webhook_url || inputs.webhook_url }}
@@ -72,6 +71,10 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_WORKFLOW: ${{ github.workflow }}
         run: |
+          if [[ -z "$WEBHOOK_URL" ]]; then
+            echo "⚠️ No webhook URL provided (input or secret), skipping notification."
+            exit 0
+          fi
           # Generate ISO 8601 timestamp
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
