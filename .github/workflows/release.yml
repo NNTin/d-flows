@@ -48,8 +48,44 @@ jobs:
         run: |
           gh release create "v${{ inputs.version }}" --generate-notes --title "Release v${{ inputs.version }}" --target "${{ github.sha }}"
 
-      - name: Output release URL
+      - name: Configure Git for bot user
         shell: bash
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Extract major version
+        shell: bash
+        run: |
+          MAJOR_VERSION=$(echo "${{ inputs.version }}" | cut -d. -f1)
+          
+          if [[ -z "$MAJOR_VERSION" ]]; then
+            echo "Error: Failed to extract major version from ${{ inputs.version }}" >&2
+            exit 1
+          fi
+          
+          echo "MAJOR_VERSION=$MAJOR_VERSION" >> $GITHUB_ENV
+
+      - name: Create annotated major tag
+        shell: bash
+        run: |
+          git tag -a "v$MAJOR_VERSION" -f -m "Update v$MAJOR_VERSION -> v${{ inputs.version }}"
+
+      - name: Push major tag with force
+        shell: bash
+        run: |
+          git push origin "v$MAJOR_VERSION" --force
+
+      - name: Update step summary with major tag information
+        shell: bash
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## Release Summary
+          - ✅ Release created: v${{ inputs.version }}
+          - 🏷️ Major tag v$MAJOR_VERSION updated to point to v${{ inputs.version }}
+          - 🔗 [View Release](${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ inputs.version }})
+          - 🔗 [View Tags](${{ github.server_url }}/${{ github.repository }}/tags)
+          EOF
+          
           echo "Release created: ${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ inputs.version }}"
-          echo "Release created: ${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "Major tag v$MAJOR_VERSION updated to point to v${{ inputs.version }}"
