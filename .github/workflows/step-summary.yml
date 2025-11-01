@@ -1,0 +1,59 @@
+name: Set Step Summary
+
+on:
+  workflow_call:
+    inputs:
+      title:
+        type: string
+        required: false
+        description: Optional heading for the summary
+      markdown:
+        type: string
+        required: true
+        description: Markdown content to display
+      overwrite:
+        type: boolean
+        required: false
+        default: false
+        description: Whether to overwrite existing summary or append
+  workflow_dispatch:
+    inputs:
+      title:
+        type: string
+        required: false
+        description: Optional heading for the summary
+      markdown:
+        type: string
+        required: true
+        description: Markdown content to display
+      overwrite:
+        type: boolean
+        required: false
+        default: false
+        description: Whether to overwrite existing summary or append
+
+jobs:
+  set-summary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Step Summary
+        shell: bash
+        env:
+          TITLE: ${{ inputs.title }}
+        run: |
+          if [[ -z "$GITHUB_STEP_SUMMARY" ]]; then
+            echo "Error: GITHUB_STEP_SUMMARY environment variable is not set" >&2
+            exit 1
+          fi
+          
+          if [[ "${{ inputs.overwrite }}" == "true" ]]; then
+            > $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ -n "${{ inputs.title }}" ]]; then
+            printf '%s\n' "## $TITLE" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          
+          cat >> $GITHUB_STEP_SUMMARY << '__GITHUB_STEP_SUMMARY_EOF__'
+          ${{ inputs.markdown }}
+          __GITHUB_STEP_SUMMARY_EOF__

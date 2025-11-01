@@ -1,0 +1,134 @@
+name: PR CI - Workflow Validation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install actionlint
+        shell: bash
+        run: |
+          bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+
+      - name: Run actionlint validation
+        shell: bash
+        id: actionlint
+        run: |
+          if ./actionlint > actionlint.log 2>&1; then
+            echo "validation_result=success" >> $GITHUB_OUTPUT
+          else
+            echo "validation_result=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Write validation results
+        shell: bash
+        if: always()
+        run: |
+          if [[ "${{ steps.actionlint.outputs.validation_result }}" == "success" ]]; then
+            cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ✅ **Workflow Syntax Validation Passed**
+          
+          All workflows passed syntax validation successfully.
+          EOF
+          else
+            cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ❌ **Workflow Syntax Validation Failed**
+          
+          One or more workflows failed syntax validation. Check the details below:
+          
+          ```
+          EOF
+            # Append actionlint output (limit to first 50 lines for readability)
+            head -50 actionlint.log >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "No actionlint output available" >> $GITHUB_STEP_SUMMARY
+            cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ```
+          EOF
+          fi
+
+  notify-validation:
+    uses: ./.github/workflows/discord-notify.yml
+    needs: validate-syntax
+    if: always()
+    secrets:
+      webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+    with:
+      message_type: "embed"
+      title: ${{ needs['validate-syntax'].result == 'success' && '✅ Workflow Validation Passed' || '❌ Workflow Validation Failed' }}
+      description: ${{ needs['validate-syntax'].result == 'success' && 'All workflows in the pull request passed syntax validation successfully.' || 'One or more workflows failed syntax validation. Please check the workflow run for details.' }}
+      color: ${{ needs['validate-syntax'].result == 'success' && '3066993' || '15158332' }}
+      fields: >-
+        [
+          {"name": "Repository", "value": "${{ github.repository }}", "inline": true},
+          {"name": "PR Number", "value": "#${{ github.event.pull_request.number }}", "inline": true},
+          {"name": "Branch", "value": "${{ github.head_ref }}", "inline": true},
+          {"name": "Run", "value": "[View Details](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})", "inline": false}
+        ]
+
+  test-step-summary:
+    uses: ./.github/workflows/step-summary.yml
+    needs: validate-syntax
+    if: always()
+    with:
+      title: "Mock Test Results"
+      markdown: |
+        ### Test Results
+        
+        - ✅ Test 1 passed
+        - ✅ Test 2 passed
+        - ✅ All validations completed
+        
+        ```bash
+        Mock output from test execution
+        ```
+        
+        **Summary**: All tests completed successfully.
+      overwrite: false
+
+  verify-execution:
+    runs-on: ubuntu-latest
+    needs: [validate-syntax, test-step-summary]
+    if: always()
+    steps:
+      - name: Verify execution
+        shell: bash
+        run: |
+          echo "Reusable workflow test completed successfully"
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          
+          ---
+          
+          ✅ **Reusable Workflow Test Passed**
+          
+          The step-summary.yml workflow was called successfully with mock data.
+          EOF
+
+  notify-completion:
+    uses: ./.github/workflows/discord-notify.yml
+    needs: [validate-syntax, test-step-summary, verify-execution]
+    if: always()
+    secrets:
+      webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+    with:
+      message_type: "embed"
+      title: ${{ needs['validate-syntax'].result == 'success' && needs['test-step-summary'].result == 'success' && needs['verify-execution'].result == 'success' && '✅ PR CI Workflow Completed Successfully' || '⚠️ PR CI Workflow Completed with Issues' }}
+      description: ${{ needs['validate-syntax'].result == 'success' && needs['test-step-summary'].result == 'success' && needs['verify-execution'].result == 'success' && 'All validation checks and tests passed successfully. The pull request is ready for review.' || 'The workflow completed but some checks failed. Please review the results and address any issues.' }}
+      color: ${{ needs['validate-syntax'].result == 'success' && needs['test-step-summary'].result == 'success' && needs['verify-execution'].result == 'success' && '3066993' || '16776960' }}
+      fields: >-
+        [
+          {"name": "Syntax Validation", "value": "${{ needs['validate-syntax'].result == 'success' && '✅ Passed' || '❌ Failed' }}", "inline": true},
+          {"name": "Step Summary Test", "value": "${{ needs['test-step-summary'].result == 'success' && '✅ Passed' || '❌ Failed' }}", "inline": true},
+          {"name": "Execution Verification", "value": "${{ needs['verify-execution'].result == 'success' && '✅ Passed' || '❌ Failed' }}", "inline": true},
+          {"name": "PR Details", "value": "[#${{ github.event.pull_request.number }}](${{ github.event.pull_request.html_url }}) by @${{ github.actor }}", "inline": false},
+          {"name": "Run Details", "value": "[View Full Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})", "inline": false}
+        ]
