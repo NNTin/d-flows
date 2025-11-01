@@ -1,0 +1,354 @@
+name: Bump Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Type of version bump to perform'
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+      target_branch:
+        description: 'Branch to bump version on (main for latest major, release/vX for older majors, or type custom branch name)'
+        required: true
+        type: string
+        default: main
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: bump-version-${{ inputs.target_branch }}
+  cancel-in-progress: false
+
+jobs:
+  calculate-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_branch }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Validate branch selection
+        shell: bash
+        run: |
+          set -e
+          set -o pipefail
+          
+          TARGET_BRANCH="${{ inputs.target_branch }}"
+          
+          echo "🔍 Validating branch selection: $TARGET_BRANCH" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if branch exists
+          if ! git ls-remote --heads origin "$TARGET_BRANCH" | grep -q "refs/heads/$TARGET_BRANCH$"; then
+            echo "❌ Error: Branch '$TARGET_BRANCH' does not exist in the repository" >&2
+            echo "❌ **Error:** Branch '$TARGET_BRANCH' does not exist in the repository" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          # Detect highest major version from existing tags
+          HIGHEST_MAJOR=$(git tag -l "v*.*.*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sed 's/^v//' | cut -d. -f1 | sort -n | tail -n1)
+          HIGHEST_MAJOR=${HIGHEST_MAJOR:-0}
+          
+          # Validate branch logic
+          if [[ "$TARGET_BRANCH" == "main" ]]; then
+            echo "✅ Using main branch for latest major version (v$((HIGHEST_MAJOR + 1)).x.x or continuation)" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$TARGET_BRANCH" =~ ^release/v([0-9]+)$ ]]; then
+            BRANCH_MAJOR="${BASH_REMATCH[1]}"
+            echo "✅ Using release branch for major version v$BRANCH_MAJOR.x.x" >> $GITHUB_STEP_SUMMARY
+            
+            if [[ "$BRANCH_MAJOR" -gt "$HIGHEST_MAJOR" ]]; then
+              echo "⚠️ Warning: Branch major version ($BRANCH_MAJOR) is higher than existing tags ($HIGHEST_MAJOR)" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "❌ Error: Invalid branch format. Use 'main' or 'release/vX'" >&2
+            echo "❌ **Error:** Invalid branch format. Use 'main' or 'release/vX'" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Fetch latest tag from selected branch
+        shell: bash
+        run: |
+          set -e
+          set -o pipefail
+          
+          TARGET_BRANCH="${{ inputs.target_branch }}"
+          
+          echo "🏷️ Fetching latest tag from branch: $TARGET_BRANCH" >> $GITHUB_STEP_SUMMARY
+          
+          # Get tags reachable from the current HEAD (checked out branch)
+          LATEST_TAG=$(git tag --merged HEAD | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -n1 || echo "")
+          
+          if [[ -z "$LATEST_TAG" ]]; then
+            echo "📦 No existing tags found - this will be the first release" >> $GITHUB_STEP_SUMMARY
+            echo "FIRST_RELEASE=true" >> $GITHUB_ENV
+            echo "LATEST_TAG=" >> $GITHUB_ENV
+          else
+            echo "📦 Latest tag found: $LATEST_TAG" >> $GITHUB_STEP_SUMMARY
+            echo "FIRST_RELEASE=false" >> $GITHUB_ENV
+            echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
+          fi
+
+      - name: Parse current version
+        shell: bash
+        run: |
+          set -e
+          set -o pipefail
+          
+          if [[ "$FIRST_RELEASE" == "true" ]]; then
+            echo "🆕 First release - initializing version components" >> $GITHUB_STEP_SUMMARY
+            MAJOR=0
+            MINOR=0
+            PATCH=0
+          else
+            # Extract version from tag (remove 'v' prefix)
+            VERSION_STRING="${LATEST_TAG#v}"
+            
+            # Split into components
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_STRING"
+            
+            # Validate components are integers
+            if ! [[ "$MAJOR" =~ ^[0-9]+$ ]] || ! [[ "$MINOR" =~ ^[0-9]+$ ]] || ! [[ "$PATCH" =~ ^[0-9]+$ ]]; then
+              echo "❌ Error: Invalid version format in tag $LATEST_TAG" >&2
+              echo "❌ **Error:** Invalid version format in tag $LATEST_TAG" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+            
+            echo "📊 Current version components: $MAJOR.$MINOR.$PATCH" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Store components in environment
+          echo "CURRENT_MAJOR=$MAJOR" >> $GITHUB_ENV
+          echo "CURRENT_MINOR=$MINOR" >> $GITHUB_ENV
+          echo "CURRENT_PATCH=$PATCH" >> $GITHUB_ENV
+
+      - name: Calculate new version
+        shell: bash
+        run: |
+          set -e
+          set -o pipefail
+          
+          BUMP_TYPE="${{ inputs.bump_type }}"
+          TARGET_BRANCH="${{ inputs.target_branch }}"
+          
+          if [[ "$FIRST_RELEASE" == "true" ]]; then
+            # First release logic by branch
+            if [[ "$TARGET_BRANCH" == "main" ]]; then
+              # First release defaults to 0.1.0 for main
+              NEW_MAJOR=0
+              NEW_MINOR=1
+              NEW_PATCH=0
+              echo "🎯 First release version on main: 0.1.0" >> $GITHUB_STEP_SUMMARY
+            elif [[ "$TARGET_BRANCH" =~ ^release/v([0-9]+)$ ]]; then
+              echo "❌ Error: First releases must start from main branch, not from release branches" >&2
+              echo "❌ **Error:** First releases must start from main branch, not from release branches" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            else
+              echo "❌ Error: Invalid target branch for first release" >&2
+              echo "❌ **Error:** Invalid target branch for first release" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+          else
+            # Calculate based on bump type
+            case "$BUMP_TYPE" in
+              major)
+                NEW_MAJOR=$((CURRENT_MAJOR + 1))
+                NEW_MINOR=0
+                NEW_PATCH=0
+                ;;
+              minor)
+                NEW_MAJOR=$CURRENT_MAJOR
+                NEW_MINOR=$((CURRENT_MINOR + 1))
+                NEW_PATCH=0
+                ;;
+              patch)
+                NEW_MAJOR=$CURRENT_MAJOR
+                NEW_MINOR=$CURRENT_MINOR
+                NEW_PATCH=$((CURRENT_PATCH + 1))
+                ;;
+              *)
+                echo "❌ Error: Invalid bump type '$BUMP_TYPE'" >&2
+                echo "❌ **Error:** Invalid bump type '$BUMP_TYPE'" >> $GITHUB_STEP_SUMMARY
+                exit 1
+                ;;
+            esac
+            
+            echo "🔼 $BUMP_TYPE bump: $CURRENT_MAJOR.$CURRENT_MINOR.$CURRENT_PATCH → $NEW_MAJOR.$NEW_MINOR.$NEW_PATCH" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Construct new version string
+          NEW_VERSION="$NEW_MAJOR.$NEW_MINOR.$NEW_PATCH"
+          
+          # Validate new version is greater than current (if not first release)
+          if [[ "$FIRST_RELEASE" == "false" ]]; then
+            CURRENT_VERSION="$CURRENT_MAJOR.$CURRENT_MINOR.$CURRENT_PATCH"
+            if ! printf '%s\n%s\n' "$CURRENT_VERSION" "$NEW_VERSION" | sort -V -C; then
+              echo "❌ Error: New version $NEW_VERSION is not greater than current $CURRENT_VERSION" >&2
+              echo "❌ **Error:** New version $NEW_VERSION is not greater than current $CURRENT_VERSION" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+          fi
+          
+          # Store new version
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+          
+          # Enforce main-branch semantics (bypass for first releases)
+          if [[ "$TARGET_BRANCH" == "main" && "$FIRST_RELEASE" != "true" ]]; then
+            # Determine highest major reachable from HEAD (main branch checked out)
+            MAIN_HIGHEST_MAJOR=$(git tag --merged HEAD | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sed 's/^v//' | cut -d. -f1 | sort -n | tail -n1)
+            MAIN_HIGHEST_MAJOR=${MAIN_HIGHEST_MAJOR:-0}
+            
+            NEW_MAJOR=$(echo "$NEW_VERSION" | cut -d. -f1)
+            
+            if [[ "$BUMP_TYPE" == "major" ]]; then
+              # For major bump, allow NEW_VERSION major to be exactly highest_major+1
+              EXPECTED_MAJOR=$((MAIN_HIGHEST_MAJOR + 1))
+              if [[ "$NEW_MAJOR" != "$EXPECTED_MAJOR" ]]; then
+                echo "❌ Error: Major bump on main must create v$EXPECTED_MAJOR.x.x, but got v$NEW_VERSION" >&2
+                echo "❌ **Error:** Major bump on main must create v$EXPECTED_MAJOR.x.x, but got v$NEW_VERSION" >> $GITHUB_STEP_SUMMARY
+                exit 1
+              fi
+            elif [[ "$BUMP_TYPE" == "minor" || "$BUMP_TYPE" == "patch" ]]; then
+              # For minor/patch bump, require NEW_VERSION major to equal highest_major
+              if [[ "$NEW_MAJOR" != "$MAIN_HIGHEST_MAJOR" ]]; then
+                echo "❌ Error: Minor/patch bump on main must stay within v$MAIN_HIGHEST_MAJOR.x.x, but got v$NEW_VERSION" >&2
+                echo "❌ **Error:** Minor/patch bump on main must stay within v$MAIN_HIGHEST_MAJOR.x.x, but got v$NEW_VERSION" >> $GITHUB_STEP_SUMMARY
+                exit 1
+              fi
+            fi
+            
+            echo "✅ Main branch semantics validated for $BUMP_TYPE bump" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Validate new version
+        shell: bash
+        run: |
+          set -e
+          
+          NEW_VERSION="$NEW_VERSION"
+          TARGET_BRANCH="${{ inputs.target_branch }}"
+          
+          echo "✅ Validating new version: v$NEW_VERSION" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if tag already exists
+          if git tag -l "v$NEW_VERSION" | grep -q "v$NEW_VERSION"; then
+            echo "❌ Error: Tag v$NEW_VERSION already exists" >&2
+            echo "❌ **Error:** Tag v$NEW_VERSION already exists" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          # Validate semantic versioning format
+          if ! [[ "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Error: Version $NEW_VERSION does not follow semantic versioning format" >&2
+            echo "❌ **Error:** Version $NEW_VERSION does not follow semantic versioning format" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          # For release branches, validate major version matches
+          if [[ "$TARGET_BRANCH" =~ ^release/v([0-9]+)$ ]]; then
+            BRANCH_MAJOR="${BASH_REMATCH[1]}"
+            VERSION_MAJOR=$(echo "$NEW_VERSION" | cut -d. -f1)
+            
+            if [[ "$VERSION_MAJOR" != "$BRANCH_MAJOR" ]]; then
+              echo "❌ Error: Major version mismatch - branch $TARGET_BRANCH should only create v$BRANCH_MAJOR.x.x versions, but got v$NEW_VERSION" >&2
+              echo "❌ **Error:** Major version mismatch - branch $TARGET_BRANCH should only create v$BRANCH_MAJOR.x.x versions, but got v$NEW_VERSION" >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+          fi
+          
+          echo "✅ Version validation passed" >> $GITHUB_STEP_SUMMARY
+
+      - name: Display version bump summary
+        shell: bash
+        run: |
+          set -e
+          
+          TARGET_BRANCH="${{ inputs.target_branch }}"
+          BUMP_TYPE="${{ inputs.bump_type }}"
+          
+          # Compute current version display
+          if [[ "$FIRST_RELEASE" == "true" ]]; then
+            CURRENT_DISPLAY="None (First Release)"
+          else
+            CURRENT_DISPLAY="$LATEST_TAG"
+          fi
+          
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          
+          ## 🚀 Version Bump Summary
+          
+          | Field | Value |
+          |-------|-------|
+          | 🌿 **Target Branch** | \`$TARGET_BRANCH\` |
+          | 🔼 **Bump Type** | \`$BUMP_TYPE\` |
+          | 📦 **Current Version** | \`$CURRENT_DISPLAY\` |
+          | 🎯 **New Version** | \`v$NEW_VERSION\` |
+          | 🆕 **First Release** | \`$FIRST_RELEASE\` |
+          
+          EOF
+
+      - name: Trigger release workflow
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          
+          NEW_VERSION="$NEW_VERSION"
+          TARGET_BRANCH="${{ inputs.target_branch }}"
+          
+          echo "🚀 Triggering release workflow for v$NEW_VERSION on $TARGET_BRANCH" >> $GITHUB_STEP_SUMMARY
+          
+          # Trigger the release workflow
+          gh workflow run release.yml \
+            --field version="$NEW_VERSION" \
+            --ref "$TARGET_BRANCH"
+          
+          if [[ $? -eq 0 ]]; then
+            echo "✅ Release workflow triggered successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Error: Failed to trigger release workflow" >&2
+            echo "❌ **Error:** Failed to trigger release workflow" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Output workflow run information
+        shell: bash
+        run: |
+          set -e
+          
+          NEW_VERSION="$NEW_VERSION"
+          TARGET_BRANCH="${{ inputs.target_branch }}"
+          REPO_URL="https://github.com/${{ github.repository }}"
+          ACTIONS_URL="$REPO_URL/actions"
+          
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          
+          ## 📋 Next Steps
+          
+          🎉 **Release workflow triggered for version v$NEW_VERSION on branch \`$TARGET_BRANCH\`**
+          
+          📊 **Monitor Progress:**
+          - [View Actions Page]($ACTIONS_URL)
+          - [View Releases Page]($REPO_URL/releases)
+          
+          ⏳ **What happens next:**
+          1. The release workflow will create tag \`v$NEW_VERSION\`
+          2. A GitHub release will be published
+          3. Release artifacts will be generated
+          
+          🔗 **Useful Links:**
+          - [Repository]($REPO_URL)
+          - [Tags]($REPO_URL/tags)
+          
+          EOF
+          
+          echo "Release workflow triggered for version v$NEW_VERSION on branch $TARGET_BRANCH. Monitor progress at $ACTIONS_URL"

@@ -46,7 +46,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v${{ inputs.version }}" --generate-notes --title "Release v${{ inputs.version }}"
+          gh release create "v${{ inputs.version }}" --generate-notes --title "Release v${{ inputs.version }}" --target "${{ github.sha }}"
 
       - name: Output release URL
         shell: bash
