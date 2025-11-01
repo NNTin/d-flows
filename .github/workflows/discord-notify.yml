@@ -56,7 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Send Discord Notification
-        if: secrets.webhook_url != '' || inputs.webhook_url != ''
+        if: ${{ secrets.webhook_url != '' || inputs.webhook_url != '' }}
         shell: bash
         env:
           WEBHOOK_URL: ${{ secrets.webhook_url || inputs.webhook_url }}
