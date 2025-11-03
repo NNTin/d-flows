@@ -1,0 +1,8 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "Colored Embed Test",
+    "description": "This embed notification includes a custom color (blue) to test the color customization feature.",
+    "color": "5814783"
+  }
+}

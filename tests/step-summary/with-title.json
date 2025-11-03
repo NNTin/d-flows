@@ -1,0 +1,6 @@
+{
+  "inputs": {
+    "markdown": "## Workflow Test\n\n✅ This test includes both markdown content and a custom title.\n\n- Feature A: Working\n- Feature B: Working\n- Feature C: Working",
+    "title": "Custom Test Summary Title"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "🚀 Full Feature Deployment Complete",
+    "description": "This comprehensive test includes all available embed customization options to verify complete functionality.",
+    "color": "3066993",
+    "fields": "[{\"name\":\"🔧 Environment\",\"value\":\"Production\",\"inline\":true},{\"name\":\"📊 Version\",\"value\":\"v2.1.0\",\"inline\":true},{\"name\":\"⏱️ Deploy Time\",\"value\":\"3m 45s\",\"inline\":true},{\"name\":\"✅ Services\",\"value\":\"All systems operational\",\"inline\":false},{\"name\":\"🔗 Links\",\"value\":\"[Dashboard](https://example.com) | [Docs](https://docs.example.com)\",\"inline\":false}]",
+    "username": "D-Flows Production Bot",
+    "avatar_url": "https://github.com/NNTin.png"
+  }
+}

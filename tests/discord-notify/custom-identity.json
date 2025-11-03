@@ -1,0 +1,9 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "Custom Identity Test",
+    "description": "This notification tests custom username and avatar override functionality.",
+    "username": "D-Flows Bot",
+    "avatar_url": "https://github.com/github.png"
+  }
+}

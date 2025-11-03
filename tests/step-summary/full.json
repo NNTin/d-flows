@@ -1,0 +1,7 @@
+{
+  "inputs": {
+    "markdown": "## Complete Test Scenario\n\n🎯 This test includes all possible inputs for the step-summary workflow:\n\n### Test Results\n| Component | Status | Notes |\n|-----------|--------|-------|\n| Frontend | ✅ Pass | All tests passing |\n| Backend | ✅ Pass | API endpoints working |\n| Database | ✅ Pass | Migrations successful |\n\n### Coverage\n- Unit Tests: 95%\n- Integration Tests: 87%\n- E2E Tests: 92%",
+    "title": "Full Feature Test Report",
+    "overwrite": "true"
+  }
+}
