@@ -64,7 +64,7 @@ jobs:
             exit 1
           fi
           
-          echo "MAJOR_VERSION=$MAJOR_VERSION" >> $GITHUB_ENV
+          echo "MAJOR_VERSION=$MAJOR_VERSION" >> "$GITHUB_ENV"
 
       - name: Create annotated major tag
         shell: bash
@@ -79,7 +79,7 @@ jobs:
       - name: Update step summary with major tag information
         shell: bash
         run: |
-          cat >> $GITHUB_STEP_SUMMARY << EOF
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
           ## Release Summary
           - ✅ Release created: v${{ inputs.version }}
           - 🏷️ Major tag v$MAJOR_VERSION updated to point to v${{ inputs.version }}

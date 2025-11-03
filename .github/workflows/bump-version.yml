@@ -90,7 +90,7 @@ jobs:
             echo "📦 No existing tags found - this will be the first release" >> "$GITHUB_STEP_SUMMARY"
             {
               echo "FIRST_RELEASE=true"
-              echo "LATEST_TAG="
+              echo "LATEST_TAG=$LATEST_TAG"
             } >> "$GITHUB_ENV"
           else
             echo "📦 Latest tag found: $LATEST_TAG" >> "$GITHUB_STEP_SUMMARY"

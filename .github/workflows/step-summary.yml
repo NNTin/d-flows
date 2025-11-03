@@ -47,13 +47,13 @@ jobs:
           fi
           
           if [[ "${{ inputs.overwrite }}" == "true" ]]; then
-            > $GITHUB_STEP_SUMMARY
+            echo -n > "$GITHUB_STEP_SUMMARY"
           fi
           
           if [[ -n "${{ inputs.title }}" ]]; then
             printf '%s\n' "## $TITLE" >> "$GITHUB_STEP_SUMMARY"
           fi
           
-          cat >> $GITHUB_STEP_SUMMARY << '__GITHUB_STEP_SUMMARY_EOF__'
+          cat >> "$GITHUB_STEP_SUMMARY" << '__GITHUB_STEP_SUMMARY_EOF__'
           ${{ inputs.markdown }}
           __GITHUB_STEP_SUMMARY_EOF__
