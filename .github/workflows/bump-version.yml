@@ -8,9 +8,9 @@ on:
         required: true
         type: choice
         options:
-          - major
-          - minor
           - patch
+          - minor
+          - major
       target_branch:
         description: 'Branch to bump version on (main for latest major, release/vX for older majors, or type custom branch name)'
         required: true
