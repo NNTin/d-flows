@@ -1,0 +1,7 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "Edge Case Test",
+    "description": "Testing edge case handling for avatar URLs."
+  }
+}

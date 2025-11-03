@@ -84,13 +84,40 @@ jobs:
             sudo apt-get update && sudo apt-get install -y jq
           fi
           
+          # Function to extract username from GitHub actor (handles formats like "nektos/act" -> "nektos")
+          extract_username() {
+            local actor="$1"
+            # Handle empty or whitespace-only strings
+            if [[ -z "$actor" || "$actor" =~ ^[[:space:]]*$ ]]; then
+              echo "github-actions"
+              return
+            fi
+            
+            # Extract everything before the first slash (for "owner/repo" format)
+            # If no slash exists, return the original string (for simple usernames)
+            local username="${actor%%/*}"
+            
+            # Validate that we have a non-empty result
+            if [[ -z "$username" || "$username" =~ ^[[:space:]]*$ ]]; then
+              echo "github-actions"
+              return
+            fi
+            
+            echo "$username"
+          }
+          
+          # Extract clean username from GitHub actor for avatar URLs
+          CLEAN_USERNAME=$(extract_username "$GITHUB_ACTOR")
+          echo "Debug: GITHUB_ACTOR=$GITHUB_ACTOR"
+          echo "Debug: CLEAN_USERNAME=$CLEAN_USERNAME"
+          
           # Set default values - handle both unset variables AND empty strings
           if [[ -z "$USERNAME" || "$USERNAME" =~ ^[[:space:]]*$ ]]; then
             USERNAME="$GITHUB_ACTOR"
           fi
           
           if [[ -z "$AVATAR_URL" || "$AVATAR_URL" =~ ^[[:space:]]*$ ]]; then
-            AVATAR_URL="https://github.com/$GITHUB_ACTOR.png"
+            AVATAR_URL="https://github.com/$CLEAN_USERNAME.png"
           fi
           
           # Function to escape JSON strings
@@ -118,7 +145,7 @@ jobs:
               }')
           else
             # Embed payload (default) using jq
-            ACTOR_ICON_URL="https://github.com/$GITHUB_ACTOR.png"
+            ACTOR_ICON_URL="https://github.com/$CLEAN_USERNAME.png"
             echo "Debug: ACTOR_ICON_URL=$ACTOR_ICON_URL"
             FOOTER_TEXT="$GITHUB_REPOSITORY • $GITHUB_WORKFLOW"
             
