@@ -1,3 +1,8 @@
 actionlint
 /.python-version
 /.venv/
+
+# Act local testing files
+.secrets
+.artifacts/
+pr-event.json
