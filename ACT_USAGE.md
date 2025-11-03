@@ -31,6 +31,7 @@ tests/
     ├── embed-with-fields.json  # Embed with structured fields
     ├── custom-identity.json    # Custom username/avatar
     ├── full-embed.json        # All embed options
+    ├── input-webhook.json     # Webhook via inputs (local testing)
     └── no-webhook.json        # Graceful failure test
 ```
 
@@ -64,13 +65,13 @@ For quick testing without JSON files:
 
 #### Basic Test
 ```powershell
-act workflow_dispatch -W .github/workflows/step-summary.yml -j summary `
+act workflow_dispatch -W .github/workflows/step-summary.yml --job set-summary `
   --input markdown="# Quick Test`n`nThis is a direct command-line test."
 ```
 
 #### With Title and Overwrite
 ```powershell
-act workflow_dispatch -W .github/workflows/step-summary.yml -j summary `
+act workflow_dispatch -W .github/workflows/step-summary.yml --job set-summary `
   --input markdown="## CLI Test`n`n✅ All systems operational" `
   --input title="Command Line Test" `
   --input overwrite=true
@@ -110,6 +111,13 @@ act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notif
 act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/full-embed.json
 ```
 
+#### Input Webhook (Local Testing)
+```powershell
+# Using webhook_url via inputs instead of secrets (acceptable for local testing)
+act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/input-webhook.json
+```
+> **Note**: While using `webhook_url` via inputs is supported for local testing, using secrets is the preferred and more secure approach for production workflows.
+
 #### Graceful Failure (No Webhook)
 ```powershell
 # Remove webhook from secrets temporarily or use empty secrets
@@ -142,7 +150,7 @@ act workflow_call -W .github/workflows/discord-notify.yml `
   --input title="Build Status" `
   --input description="Build completed successfully" `
   --input color="3066993" `
-  --input fields='[{\"name\":\"Status\",\"value\":\"✅ Success\",\"inline\":true}]'
+  --input fields='[{"name":"Status","value":"✅ Success","inline":true}]'
 ```
 
 ## Secrets Management 🔐
@@ -151,19 +159,19 @@ act workflow_call -W .github/workflows/discord-notify.yml `
 1. Copy `.secrets.template` to `.secrets`
 2. Add your Discord webhook URL:
    ```
-   DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your/webhook/url
+   webhook_url=https://discord.com/api/webhooks/your/webhook/url
    ```
 
 ### Alternative: Command-Line Secrets
 ```powershell
 act workflow_call -W .github/workflows/discord-notify.yml `
-  -s DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/your/webhook/url" `
+  -s webhook_url="https://discord.com/api/webhooks/your/webhook/url" `
   -e tests/discord-notify/minimal-embed.json
 ```
 
 ### Environment Variables
 ```powershell
-$env:DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/your/webhook/url"
+$env:webhook_url="https://discord.com/api/webhooks/your/webhook/url"
 act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/minimal-embed.json
 ```
 
@@ -171,8 +179,8 @@ act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notif
 
 ### Running Specific Jobs Only
 ```powershell
-# Run only the 'notify' job in discord-notify workflow
-act workflow_call -W .github/workflows/discord-notify.yml --job notify -e tests/discord-notify/minimal-embed.json
+# Run only the 'send-notification' job in discord-notify workflow
+act workflow_call -W .github/workflows/discord-notify.yml --job send-notification -e tests/discord-notify/minimal-embed.json
 ```
 
 ### Verbose Output for Debugging
@@ -193,7 +201,7 @@ act workflow_dispatch -W .github/workflows/step-summary.yml -e tests/step-summar
 
 ### Offline Mode (Cached Actions Only)
 ```powershell
-act workflow_dispatch -W .github/workflows/step-summary.yml -e tests/step-summary/minimal.json --use-gitignore=false --offline
+act workflow_dispatch -W .github/workflows/step-summary.yml -e tests/step-summary/minimal.json --action-offline-mode
 ```
 
 ## Tips and Best Practices 💡
@@ -236,7 +244,7 @@ Get-Content tests/step-summary/full.json | ConvertFrom-Json
   ```powershell
   # Get a test webhook URL from https://webhook.site
   act workflow_call -W .github/workflows/discord-notify.yml `
-    -s DISCORD_WEBHOOK_URL="https://webhook.site/your-unique-id" `
+    -s webhook_url="https://webhook.site/your-unique-id" `
     -e tests/discord-notify/minimal-message.json
   ```
 
@@ -277,6 +285,7 @@ Get-Content tests/step-summary/full.json | ConvertFrom-Json
 | **Discord - Fields** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/embed-with-fields.json` | Structured data display |
 | **Discord - Identity** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/custom-identity.json` | Custom username/avatar |
 | **Discord - Full** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/full-embed.json` | All embed features |
+| **Discord - Input Webhook** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/input-webhook.json` | Webhook via inputs (local testing) |
 | **Discord - No Webhook** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/no-webhook.json --secret-file /dev/null` | Graceful failure handling |
 
 ---

@@ -1,0 +1,8 @@
+{
+  "inputs": {
+    "webhook_url": "https://discord.com/api/webhooks/your/webhook/url",
+    "message_type": "embed",
+    "title": "Input Webhook Test",
+    "description": "This test demonstrates passing webhook_url via workflow inputs instead of secrets. Useful for local testing scenarios."
+  }
+}
