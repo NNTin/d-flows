@@ -25,9 +25,9 @@ jobs:
         id: actionlint
         run: |
           if ./actionlint > actionlint.log 2>&1; then
-            echo "validation_result=success" >> $GITHUB_OUTPUT
+            echo "validation_result=success" >> "$GITHUB_OUTPUT"
           else
-            echo "validation_result=failed" >> $GITHUB_OUTPUT
+            echo "validation_result=failed" >> "$GITHUB_OUTPUT"
             exit 1
           fi
 
@@ -36,13 +36,13 @@ jobs:
         if: always()
         run: |
           if [[ "${{ steps.actionlint.outputs.validation_result }}" == "success" ]]; then
-            cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+            cat >> "$GITHUB_STEP_SUMMARY" << 'EOF'
           ✅ **Workflow Syntax Validation Passed**
           
           All workflows passed syntax validation successfully.
           EOF
           else
-            cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+            cat >> "$GITHUB_STEP_SUMMARY" << 'EOF'
           ❌ **Workflow Syntax Validation Failed**
           
           One or more workflows failed syntax validation. Check the details below:
@@ -50,8 +50,8 @@ jobs:
           ```
           EOF
             # Append actionlint output (limit to first 50 lines for readability)
-            head -50 actionlint.log >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "No actionlint output available" >> $GITHUB_STEP_SUMMARY
-            cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+            head -50 actionlint.log >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "No actionlint output available" >> "$GITHUB_STEP_SUMMARY"
+            cat >> "$GITHUB_STEP_SUMMARY" << 'EOF'
           ```
           EOF
           fi
@@ -104,7 +104,7 @@ jobs:
         shell: bash
         run: |
           echo "Reusable workflow test completed successfully"
-          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          cat >> "$GITHUB_STEP_SUMMARY" << 'EOF'
           
           ---
           

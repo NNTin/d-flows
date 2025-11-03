@@ -88,12 +88,16 @@ jobs:
           
           if [[ -z "$LATEST_TAG" ]]; then
             echo "📦 No existing tags found - this will be the first release" >> "$GITHUB_STEP_SUMMARY"
-            echo "FIRST_RELEASE=true" >> "$GITHUB_ENV"
-            echo "LATEST_TAG=" >> "$GITHUB_ENV"
+            {
+              echo "FIRST_RELEASE=true"
+              echo "LATEST_TAG="
+            } >> "$GITHUB_ENV"
           else
             echo "📦 Latest tag found: $LATEST_TAG" >> "$GITHUB_STEP_SUMMARY"
-            echo "FIRST_RELEASE=false" >> "$GITHUB_ENV"
-            echo "LATEST_TAG=$LATEST_TAG" >> "$GITHUB_ENV"
+            {
+              echo "FIRST_RELEASE=false"
+              echo "LATEST_TAG=$LATEST_TAG"
+            } >> "$GITHUB_ENV"
           fi
 
       - name: Parse current version
@@ -125,9 +129,11 @@ jobs:
           fi
           
           # Store components in environment
-          echo "CURRENT_MAJOR=$MAJOR" >> "$GITHUB_ENV"
-          echo "CURRENT_MINOR=$MINOR" >> "$GITHUB_ENV"
-          echo "CURRENT_PATCH=$PATCH" >> "$GITHUB_ENV"
+          {
+            echo "CURRENT_MAJOR=$MAJOR"
+            echo "CURRENT_MINOR=$MINOR"
+            echo "CURRENT_PATCH=$PATCH"
+          } >> "$GITHUB_ENV"
 
       - name: Calculate new version
         shell: bash
@@ -233,7 +239,6 @@ jobs:
         run: |
           set -e
           
-          NEW_VERSION="$NEW_VERSION"
           TARGET_BRANCH="${{ inputs.target_branch }}"
           
           echo "✅ Validating new version: v$NEW_VERSION" >> "$GITHUB_STEP_SUMMARY"
@@ -302,17 +307,14 @@ jobs:
         run: |
           set -e
           
-          NEW_VERSION="$NEW_VERSION"
           TARGET_BRANCH="${{ inputs.target_branch }}"
           
           echo "🚀 Triggering release workflow for v$NEW_VERSION on $TARGET_BRANCH" >> "$GITHUB_STEP_SUMMARY"
           
           # Trigger the release workflow
-          gh workflow run release.yml \
+          if gh workflow run release.yml \
             --field version="$NEW_VERSION" \
-            --ref "$TARGET_BRANCH"
-          
-          if [[ $? -eq 0 ]]; then
+            --ref "$TARGET_BRANCH"; then
             echo "✅ Release workflow triggered successfully" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "❌ Error: Failed to trigger release workflow" >&2
@@ -325,7 +327,6 @@ jobs:
         run: |
           set -e
           
-          NEW_VERSION="$NEW_VERSION"
           TARGET_BRANCH="${{ inputs.target_branch }}"
           REPO_URL="https://github.com/${{ github.repository }}"
           ACTIONS_URL="$REPO_URL/actions"
