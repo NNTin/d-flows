@@ -1,0 +1,5 @@
+{
+  "inputs": {
+    "markdown": "# Test Summary\n\nThis is a minimal test of the step-summary workflow with only the required markdown input."
+  }
+}

@@ -84,13 +84,40 @@ jobs:
             sudo apt-get update && sudo apt-get install -y jq
           fi
           
-          # Set default values
-          if [[ -z "$USERNAME" ]]; then
+          # Function to extract username from GitHub actor (handles formats like "nektos/act" -> "nektos")
+          extract_username() {
+            local actor="$1"
+            # Handle empty or whitespace-only strings
+            if [[ -z "$actor" || "$actor" =~ ^[[:space:]]*$ ]]; then
+              echo "github-actions"
+              return
+            fi
+            
+            # Extract everything before the first slash (for "owner/repo" format)
+            # If no slash exists, return the original string (for simple usernames)
+            local username="${actor%%/*}"
+            
+            # Validate that we have a non-empty result
+            if [[ -z "$username" || "$username" =~ ^[[:space:]]*$ ]]; then
+              echo "github-actions"
+              return
+            fi
+            
+            echo "$username"
+          }
+          
+          # Extract clean username from GitHub actor for avatar URLs
+          CLEAN_USERNAME=$(extract_username "$GITHUB_ACTOR")
+          echo "Debug: GITHUB_ACTOR=$GITHUB_ACTOR"
+          echo "Debug: CLEAN_USERNAME=$CLEAN_USERNAME"
+          
+          # Set default values - handle both unset variables AND empty strings
+          if [[ -z "$USERNAME" || "$USERNAME" =~ ^[[:space:]]*$ ]]; then
             USERNAME="$GITHUB_ACTOR"
           fi
           
-          if [[ -z "$AVATAR_URL" ]]; then
-            AVATAR_URL="https://github.com/$GITHUB_ACTOR.png"
+          if [[ -z "$AVATAR_URL" || "$AVATAR_URL" =~ ^[[:space:]]*$ ]]; then
+            AVATAR_URL="https://github.com/$CLEAN_USERNAME.png"
           fi
           
           # Function to escape JSON strings
@@ -118,9 +145,9 @@ jobs:
               }')
           else
             # Embed payload (default) using jq
-            ACTOR_ICON_URL="https://github.com/$GITHUB_ACTOR.png"
-            FOOTER_TIME=$(date -u -d "$TIMESTAMP" +"%Y-%m-%d %H:%M UTC")
-            FOOTER_TEXT="$GITHUB_REPOSITORY • $GITHUB_WORKFLOW • $FOOTER_TIME"
+            ACTOR_ICON_URL="https://github.com/$CLEAN_USERNAME.png"
+            echo "Debug: ACTOR_ICON_URL=$ACTOR_ICON_URL"
+            FOOTER_TEXT="$GITHUB_REPOSITORY • $GITHUB_WORKFLOW"
             
             # Start with base embed object
             EMBED_BASE=$(jq -n \
@@ -159,11 +186,24 @@ jobs:
             
             # Add fields if provided and valid JSON array
             if [[ -n "$FIELDS" ]]; then
+              echo "Debug: Raw FIELDS value:"
+              echo "$FIELDS"
+              echo "Debug: FIELDS length: ${#FIELDS}"
+              
               # Validate JSON and check if it's an array
               if command -v jq >/dev/null 2>&1 && echo "$FIELDS" | jq . >/dev/null 2>&1 && echo "$FIELDS" | jq -e 'type=="array"' >/dev/null 2>&1; then
+                echo "Debug: Fields JSON validation passed"
+                echo "Debug: Parsed fields array:"
+                echo "$FIELDS" | jq .
+                
                 EMBED_BASE=$(echo "$EMBED_BASE" | jq --argjson fields "$FIELDS" '. + {fields: $fields}')
+                
+                echo "Debug: Final EMBED_BASE after adding fields:"
+                echo "$EMBED_BASE" | jq .
               else
                 echo "Warning: Fields input is not a valid JSON array, skipping fields"
+                echo "Debug: jq validation output:"
+                echo "$FIELDS" | jq . 2>&1 || true
               fi
             fi
             
@@ -177,6 +217,9 @@ jobs:
                 avatar_url: $avatar_url,
                 embeds: [$embed]
               }')
+              
+            echo "Debug: Final payload:"
+            echo "$PAYLOAD" | jq .
           fi
           
           # Send the webhook using curl

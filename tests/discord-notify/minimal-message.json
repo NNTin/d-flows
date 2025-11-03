@@ -1,0 +1,6 @@
+{
+  "inputs": {
+    "message_type": "message",
+    "content": "Hello from GitHub Actions! This is a minimal message test."
+  }
+}

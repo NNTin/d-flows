@@ -1,0 +1,7 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "Minimal Embed Test",
+    "description": "This is a basic embed notification test with minimal required fields."
+  }
+}

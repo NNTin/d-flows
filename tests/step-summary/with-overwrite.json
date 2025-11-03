@@ -1,0 +1,6 @@
+{
+  "inputs": {
+    "markdown": "# Overwrite Mode Test\n\n🔄 This test sets overwrite to true, which should replace any existing summary content instead of appending to it.\n\n**Previous content should be cleared.**",
+    "overwrite": "true"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "Build Status Report",
+    "description": "This embed includes structured fields to display build information in a formatted layout.",
+    "fields": "[{\"name\":\"Status\",\"value\":\"✅ Success\",\"inline\":true},{\"name\":\"Duration\",\"value\":\"2m 30s\",\"inline\":true},{\"name\":\"Tests\",\"value\":\"45/45 passed\",\"inline\":true},{\"name\":\"Coverage\",\"value\":\"94.2%\",\"inline\":false}]"
+  }
+}
