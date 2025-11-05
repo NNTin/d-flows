@@ -1,0 +1,12 @@
+{
+  "_comment": "Test fixture for duplicate tag error in release workflow. Tests the workflow's validation that prevents creating a release for an existing version. This tests duplicate tag detection in the release workflow, which is the second line of defense after bump-version.yml validation. Git state required: Existing tag v1.0.0 already exists, main branch checked out. Expected outcome: Workflow should FAIL at tag existence check with error message: 'Tag v1.0.0 already exists', should not create GitHub release, should not update major tag. Setup: Run 'setup-test-git-state.ps1 -Scenario DuplicateReleaseTag' before testing.",
+  "pull_request": null,
+  "inputs": {
+    "version": "1.0.0"
+  },
+  "github": {
+    "actor": "test-user",
+    "repository": "test-org/test-repo",
+    "workflow": "Release Workflow"
+  }
+}

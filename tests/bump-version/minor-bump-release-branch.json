@@ -1,0 +1,13 @@
+{
+  "_comment": "Test fixture for minor bump on a release branch. Tests adding features to an older major version. Git state required: Existing tag v1.2.1 on release/v1 branch, release/v1 branch checked out. Expected outcome: Workflow should calculate new version as v1.3.0, validate major version matches branch, trigger release workflow. Setup: Run 'setup-test-git-state.ps1 -Scenario ReleaseBranchMinor' before testing.",
+  "pull_request": null,
+  "inputs": {
+    "bump_type": "minor",
+    "target_branch": "release/v1"
+  },
+  "github": {
+    "actor": "test-user",
+    "repository": "test-org/test-repo",
+    "workflow": "Bump Version"
+  }
+}

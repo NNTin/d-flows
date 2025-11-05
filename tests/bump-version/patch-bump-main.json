@@ -1,0 +1,13 @@
+{
+  "_comment": "Test fixture for patch version bump on main branch. Tests incrementing the patch version (e.g., v0.1.0 → v0.1.1). This scenario is documented in VERSIONING.md under 'Releasing Minor and Patch Versions'. Git state required: Existing tag v0.1.0 on main branch, main branch checked out. Expected outcome: Workflow should calculate new version as v0.1.1, validate version is greater than current, trigger release workflow. Setup: Run 'setup-test-git-state.ps1 -Scenario PatchBump' before testing.",
+  "pull_request": null,
+  "inputs": {
+    "bump_type": "patch",
+    "target_branch": "main"
+  },
+  "github": {
+    "actor": "test-user",
+    "repository": "test-org/test-repo",
+    "workflow": "Bump Version"
+  }
+}

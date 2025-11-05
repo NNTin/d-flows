@@ -1,0 +1,12 @@
+{
+  "_comment": "Test fixture for a valid v1.0.0 release (first stable release). Tests creating a major version 1 release. Git state required: No existing tag v1.0.0, existing tag v0.2.1 (or similar v0 version), main branch checked out. Expected outcome: Workflow should validate version format, create GitHub release with tag v1.0.0, create/update major tag v1 pointing to v1.0.0, generate release notes. Setup: Run 'setup-test-git-state.ps1 -Scenario ValidReleaseV1' before testing.",
+  "pull_request": null,
+  "inputs": {
+    "version": "1.0.0"
+  },
+  "github": {
+    "actor": "test-user",
+    "repository": "test-org/test-repo",
+    "workflow": "Release Workflow"
+  }
+}

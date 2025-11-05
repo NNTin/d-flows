@@ -1,0 +1,13 @@
+{
+  "_comment": "Test fixture for major version mismatch error on release branches. Tests that release/vX branches can only create vX.y.z versions. This tests the major version constraint on release branches as documented in VERSIONING.md under 'Troubleshooting - Issue 3'. Git state required: Existing tag v1.2.0 on release/v1 branch, release/v1 branch checked out. Expected outcome: Workflow would calculate new version as v2.0.0, should FAIL at validation with error: 'Major version mismatch - branch release/v1 should only create v1.x.x versions, but got v2.0.0', should not proceed to release creation. Setup: Run 'setup-test-git-state.ps1 -Scenario MajorVersionMismatch' before testing.",
+  "pull_request": null,
+  "inputs": {
+    "bump_type": "major",
+    "target_branch": "release/v1"
+  },
+  "github": {
+    "actor": "test-user",
+    "repository": "test-org/test-repo",
+    "workflow": "Bump Version"
+  }
+}

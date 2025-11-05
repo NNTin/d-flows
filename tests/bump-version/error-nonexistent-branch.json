@@ -1,0 +1,13 @@
+{
+  "_comment": "Test fixture for nonexistent branch error. Tests the workflow's validation that the target branch exists. This tests branch existence validation as documented in VERSIONING.md under 'Troubleshooting - Issue 2'. Git state required: Branch 'release/v5' does NOT exist, main branch exists with some tags. Expected outcome: Workflow should FAIL at branch validation step with error message: 'Branch release/v5 does not exist in the repository', should not proceed to version calculation. Setup: Run 'setup-test-git-state.ps1 -Scenario NonexistentBranch' before testing.",
+  "pull_request": null,
+  "inputs": {
+    "bump_type": "patch",
+    "target_branch": "release/v5"
+  },
+  "github": {
+    "actor": "test-user",
+    "repository": "test-org/test-repo",
+    "workflow": "Bump Version"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "_comment": "Test fixture for patch bump on a release branch. Tests maintaining an older major version while newer versions exist on main. This scenario is documented in VERSIONING.md under 'Patching an Older Major Version'. Git state required: Existing tag v1.2.0 on release/v1 branch, existing tag v2.0.0 on main branch (newer major version exists), release/v1 branch checked out. Expected outcome: Workflow should calculate new version as v1.2.1, validate major version matches branch (v1), trigger release workflow. Setup: Run 'setup-test-git-state.ps1 -Scenario ReleaseBranchPatch' before testing.",
+  "pull_request": null,
+  "inputs": {
+    "bump_type": "patch",
+    "target_branch": "release/v1"
+  },
+  "github": {
+    "actor": "test-user",
+    "repository": "test-org/test-repo",
+    "workflow": "Bump Version"
+  }
+}

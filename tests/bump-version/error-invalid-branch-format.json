@@ -1,0 +1,13 @@
+{
+  "_comment": "Test fixture for invalid branch format error. Tests the workflow's validation of branch naming conventions. Only 'main' or 'release/vX' patterns are allowed. Git state required: Branch named 'feature/test-branch' exists, some existing tag (e.g., v0.1.0) on main. Expected outcome: Workflow should FAIL at branch validation step with error message: 'Invalid branch format. Use main or release/vX', should not proceed to version calculation. Setup: Run 'setup-test-git-state.ps1 -Scenario InvalidBranch' before testing.",
+  "pull_request": null,
+  "inputs": {
+    "bump_type": "patch",
+    "target_branch": "feature/test-branch"
+  },
+  "github": {
+    "actor": "test-user",
+    "repository": "test-org/test-repo",
+    "workflow": "Bump Version"
+  }
+}
