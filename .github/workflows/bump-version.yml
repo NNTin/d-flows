@@ -301,6 +301,7 @@ jobs:
           EOF
 
       - name: Trigger release workflow
+        if: ${{ !env.ACT }} # only run if NOT running under act
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}

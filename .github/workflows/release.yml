@@ -72,6 +72,7 @@ jobs:
           git tag -a "v$MAJOR_VERSION" -f -m "Update v$MAJOR_VERSION -> v${{ inputs.version }}"
 
       - name: Push major tag with force
+        if: ${{ !env.ACT }} # only run if NOT running under act
         shell: bash
         run: |
           git push origin "v$MAJOR_VERSION" --force
