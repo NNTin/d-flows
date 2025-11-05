@@ -427,7 +427,7 @@ act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-versio
 .\setup-test-git-state.ps1 -Scenario ValidReleaseV1
 
 # Test release creation
-act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v1.json
+act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v1.0.0.json
 
 # Should create v1.0.0 tag and GitHub release
 # Verify tag creation and release notes
@@ -491,9 +491,9 @@ To run all release tests:
 ```powershell
 # Array of all release test scenarios  
 $releaseTests = @(
-    @{Scenario="ValidReleaseV0"; Test="valid-release-v0.json"},
-    @{Scenario="ValidReleaseV1"; Test="valid-release-v1.json"},
-    @{Scenario="ValidReleaseV1Patch"; Test="valid-release-v1-patch.json"}
+    @{Scenario="ValidReleaseV0"; Test="valid-release-v0.1.0.json"},
+    @{Scenario="ValidReleaseV1"; Test="valid-release-v1.0.0.json"},
+    @{Scenario="ValidReleaseV1Patch"; Test="valid-release-v1.2.3.json"}
 )
 
 # Run each test
@@ -517,9 +517,9 @@ foreach ($test in $releaseTests) {
 | **Major Bump v1→v2** | `.\setup-test-git-state.ps1 -Scenario MajorBumpV1ToV2` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/major-bump-v1-to-v2.json` | Calculate v2.0.0, create release/v1 branch |
 | **Release Branch Patch** | `.\setup-test-git-state.ps1 -Scenario ReleaseBranchPatch` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/patch-bump-release-branch.json` | Calculate v1.2.1 on release branch |
 | **Release Branch Minor** | `.\setup-test-git-state.ps1 -Scenario ReleaseBranchMinor` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/minor-bump-release-branch.json` | Calculate v1.3.0 on release branch |
-| **Release v0.1.0** | `.\setup-test-git-state.ps1 -Scenario ValidReleaseV0` | `act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v0.json` | Create v0.1.0 tag and release |
-| **Release v1.0.0** | `.\setup-test-git-state.ps1 -Scenario ValidReleaseV1` | `act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v1.json` | Create v1.0.0 tag and release |
-| **Release v1.2.3** | `.\setup-test-git-state.ps1 -Scenario ValidReleaseV1Patch` | `act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v1-patch.json` | Create v1.2.3 tag and release |
+| **Release v0.1.0** | `.\setup-test-git-state.ps1 -Scenario ValidReleaseV0` | `act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v0.1.0.json` | Create v0.1.0 tag and release |
+| **Release v1.0.0** | `.\setup-test-git-state.ps1 -Scenario ValidReleaseV1` | `act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v1.0.0.json` | Create v1.0.0 tag and release |
+| **Release v1.2.3** | `.\setup-test-git-state.ps1 -Scenario ValidReleaseV1Patch` | `act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v1.2.3.json` | Create v1.2.3 tag and release |
 
 ---
 

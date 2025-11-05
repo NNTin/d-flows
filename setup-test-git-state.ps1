@@ -33,7 +33,11 @@
 #   - DuplicateReleaseTag: Setup v1.0.0 tag for error testing
 # 
 # Cleanup:
-#   - Reset: Remove all test tags and branches
+#   - Reset: Remove all test tags, branches, and optionally clean test files
+# 
+# TEST FILE MANAGEMENT:
+# Test files are created in the .test-state/ directory (added to .gitignore).
+# The Reset scenario offers to clean up these files and reset the working tree.
 # 
 # INTEGRATION WITH ACT:
 # The script is aware of the $ACT environment variable and includes safety
@@ -82,8 +86,14 @@ function Test-GitStateReady {
 function New-TestCommit {
     param([string]$Message = "Test commit for workflow testing")
     
-    # Create or modify a test file
-    $testFile = "test-file-$(Get-Date -Format 'yyyyMMdd-HHmmss').txt"
+    # Create test state directory if it doesn't exist
+    $testDir = ".test-state"
+    if (-not (Test-Path $testDir)) {
+        New-Item -ItemType Directory -Path $testDir -Force | Out-Null
+    }
+    
+    # Create or modify a test file in the test directory
+    $testFile = Join-Path $testDir "test-file-$(Get-Date -Format 'yyyyMMdd-HHmmss').txt"
     "Test commit content - $Message" | Out-File -FilePath $testFile -Encoding UTF8
     git add $testFile
     git commit -m $Message
@@ -113,7 +123,63 @@ function Reset-TestGitState {
     }
     
     # Return to main branch
-    git checkout main 2>$null
+    $currentBranch = git branch --show-current 2>$null
+    if ($currentBranch -ne "main") {
+        git checkout main 2>$null
+        Write-Output "Switched to main branch"
+    }
+    
+    # Check for test state directory and untracked test files
+    $testDir = ".test-state"
+    $hasTestDir = Test-Path $testDir
+    $untrackedTestFiles = @()
+    
+    # Find any remaining test files that might be untracked
+    if ($hasTestDir) {
+        $untrackedTestFiles = git ls-files --others --exclude-standard $testDir 2>$null | Where-Object { $_ }
+    }
+    
+    # Check for any uncommitted changes or untracked test files
+    $hasChanges = $false
+    $statusOutput = git status --porcelain 2>$null
+    if ($statusOutput -and ($statusOutput | Where-Object { $_ -match "\.test-state/" })) {
+        $hasChanges = $true
+    }
+    
+    # Prompt for cleanup if there are test files or changes
+    if ($hasTestDir -or $untrackedTestFiles.Count -gt 0 -or $hasChanges) {
+        Write-Output ""
+        Write-Warning "Found test files and/or changes in the working tree:"
+        
+        if ($hasTestDir) {
+            Write-Output "  📁 Test directory: $testDir"
+        }
+        if ($untrackedTestFiles.Count -gt 0) {
+            Write-Output "  📄 Untracked test files: $($untrackedTestFiles.Count) files"
+        }
+        if ($hasChanges) {
+            Write-Output "  📝 Uncommitted changes in test directory"
+        }
+        
+        Write-Output ""
+        $cleanupChoice = Read-Host "Clean up test files and reset working tree to clean state? (y/N)"
+        
+        if ($cleanupChoice -eq "y" -or $cleanupChoice -eq "Y") {
+            # Remove test state directory if it exists
+            if ($hasTestDir) {
+                Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue
+                Write-Output "Removed test directory: $testDir"
+            }
+            
+            # Reset working tree to clean state
+            git reset --hard HEAD 2>$null
+            git clean -fd 2>$null
+            Write-Output "Reset working tree to clean state"
+        } else {
+            Write-Output "Keeping test files and working tree changes"
+        }
+    }
+    
     Write-Output "✅ Git state reset complete"
 }
 
@@ -368,3 +434,4 @@ Write-Output "🎯 Git state setup complete for scenario: $Scenario"
 Write-Output "You can now run your workflow tests with act."
 Write-Output ""
 Write-Output "💡 Remember to run 'setup-test-git-state.ps1 -Scenario Reset' when finished testing."
+Write-Output "💡 Test files are created in .test-state/ directory (ignored by git)."

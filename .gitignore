@@ -9,3 +9,6 @@ pr-event.json
 /.chunkhound.json
 /.chunkhound/db
 /.vscode/mcp.json
+
+# Test state files created by setup-test-git-state.ps1
+.test-state/
