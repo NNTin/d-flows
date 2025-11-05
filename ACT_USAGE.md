@@ -4,6 +4,8 @@
 
 This document complements the [`ACT_SETUP_GUIDE.md`](./ACT_SETUP_GUIDE.md) and focuses specifically on testing the `step-summary.yml` and `discord-notify.yml` workflows with various input combinations and scenarios.
 
+> **Note**: This guide covers unit testing of individual workflows. For integration testing of complete release cycles and multi-workflow scenarios, see [INTEGRATION_TESTING.md](./INTEGRATION_TESTING.md).
+
 ## Prerequisites 📋
 
 Before using this guide, ensure you have:
@@ -520,7 +522,40 @@ foreach ($test in $releaseTests) {
 | **Release v0.1.0** | `.\setup-test-git-state.ps1 -Scenario ValidReleaseV0` | `act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v0.1.0.json` | Create v0.1.0 tag and release |
 | **Release v1.0.0** | `.\setup-test-git-state.ps1 -Scenario ValidReleaseV1` | `act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v1.0.0.json` | Create v1.0.0 tag and release |
 | **Release v1.2.3** | `.\setup-test-git-state.ps1 -Scenario ValidReleaseV1Patch` | `act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v1.2.3.json` | Create v1.2.3 tag and release |
+| **Integration Tests** | See [INTEGRATION_TESTING.md](./INTEGRATION_TESTING.md) | Complete release cycles, multi-workflow orchestration |
+
+## Integration Testing 🧪
+
+For end-to-end testing of complete release cycles and multi-workflow scenarios, see the comprehensive integration testing guide:
+
+📖 **[INTEGRATION_TESTING.md](./INTEGRATION_TESTING.md)**
+
+Integration tests validate:
+- ✅ Complete release cycles (v0.1.1 → v1.0.0)
+- ✅ Multi-workflow orchestration (bump-version → release)
+- ✅ Rollback and error recovery scenarios
+- ✅ Backward compatibility for v0 users
+- ✅ Release branch creation and maintenance
+- ✅ Major tag stability and updates
+
+**Quick Start:**
+```powershell
+# Run all integration tests
+.\run-integration-tests.ps1
+
+# Run specific scenario
+.\run-integration-tests.ps1 -Scenario CompleteReleaseCycle
+
+# Run with verbose output
+.\run-integration-tests.ps1 -Verbose
+```
+
+**When to use integration tests vs. unit tests:**
+- **Unit tests** (this document): Test individual workflows in isolation with specific inputs
+- **Integration tests** (INTEGRATION_TESTING.md): Test complete workflows end-to-end with state transitions
+
+For most development and debugging, start with unit tests. Use integration tests before releases and after major changes to validate the complete system.
 
 ---
 
-🎯 **Happy Testing!** These test fixtures and commands provide comprehensive coverage of all workflows. Start with the minimal tests and work your way up to the full feature tests to verify all functionality.
+🎯 **Happy Testing!** These test fixtures and commands provide comprehensive coverage of all workflows. Start with the minimal tests and work your way up to the full feature tests to verify all functionality. For multi-workflow scenarios and complete release cycles, see the integration testing guide.

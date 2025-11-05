@@ -1,0 +1,82 @@
+{
+  "name": "Major Tag Stability and Updates",
+  "description": "Tests the major tag update mechanism and ensures users understand the difference between pinning to major versions (v1) vs. specific versions (v1.0.0). Validates that major tags move to latest v1.x.x release while historical versions remain accessible.",
+  "steps": [
+    {
+      "name": "Setup v1.0.0 release",
+      "action": "execute-command",
+      "command": "git tag -a v1.0.0 -m 'Release v1.0.0'; git tag v1 v1.0.0"
+    },
+    {
+      "name": "Validate initial major tag points to v1.0.0",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v1"},
+        {"type": "tag-points-to", "tag": "v1", "target": "v1.0.0"}
+      ]
+    },
+    {
+      "name": "Create v1.1.0 release",
+      "action": "execute-command",
+      "command": "git tag -a v1.1.0 -m 'Release v1.1.0'; git tag -f v1 v1.1.0"
+    },
+    {
+      "name": "Validate major tag updated to v1.1.0",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v1"},
+        {"type": "tag-points-to", "tag": "v1", "target": "v1.1.0"},
+        {"type": "tag-exists", "tag": "v1.0.0"}
+      ]
+    },
+    {
+      "name": "Create v1.2.0 release",
+      "action": "execute-command",
+      "command": "git tag -a v1.2.0 -m 'Release v1.2.0'; git tag -f v1 v1.2.0"
+    },
+    {
+      "name": "Validate major tag updated to v1.2.0",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v1"},
+        {"type": "tag-points-to", "tag": "v1", "target": "v1.2.0"}
+      ]
+    },
+    {
+      "name": "Validate all historical versions still accessible",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v1.0.0"},
+        {"type": "tag-exists", "tag": "v1.1.0"},
+        {"type": "tag-exists", "tag": "v1.2.0"},
+        {"type": "tag-accessible", "tag": "v1.0.0"},
+        {"type": "tag-accessible", "tag": "v1.1.0"}
+      ]
+    },
+    {
+      "name": "Validate major tag stability mechanism",
+      "action": "validate-state",
+      "checks": [
+        {"type": "major-tag-auto-updates"},
+        {"type": "historical-versions-preserved"},
+        {"type": "force-push-safe"}
+      ]
+    },
+    {
+      "name": "Validate user expectations",
+      "action": "validate-state",
+      "checks": [
+        {"type": "user-pinned-to-v1-gets", "expectation": "v1.2.0"},
+        {"type": "user-pinned-to-v1.0.0-gets", "expectation": "v1.0.0"},
+        {"type": "user-pinned-to-v1.1.0-gets", "expectation": "v1.1.0"},
+        {"type": "major-version-flexible"},
+        {"type": "specific-version-stable"}
+      ]
+    }
+  ],
+  "cleanup": {
+    "action": "reset-git-state"
+  },
+  "expectedDuration": "20-40 seconds",
+  "tags": ["integration", "major-tag-management", "version-pinning", "stability"]
+}

@@ -1,0 +1,94 @@
+{
+  "name": "Multi-Step Version Progression",
+  "description": "Tests the complete development lifecycle from initial release through stable v1.0.0 promotion, validating all bump types work correctly in sequence. This validates version progression follows semantic versioning rules, each bump type correctly resets lower components, and major tags update correctly at each step.",
+  "steps": [
+    {
+      "name": "Setup initial clean state",
+      "action": "setup-git-state",
+      "scenario": "FirstRelease",
+      "expectedState": {
+        "tags": [],
+        "branches": ["main"],
+        "currentBranch": "main"
+      }
+    },
+    {
+      "name": "First release: Create v0.1.0",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/first-release-main.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "0.1.0",
+        "FIRST_RELEASE": "true"
+      }
+    },
+    {
+      "name": "Execute first release workflow",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v0.1.0.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "0"
+      }
+    },
+    {
+      "name": "Patch bump: v0.1.0 → v0.1.1",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/patch-bump-main.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "0.1.1"
+      }
+    },
+    {
+      "name": "Validate patch bump completed",
+      "action": "validate-state",
+      "checks": [
+        {"type": "version-progression", "from": "0.1.0", "to": "0.1.1", "bump-type": "patch"}
+      ]
+    },
+    {
+      "name": "Minor bump: v0.1.1 → v0.2.0",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/minor-bump-main.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "0.2.0"
+      }
+    },
+    {
+      "name": "Validate minor bump resets patch",
+      "action": "validate-state",
+      "checks": [
+        {"type": "version-progression", "from": "0.1.1", "to": "0.2.0", "bump-type": "minor"}
+      ]
+    },
+    {
+      "name": "Major bump: v0.2.0 → v1.0.0",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/major-bump-v0-to-v1.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "1.0.0",
+        "CURRENT_MAJOR": "0"
+      }
+    },
+    {
+      "name": "Validate major bump completes progression",
+      "action": "validate-state",
+      "checks": [
+        {"type": "version-progression", "from": "0.2.0", "to": "1.0.0", "bump-type": "major"},
+        {"type": "tag-exists", "tag": "v0.1.0"},
+        {"type": "tag-exists", "tag": "v0.1.1"},
+        {"type": "tag-exists", "tag": "v0.2.0"},
+        {"type": "tag-exists", "tag": "v1.0.0"},
+        {"type": "major-tag-progression", "tags": ["v0", "v1"]}
+      ]
+    }
+  ],
+  "cleanup": {
+    "action": "reset-git-state"
+  },
+  "expectedDuration": "60-120 seconds",
+  "tags": ["integration", "version-progression", "all-bump-types", "semantic-versioning"]
+}

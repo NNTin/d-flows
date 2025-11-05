@@ -1,0 +1,92 @@
+{
+  "name": "v0 Backward Compatibility",
+  "description": "Tests that releasing v1.0.0 doesn't break existing users who reference v0 in their workflows. This validates critical requirement that releasing v1.0.0 doesn't break v0 users, ensures smooth transition, and allows users to upgrade at their own pace.",
+  "steps": [
+    {
+      "name": "Setup complete release history",
+      "action": "setup-git-state",
+      "scenario": "ValidReleaseV0",
+      "expectedState": {
+        "tags": [],
+        "branches": ["main"],
+        "currentBranch": "main"
+      }
+    },
+    {
+      "name": "Create v0.1.0 release",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v0.1.0.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "0"
+      }
+    },
+    {
+      "name": "Create v0.2.0 release",
+      "action": "execute-command",
+      "command": "git tag -a v0.2.0 -m 'Release v0.2.0'; git tag -f v0 v0.2.0"
+    },
+    {
+      "name": "Create v0.2.1 release",
+      "action": "execute-command",
+      "command": "git tag -a v0.2.1 -m 'Release v0.2.1'; git tag -f v0 v0.2.1"
+    },
+    {
+      "name": "Create v1.0.0 release",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v1.0.0.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "1"
+      }
+    },
+    {
+      "name": "Validate v0 major tag exists",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v0"},
+        {"type": "tag-points-to", "tag": "v0", "target": "v0.2.1"}
+      ]
+    },
+    {
+      "name": "Validate v1 major tag exists",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v1"},
+        {"type": "tag-points-to", "tag": "v1", "target": "v1.0.0"}
+      ]
+    },
+    {
+      "name": "Validate all individual version tags accessible",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-accessible", "tag": "v0.1.0"},
+        {"type": "tag-accessible", "tag": "v0.2.0"},
+        {"type": "tag-accessible", "tag": "v0.2.1"},
+        {"type": "tag-accessible", "tag": "v1.0.0"}
+      ]
+    },
+    {
+      "name": "Validate tag coexistence",
+      "action": "validate-state",
+      "checks": [
+        {"type": "major-tags-coexist", "tags": ["v0", "v1"]},
+        {"type": "no-tag-conflicts"}
+      ]
+    },
+    {
+      "name": "Validate backward compatibility - v0 users unaffected",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-resolution-v0", "expectation": "v0.2.1"},
+        {"type": "tag-resolution-v1", "expectation": "v1.0.0"},
+        {"type": "no-breaking-changes", "previous-major": "v0"}
+      ]
+    }
+  ],
+  "cleanup": {
+    "action": "reset-git-state"
+  },
+  "expectedDuration": "30-60 seconds",
+  "tags": ["integration", "backward-compatibility", "major-version-release", "v0-to-v1"]
+}
