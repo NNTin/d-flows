@@ -73,6 +73,7 @@ This workflow (`bump-version.yml`) automates version calculation and triggers re
 - Fetches the latest tag from the selected branch
 - Calculates the new version based on bump type
 - Validates the version and branch selection
+- Automatically creates release branches for previous major versions when performing major bumps on main
 - Triggers the release workflow automatically
 
 **Validation Rules:**
@@ -153,11 +154,11 @@ This promotes your project from the initial development phase (v0.x.x) to the fi
 1. Run Bump Version workflow
 2. Select bump type: `major`
 3. Select target branch: `main`
-4. **Result**: Creates `v2.0.0`, creates `v2` tag
+4. **Result**: Creates `v2.0.0`, creates `v2` tag, **automatically creates `release/v1` branch from the last v1 commit**
 
-**Post-release actions:**
-- Create `release/v1` branch from the last v1 commit if v1 needs continued support
-- Main branch now tracks v2.x.x development
+**Automatic post-release actions:** The workflow automatically creates `release/v1` branch from the last v1 commit (v1.2.0) to enable continued v1 maintenance. Main branch now tracks v2.x.x development.
+
+**Note:** Release branch creation is skipped for v0 → v1 transitions, as v0 versions typically don't require long-term maintenance.
 
 ### Patching an Older Major Version
 
@@ -187,7 +188,7 @@ Here's a chronological example showing the full lifecycle:
 4. **Promote to Stable**: Create `v1.0.0` on `main` → `v1` points to `v1.0.0`
 5. **Feature Addition**: Create `v1.1.0` on `main` → `v1` points to `v1.1.0`
 6. **Major Release**: Create `v2.0.0` on `main` → `v2` points to `v2.0.0`
-7. **Create Release Branch**: Create `release/v1` from last v1 commit
+7. **Automatic Release Branch**: `release/v1` automatically created from last v1 commit during v2.0.0 release
 8. **Patch Old Version**: Create `v1.1.1` on `release/v1` → `v1` points to `v1.1.1`
 9. **Continue New Version**: Create `v2.1.0` on `main` → `v2` points to `v2.1.0`
 
@@ -200,7 +201,7 @@ Here's a chronological example showing the full lifecycle:
 ## Best Practices
 
 - **Always use the Bump Version workflow**: Avoid manually creating releases to ensure consistency
-- **Create release branches proactively**: When releasing a new major version, create the release branch for the previous major if it needs continued support
+- **Verify release branches**: After major version releases, verify that release branches were created automatically for the previous major version
 - **Test before releasing**: Ensure all tests pass before triggering a release
 - **Use semantic versioning correctly**: Follow SemVer principles for bump type selection
 - **Document breaking changes**: When releasing major versions, clearly document what changed
@@ -247,6 +248,10 @@ Here's a chronological example showing the full lifecycle:
 ### Issue 4: "First releases must start from main" error
 - **Problem**: Attempting to create the first release from a release branch
 - **Solution**: Always create the first release from `main` branch
+
+### Issue 5: Release branch creation failed during major bump
+- **Problem**: The automatic release branch creation step failed during a major version bump
+- **Solution**: Check the workflow logs for specific error messages. Common causes include: branch already exists (safe to ignore), no previous tags found (verify git history), or permission issues (check repository settings). You can manually create the release branch using `git branch release/v{MAJOR} {commit_sha}` and `git push origin release/v{MAJOR}` if needed.
 
 ---
 
