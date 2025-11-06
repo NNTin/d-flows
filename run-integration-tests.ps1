@@ -44,7 +44,7 @@ param(
 # Configuration
 $ErrorActionPreference = "Stop"
 $TestStartTime = Get-Date
-$RepositoryRoot = git rev-parse --show-toplevel
+$RepositoryRoot = (git rev-parse --show-toplevel) -replace '/', '\'
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $IntegrationTestDir = Join-Path $RepositoryRoot "tests\integration"
 
