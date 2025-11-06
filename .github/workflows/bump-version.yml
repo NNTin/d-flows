@@ -313,7 +313,7 @@ jobs:
           EOF
 
       - name: Create release branch for previous major version
-        if: ${{ inputs.bump_type == 'major' && inputs.target_branch == 'main' && env.FIRST_RELEASE == 'false' }}
+        if: ${{ inputs.bump_type == 'major' && inputs.target_branch == 'main' && env.FIRST_RELEASE == 'false' && !env.ACT }}
         shell: bash
         continue-on-error: false
         run: |
@@ -324,7 +324,7 @@ jobs:
           echo "## 🌿 Release Branch Creation" >> "$GITHUB_STEP_SUMMARY"
           
           # Calculate previous major version
-          PREVIOUS_MAJOR=$((CURRENT_MAJOR))
+          PREVIOUS_MAJOR=$CURRENT_MAJOR
           
           # Find last tag of previous major
           LAST_TAG=$(git tag -l "v${PREVIOUS_MAJOR}.*.*" | grep -E "^v${PREVIOUS_MAJOR}\.[0-9]+\.[0-9]+$" | sort -V | tail -n1 || echo "")

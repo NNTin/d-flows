@@ -1,6 +1,6 @@
 {
   "name": "Complete v0.1.1 to v1.0.0 Release Cycle",
-  "description": "Tests the complete release cycle from v0.1.1 to v1.0.0 including version bump, release creation, and tag management. This tests the critical v0 → v1 promotion scenario as documented in VERSIONING.md under 'Promoting to v1.0.0'. This is a special case where no release/v0 branch is created because v0 versions don't require long-term maintenance.",
+  "description": "Tests the complete release cycle from v0.2.1 to v1.0.0 including version bump, release creation, tag management, and automatic release/v0 branch creation. This tests the critical v0 → v1 promotion scenario as documented in VERSIONING.md under 'Promoting to v1.0.0', validating that v0 receives the same maintenance support as other major versions.",
   "steps": [
     {
       "name": "Setup initial state",
@@ -51,9 +51,19 @@
         {"type": "tag-exists", "tag": "v1.0.0"},
         {"type": "tag-exists", "tag": "v1"},
         {"type": "tag-points-to", "tag": "v1", "target": "v1.0.0"},
-        {"type": "branch-not-exists", "branch": "release/v0"},
+        {"type": "branch-exists", "branch": "release/v0"},
+        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.1"},
         {"type": "tag-exists", "tag": "v0.2.1"},
         {"type": "workflow-success", "workflow": "release.yml"}
+      ]
+    },
+    {
+      "name": "Validate release/v0 branch creation",
+      "action": "validate-state",
+      "checks": [
+        {"type": "branch-exists", "branch": "release/v0"},
+        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.1"},
+        {"type": "branch-on-remote", "branch": "release/v0"}
       ]
     },
     {

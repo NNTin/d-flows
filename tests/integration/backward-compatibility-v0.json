@@ -1,6 +1,6 @@
 {
   "name": "v0 Backward Compatibility",
-  "description": "Tests that releasing v1.0.0 doesn't break existing users who reference v0 in their workflows. This validates critical requirement that releasing v1.0.0 doesn't break v0 users, ensures smooth transition, and allows users to upgrade at their own pace.",
+  "description": "Tests that releasing v1.0.0 doesn't break existing users who reference v0 in their workflows, and that a release/v0 branch is created for continued v0 maintenance. This validates critical requirement that releasing v1.0.0 doesn't break v0 users, ensures smooth transition with maintenance support, and allows users to upgrade at their own pace.",
   "steps": [
     {
       "name": "Setup complete release history",
@@ -39,6 +39,14 @@
       "expectedOutputs": {
         "MAJOR_VERSION": "1"
       }
+    },
+    {
+      "name": "Validate release/v0 branch created",
+      "action": "validate-state",
+      "checks": [
+        {"type": "branch-exists", "branch": "release/v0"},
+        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.1"}
+      ]
     },
     {
       "name": "Validate v0 major tag exists",

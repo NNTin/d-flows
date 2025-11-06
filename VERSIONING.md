@@ -126,6 +126,8 @@ This workflow (`release.yml`) creates the actual GitHub release.
 
 This promotes your project from the initial development phase (v0.x.x) to the first stable major release (v1.0.0).
 
+**Note:** When promoting to v1.0.0, a `release/v0` branch is automatically created from the last v0 tag to enable continued v0 maintenance if needed.
+
 ### Releasing Minor and Patch Versions
 
 **Example scenario - Minor bump:**
@@ -154,11 +156,9 @@ This promotes your project from the initial development phase (v0.x.x) to the fi
 1. Run Bump Version workflow
 2. Select bump type: `major`
 3. Select target branch: `main`
-4. **Result**: Creates `v2.0.0`, creates `v2` tag, **automatically creates `release/v1` branch from the last v1 commit**
+4. **Result**: Creates `v2.0.0`, creates `v2` tag, **automatically creates `release/v1` branch from the last v1 commit (v1.2.0)**
 
-**Automatic post-release actions:** The workflow automatically creates `release/v1` branch from the last v1 commit (v1.2.0) to enable continued v1 maintenance. Main branch now tracks v2.x.x development.
-
-**Note:** Release branch creation is skipped for v0 → v1 transitions, as v0 versions typically don't require long-term maintenance.
+**Automatic post-release actions:** The workflow automatically creates a release branch for the previous major version (e.g., `release/v1` from v1.2.0) to enable continued maintenance. Main branch now tracks the new major version development.
 
 ### Patching an Older Major Version
 
@@ -186,13 +186,15 @@ Here's a chronological example showing the full lifecycle:
 2. **Feature Addition**: Create `v0.2.0` on `main` → `v0` points to `v0.2.0`
 3. **Bug Fix**: Create `v0.2.1` on `main` → `v0` points to `v0.2.1`
 4. **Promote to Stable**: Create `v1.0.0` on `main` → `v1` points to `v1.0.0`
+4.5. **Automatic Release Branch**: `release/v0` automatically created from v0.2.1 commit during v1.0.0 release
 5. **Feature Addition**: Create `v1.1.0` on `main` → `v1` points to `v1.1.0`
 6. **Major Release**: Create `v2.0.0` on `main` → `v2` points to `v2.0.0`
-7. **Automatic Release Branch**: `release/v1` automatically created from last v1 commit during v2.0.0 release
+7. **Automatic Release Branch**: `release/v1` automatically created from v1.1.0 commit during v2.0.0 release
 8. **Patch Old Version**: Create `v1.1.1` on `release/v1` → `v1` points to `v1.1.1`
 9. **Continue New Version**: Create `v2.1.0` on `main` → `v2` points to `v2.1.0`
 
 **Final state:**
+- `v0` → `v0.2.1` (on `release/v0` branch)
 - `v1` → `v1.1.1` (on `release/v1` branch)
 - `v2` → `v2.1.0` (on `main` branch)
 
@@ -201,7 +203,7 @@ Here's a chronological example showing the full lifecycle:
 ## Best Practices
 
 - **Always use the Bump Version workflow**: Avoid manually creating releases to ensure consistency
-- **Verify release branches**: After major version releases, verify that release branches were created automatically for the previous major version
+- **Verify release branches**: After major version releases, verify that release branches were created automatically for the previous major version (including `release/v0` when promoting to v1.0.0)
 - **Test before releasing**: Ensure all tests pass before triggering a release
 - **Use semantic versioning correctly**: Follow SemVer principles for bump type selection
 - **Document breaking changes**: When releasing major versions, clearly document what changed

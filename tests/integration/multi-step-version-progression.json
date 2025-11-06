@@ -1,6 +1,6 @@
 {
   "name": "Multi-Step Version Progression",
-  "description": "Tests the complete development lifecycle from initial release through stable v1.0.0 promotion, validating all bump types work correctly in sequence. This validates version progression follows semantic versioning rules, each bump type correctly resets lower components, and major tags update correctly at each step.",
+  "description": "Tests the complete development lifecycle from initial release through stable v1.0.0 promotion, validating all bump types work correctly in sequence. This validates version progression follows semantic versioning rules, each bump type correctly resets lower components, major tags update correctly at each step, and release/v0 branch is automatically created during v0→v1 promotion.",
   "steps": [
     {
       "name": "Setup initial clean state",
@@ -82,7 +82,9 @@
         {"type": "tag-exists", "tag": "v0.1.1"},
         {"type": "tag-exists", "tag": "v0.2.0"},
         {"type": "tag-exists", "tag": "v1.0.0"},
-        {"type": "major-tag-progression", "tags": ["v0", "v1"]}
+        {"type": "major-tag-progression", "tags": ["v0", "v1"]},
+        {"type": "branch-exists", "branch": "release/v0"},
+        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.0"}
       ]
     }
   ],
