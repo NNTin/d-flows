@@ -1,0 +1,12 @@
+{
+  "_comment": "Test fixture for a valid patch release (v1.2.3). Tests creating a release with all three version components. Git state required: No existing tag v1.2.3, existing tags v1.2.2, v1.2.1, v1.2.0, etc., main or release/v1 branch checked out. Expected outcome: Workflow should validate version format, create GitHub release with tag v1.2.3, update major tag v1 to point to v1.2.3, generate release notes. Setup: Run 'setup-test-git-state.ps1 -Scenario ValidReleaseV1Patch' before testing.",
+  "pull_request": null,
+  "inputs": {
+    "version": "1.2.3"
+  },
+  "github": {
+    "actor": "test-user",
+    "repository": "test-org/test-repo",
+    "workflow": "Release Workflow"
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "name": "Complete v0.1.1 to v1.0.0 Release Cycle",
+  "description": "Tests the complete release cycle from v0.2.1 to v1.0.0 including version bump, release creation, tag management, and automatic release/v0 branch creation. This tests the critical v0 → v1 promotion scenario as documented in VERSIONING.md under 'Promoting to v1.0.0', validating that v0 receives the same maintenance support as other major versions.",
+  "steps": [
+    {
+      "name": "Setup initial state",
+      "action": "setup-git-state",
+      "scenario": "MajorBumpV0ToV1",
+      "expectedState": {
+        "tags": ["v0.2.1"],
+        "branches": ["main"],
+        "currentBranch": "main"
+      }
+    },
+    {
+      "name": "Execute bump-version workflow",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/major-bump-v0-to-v1.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "1.0.0",
+        "FIRST_RELEASE": "false",
+        "CURRENT_MAJOR": "0"
+      },
+      "expectedStepSummary": [
+        "🔼 major bump: 0.2.1 → 1.0.0",
+        "✅ Version validation passed"
+      ]
+    },
+    {
+      "name": "Validate version calculation",
+      "action": "validate-state",
+      "checks": [
+        {"type": "version-greater", "current": "0.2.1", "new": "1.0.0"},
+        {"type": "major-increment", "from": 0, "to": 1}
+      ]
+    },
+    {
+      "name": "Execute release workflow",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v1.0.0.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "1"
+      }
+    },
+    {
+      "name": "Validate release artifacts",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v1.0.0"},
+        {"type": "tag-exists", "tag": "v1"},
+        {"type": "tag-points-to", "tag": "v1", "target": "v1.0.0"},
+        {"type": "branch-exists", "branch": "release/v0"},
+        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.1"},
+        {"type": "tag-exists", "tag": "v0.2.1"},
+        {"type": "workflow-success", "workflow": "release.yml"}
+      ]
+    },
+    {
+      "name": "Validate release/v0 branch creation",
+      "action": "validate-state",
+      "checks": [
+        {"type": "branch-exists", "branch": "release/v0"},
+        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.1"},
+        {"type": "branch-on-remote", "branch": "release/v0"}
+      ]
+    },
+    {
+      "name": "Validate backward compatibility",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-accessible", "tag": "v0.2.1"},
+        {"type": "tag-accessible", "tag": "v1.0.0"},
+        {"type": "major-tags-coexist", "tags": ["v0", "v1"]}
+      ]
+    }
+  ],
+  "cleanup": {
+    "action": "reset-git-state"
+  },
+  "expectedDuration": "30-60 seconds",
+  "tags": ["integration", "major-version", "v0-to-v1", "release-cycle"]
+}

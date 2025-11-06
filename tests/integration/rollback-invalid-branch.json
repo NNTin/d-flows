@@ -1,0 +1,67 @@
+{
+  "name": "Invalid Branch Format Error Recovery",
+  "description": "Tests recovery from invalid branch format errors. This validates that workflows validate branch format before processing, provide clear error messages explaining valid formats (main, release/vX), have no side effects from invalid branch attempts, and can recover by switching to valid branch.",
+  "steps": [
+    {
+      "name": "Setup invalid branch scenario",
+      "action": "setup-git-state",
+      "scenario": "InvalidBranch",
+      "expectedState": {
+        "tags": ["v0.1.0"],
+        "branches": ["main", "feature/test-branch"],
+        "currentBranch": "feature/test-branch"
+      }
+    },
+    {
+      "name": "Attempt bump on invalid branch (should fail)",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/error-invalid-branch-format.json",
+      "expectedFailure": true,
+      "expectedErrorMessage": ["branch", "format", "main", "release/v"]
+    },
+    {
+      "name": "Validate no side effects from failed attempt",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v0.1.0"},
+        {"type": "no-new-tags"},
+        {"type": "branch-exists", "branch": "feature/test-branch"}
+      ]
+    },
+    {
+      "name": "Recover: Switch to main branch",
+      "action": "execute-command",
+      "command": "git checkout main"
+    },
+    {
+      "name": "Validate recovery state",
+      "action": "validate-state",
+      "checks": [
+        {"type": "current-branch", "branch": "main"}
+      ]
+    },
+    {
+      "name": "Retry bump on main branch",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/patch-bump-main.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "0.1.1"
+      }
+    },
+    {
+      "name": "Validate success after recovery",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v0.1.1"},
+        {"type": "current-branch", "branch": "main"}
+      ]
+    }
+  ],
+  "cleanup": {
+    "action": "reset-git-state"
+  },
+  "expectedDuration": "30-60 seconds",
+  "tags": ["integration", "error-recovery", "branch-validation", "resilience"]
+}
