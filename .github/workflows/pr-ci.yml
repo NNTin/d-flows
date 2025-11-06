@@ -66,6 +66,8 @@ jobs:
     steps:
       - name: Build Discord Fields
         id: discord_fields
+        env:
+          HEAD_REF: ${{ github.head_ref }}
         run: |
           STATUS="${{ needs['validate-syntax'].result }}"
           
@@ -73,7 +75,7 @@ jobs:
           FIELDS=$(jq -n \
             --arg repo "${{ github.repository }}" \
             --arg pr_number "${{ github.event.pull_request.number }}" \
-            --arg branch "${{ github.head_ref }}" \
+            --arg branch "$HEAD_REF" \
             --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '[
               {"name": "Repository", "value": $repo, "inline": true},
