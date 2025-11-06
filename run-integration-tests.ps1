@@ -59,49 +59,49 @@ $Scenarios = @{
     "CompleteReleaseCycle" = @{
         Name = "Complete v0.1.1 to v1.0.0 Release Cycle"
         Description = "Tests the complete release cycle from v0.1.1 to v1.0.0"
-        File = "v0-to-v1-release-cycle.json"
+        File = "tests/integration/v0-to-v1-release-cycle.json"
         Tags = "major-version", "v0-to-v1", "release-cycle"
     }
     "MultiStepVersionProgression" = @{
         Name = "Multi-Step Version Progression"
         Description = "Tests sequential version bumps from v0.1.0 to v1.0.0"
-        File = "multi-step-version-progression.json"
+        File = "tests/integration/multi-step-version-progression.json"
         Tags = "version-progression", "all-bump-types"
     }
     "ReleaseBranchLifecycle" = @{
         Name = "Release Branch Lifecycle"
         Description = "Tests release branch creation and maintenance"
-        File = "release-branch-lifecycle.json"
+        File = "tests/integration/release-branch-lifecycle.json"
         Tags = "release-branch", "major-versions"
     }
     "DuplicateTagRecovery" = @{
         Name = "Duplicate Tag Error Recovery"
         Description = "Tests recovery from duplicate tag errors"
-        File = "rollback-duplicate-tag.json"
+        File = "tests/integration/rollback-duplicate-tag.json"
         Tags = "error-recovery", "duplicate-tag"
     }
     "InvalidBranchRecovery" = @{
         Name = "Invalid Branch Format Error Recovery"
         Description = "Tests recovery from invalid branch errors"
-        File = "rollback-invalid-branch.json"
+        File = "tests/integration/rollback-invalid-branch.json"
         Tags = "error-recovery", "branch-validation"
     }
     "FailedReleaseRetry" = @{
         Name = "Failed Release Workflow Retry"
         Description = "Tests retry after release workflow failure"
-        File = "rollback-failed-release.json"
+        File = "tests/integration/rollback-failed-release.json"
         Tags = "error-recovery", "workflow-separation"
     }
     "V0BackwardCompatibility" = @{
         Name = "v0 Backward Compatibility"
         Description = "Tests backward compatibility for v0 users after v1.0.0"
-        File = "backward-compatibility-v0.json"
+        File = "tests/integration/backward-compatibility-v0.json"
         Tags = "backward-compatibility", "v0-to-v1"
     }
     "MajorTagStability" = @{
         Name = "Major Tag Stability and Updates"
         Description = "Tests major tag update behavior and version pinning"
-        File = "major-tag-stability.json"
+        File = "tests/integration/major-tag-stability.json"
         Tags = "major-tag-management", "stability"
     }
 }
@@ -677,15 +677,6 @@ function Test-ReleaseBranchLifecycle {
     }
     
     return Invoke-ScenarioTest -Scenario $Scenario -TestName $TestName
-        return $BranchValid
-    }
-    catch {
-        Write-TestResult -TestName $TestName -Passed $false -Message $_.Exception.Message -Duration ((Get-Date) - $StartTime).TotalSeconds
-        return $false
-    }
-    finally {
-        Reset-GitState
-    }
 }
 
 function Test-DuplicateTagRecovery {
