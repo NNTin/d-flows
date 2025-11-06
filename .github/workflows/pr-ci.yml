@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-tags: ${{ !env.ACT }}  # Only fetch tags when NOT under act
 
       - name: Install actionlint
         shell: bash
@@ -28,6 +30,7 @@ jobs:
             echo "validation_result=success" >> "$GITHUB_OUTPUT"
           else
             echo "validation_result=failed" >> "$GITHUB_OUTPUT"
+            cat actionlint.log
             exit 1
           fi
 
@@ -66,14 +69,14 @@ jobs:
     steps:
       - name: Build Discord Fields
         id: discord_fields
+        env:
+          HEAD_REF: ${{ github.head_ref }}
         run: |
-          STATUS="${{ needs['validate-syntax'].result }}"
-          
           # Build JSON fields with readable formatting
           FIELDS=$(jq -n \
             --arg repo "${{ github.repository }}" \
             --arg pr_number "${{ github.event.pull_request.number }}" \
-            --arg branch "${{ github.head_ref }}" \
+            --arg branch "$HEAD_REF" \
             --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '[
               {"name": "Repository", "value": $repo, "inline": true},
@@ -84,9 +87,11 @@ jobs:
           
           # Use delimiter to safely output the multiline JSON
           delimiter="$(openssl rand -hex 8)"
-          echo "fields<<${delimiter}" >> $GITHUB_OUTPUT
-          echo "$FIELDS" >> $GITHUB_OUTPUT
-          echo "${delimiter}" >> $GITHUB_OUTPUT
+          {
+            echo "fields<<${delimiter}"
+            echo "$FIELDS"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
 
   notify-validation:
     uses: ./.github/workflows/discord-notify.yml
@@ -173,9 +178,11 @@ jobs:
           
           # Use delimiter to safely output the multiline JSON
           delimiter="$(openssl rand -hex 8)"
-          echo "fields<<${delimiter}" >> $GITHUB_OUTPUT
-          echo "$FIELDS" >> $GITHUB_OUTPUT
-          echo "${delimiter}" >> $GITHUB_OUTPUT
+          {
+            echo "fields<<${delimiter}"
+            echo "$FIELDS"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
 
   notify-completion:
     uses: ./.github/workflows/discord-notify.yml
