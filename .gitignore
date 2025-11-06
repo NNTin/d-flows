@@ -9,3 +9,9 @@ pr-event.json
 /.chunkhound.json
 /.chunkhound/db
 /.vscode/mcp.json
+
+# Test state files (act integration testing)
+.test-state/backup/
+.test-state/*.txt
+.test-state/*.json
+

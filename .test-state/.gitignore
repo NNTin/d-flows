@@ -1,0 +1,5 @@
+# Test state backup files
+# These are generated during act integration testing and should not be committed
+backup/
+*.txt
+*.json
