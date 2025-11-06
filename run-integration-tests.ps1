@@ -211,30 +211,42 @@ function Test-WorkflowOutput {
         return $true
     }
     
-    # Parse act output for workflow outputs (format: key=value)
-    # When act runs a workflow, outputs are captured in the logs with patterns like:
-    # "::set-output name=KEY::VALUE" or "KEY=VALUE" in environment
+    # Parse act output for workflow outputs
+    # Primary source: Look for distinctive "OUTPUT: KEY=VALUE" markers printed when running under act
+    # Fallback: Match patterns like "KEY=VALUE" which appear in act's output
+    # Fallback: Match ::set-output format used by newer GitHub Actions
     $OutputLines = $ActOutput -split "`n"
     
     foreach ($Line in $OutputLines) {
-        # Match patterns like "KEY=VALUE" which appear in act's output
-        if ($Line -match '^\s*([A-Z_][A-Z0-9_]*)=(.*)$') {
+        # PREFERRED: Match "OUTPUT: KEY=VALUE" markers (printed conditionally under ACT)
+        # This is the most reliable method for act testing
+        if ($Line -match '^\s*OUTPUT:\s*([A-Z_][A-Z0-9_]*)=(.*)$') {
             $Key = $matches[1]
-            $Value = $matches[2]
+            $Value = $matches[2].Trim()
             $ParsedOutputs[$Key] = $Value
             
             if ($Verbose) {
-                Write-Host "  ✓ Extracted output: $Key=$Value" -ForegroundColor Gray
+                Write-Host "  ✓ Extracted output (ACT marker): $Key=$Value" -ForegroundColor Cyan
             }
         }
-        # Also match ::set-output format used by newer GitHub Actions
+        # Match ::set-output format used by GitHub Actions
         elseif ($Line -match '::set-output\s+name=([A-Z_][A-Z0-9_]*)::(.*)$') {
             $Key = $matches[1]
-            $Value = $matches[2]
+            $Value = $matches[2].Trim()
             $ParsedOutputs[$Key] = $Value
             
             if ($Verbose) {
                 Write-Host "  ✓ Extracted output (set-output format): $Key=$Value" -ForegroundColor Gray
+            }
+        }
+        # Match plain "KEY=VALUE" patterns (fallback)
+        elseif ($Line -match '^\s*([A-Z_][A-Z0-9_]*)=(.+?)$' -and $Line -notmatch 'Output|output') {
+            $Key = $matches[1]
+            $Value = $matches[2].Trim()
+            $ParsedOutputs[$Key] = $Value
+            
+            if ($Verbose) {
+                Write-Host "  ✓ Extracted output (plain format): $Key=$Value" -ForegroundColor Gray
             }
         }
     }

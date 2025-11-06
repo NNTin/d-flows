@@ -206,6 +206,13 @@ jobs:
           echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_ENV"
           echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_OUTPUT"
           
+          # Print distinctive markers for act (ACT_TESTING_MODE)
+          if [[ -n "$ACT" ]]; then
+            echo "OUTPUT: NEW_VERSION=$NEW_VERSION"
+            echo "OUTPUT: FIRST_RELEASE=$FIRST_RELEASE"
+            echo "OUTPUT: CURRENT_MAJOR=$CURRENT_MAJOR"
+          fi
+          
           # Enforce main-branch semantics (bypass for first releases)
           if [[ "$TARGET_BRANCH" == "main" && "$FIRST_RELEASE" != "true" ]]; then
             # Determine highest major reachable from HEAD (main branch checked out)

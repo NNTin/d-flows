@@ -65,6 +65,11 @@ jobs:
           fi
           
           echo "MAJOR_VERSION=$MAJOR_VERSION" >> "$GITHUB_ENV"
+          
+          # Print distinctive markers for act (ACT_TESTING_MODE)
+          if [[ -n "$ACT" ]]; then
+            echo "OUTPUT: MAJOR_VERSION=$MAJOR_VERSION"
+          fi
 
       - name: Create annotated major tag
         shell: bash
