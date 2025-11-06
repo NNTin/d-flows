@@ -239,7 +239,7 @@ function Test-WorkflowOutput {
         }
     }
     
-    # Validate expected outputs
+    # Validate expected outputs - strict validation
     $AllValid = $true
     foreach ($ExpectedKey in $ExpectedOutputs.Keys) {
         $ExpectedValue = $ExpectedOutputs[$ExpectedKey]
@@ -265,8 +265,6 @@ function Test-GitState {
     param(
         [hashtable[]]$Checks
     )
-    
-    $AllPassed = $true
     
     foreach ($check in $Checks) {
         $CheckType = $check.Type
@@ -526,6 +524,19 @@ function Invoke-ScenarioStep {
                 $Checks = $Step.checks
                 
                 if ($Verbose) { Write-Host "    → Validating state with $($Checks.Count) checks" -ForegroundColor Gray }
+                
+                # Convert array of PSCustomObjects to hashtables if needed
+                if ($Checks -and $Checks[0] -is [System.Management.Automation.PSCustomObject]) {
+                    $ConvertedChecks = @()
+                    foreach ($check in $Checks) {
+                        $hashtable = @{}
+                        foreach ($property in $check.PSObject.Properties) {
+                            $hashtable[$property.Name] = $property.Value
+                        }
+                        $ConvertedChecks += $hashtable
+                    }
+                    $Checks = $ConvertedChecks
+                }
                 
                 $ChecksValid = Test-GitState -Checks $Checks
                 
