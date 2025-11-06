@@ -186,6 +186,72 @@ function Invoke-WorkflowTest {
     }
 }
 
+function Test-WorkflowOutput {
+    param(
+        [string]$ActOutput,
+        [string]$StepName,
+        [hashtable]$ExpectedOutputs
+    )
+    
+    $ParsedOutputs = @{}
+    
+    if ([string]::IsNullOrEmpty($ActOutput) -or $null -eq $ExpectedOutputs -or $ExpectedOutputs.Count -eq 0) {
+        if ($Verbose) {
+            Write-Host "  ⓘ Skipping output validation: ActOutput empty or no expected outputs" -ForegroundColor Gray
+        }
+        return $true
+    }
+    
+    # Parse act output for workflow outputs (format: key=value)
+    # When act runs a workflow, outputs are captured in the logs with patterns like:
+    # "::set-output name=KEY::VALUE" or "KEY=VALUE" in environment
+    $OutputLines = $ActOutput -split "`n"
+    
+    foreach ($Line in $OutputLines) {
+        # Match patterns like "KEY=VALUE" which appear in act's output
+        if ($Line -match '^\s*([A-Z_][A-Z0-9_]*)=(.*)$') {
+            $Key = $matches[1]
+            $Value = $matches[2]
+            $ParsedOutputs[$Key] = $Value
+            
+            if ($Verbose) {
+                Write-Host "  ✓ Extracted output: $Key=$Value" -ForegroundColor Gray
+            }
+        }
+        # Also match ::set-output format used by newer GitHub Actions
+        elseif ($Line -match '::set-output\s+name=([A-Z_][A-Z0-9_]*)::(.*)$') {
+            $Key = $matches[1]
+            $Value = $matches[2]
+            $ParsedOutputs[$Key] = $Value
+            
+            if ($Verbose) {
+                Write-Host "  ✓ Extracted output (set-output format): $Key=$Value" -ForegroundColor Gray
+            }
+        }
+    }
+    
+    # Validate expected outputs
+    $AllValid = $true
+    foreach ($ExpectedKey in $ExpectedOutputs.Keys) {
+        $ExpectedValue = $ExpectedOutputs[$ExpectedKey]
+        $ActualValue = $ParsedOutputs[$ExpectedKey]
+        
+        if ($null -eq $ActualValue) {
+            Write-Host "  ❌ Missing output: $ExpectedKey (expected '$ExpectedValue')" -ForegroundColor Red
+            $AllValid = $false
+        } elseif ($ActualValue -ne $ExpectedValue) {
+            Write-Host "  ❌ Output mismatch for $ExpectedKey: expected '$ExpectedValue', got '$ActualValue'" -ForegroundColor Red
+            $AllValid = $false
+        } else {
+            if ($Verbose) {
+                Write-Host "  ✓ Output validated: $ExpectedKey=$ActualValue" -ForegroundColor Green
+            }
+        }
+    }
+    
+    return $AllValid
+}
+
 function Test-GitState {
     param(
         [hashtable[]]$Checks
@@ -308,6 +374,19 @@ function Test-CompleteReleaseCycle {
             throw "Bump-version workflow failed"
         }
         
+        # Step 2.5: Validate bump-version workflow outputs
+        Write-Host "📊 Validating bump-version workflow outputs..." -ForegroundColor Cyan
+        $BumpExpectedOutputs = @{
+            "NEW_VERSION" = "1.0.0"
+            "FIRST_RELEASE" = "false"
+            "CURRENT_MAJOR" = "0"
+        }
+        $BumpOutputsValid = Test-WorkflowOutput -ActOutput ($BumpResult.Logs) -StepName "Calculate New Version" -ExpectedOutputs $BumpExpectedOutputs
+        
+        if (-not $BumpOutputsValid) {
+            throw "Bump-version workflow outputs validation failed"
+        }
+        
         # Step 3: Validate version calculation
         Write-Host "✅ Validating version calculation..." -ForegroundColor Cyan
         $VersionValid = (Compare-Versions "0.2.1" "1.0.0" "greater")
@@ -322,6 +401,17 @@ function Test-CompleteReleaseCycle {
         
         if (-not $ReleaseResult.Success) {
             throw "Release workflow failed"
+        }
+        
+        # Step 4.5: Validate release workflow outputs
+        Write-Host "📊 Validating release workflow outputs..." -ForegroundColor Cyan
+        $ReleaseExpectedOutputs = @{
+            "MAJOR_VERSION" = "1"
+        }
+        $ReleaseOutputsValid = Test-WorkflowOutput -ActOutput ($ReleaseResult.Logs) -StepName "Extract Major Version" -ExpectedOutputs $ReleaseExpectedOutputs
+        
+        if (-not $ReleaseOutputsValid) {
+            throw "Release workflow outputs validation failed"
         }
         
         # Step 5: Validate release artifacts
@@ -343,7 +433,7 @@ function Test-CompleteReleaseCycle {
         
         $NoBranchCreated = -not (Test-GitState -Checks $BranchCheck)
         
-        if ($TagsValid -and $VersionValid -and $NoBranchCreated) {
+        if ($TagsValid -and $VersionValid -and $NoBranchCreated -and $BumpOutputsValid -and $ReleaseOutputsValid) {
             Write-TestResult -TestName $TestName -Passed $true -Duration ((Get-Date) - $StartTime).TotalSeconds
             return $true
         } else {
@@ -369,24 +459,61 @@ function Test-MultiStepVersionProgression {
         Write-Host "📋 Setting up clean git state..." -ForegroundColor Cyan
         & "$ScriptDir\setup-test-git-state.ps1" -Scenario FirstRelease | Out-Null
         
+        # Step 1: First release (v0.1.0)
         Write-Host "📦 Testing first release (v0.1.0)..." -ForegroundColor Cyan
         $FirstResult = Invoke-WorkflowTest -Workflow "bump-version.yml" -Fixture "tests/bump-version/first-release-main.json"
         if (-not $FirstResult.Success) { throw "First release failed" }
         
+        Write-Host "📊 Validating first release outputs..." -ForegroundColor Cyan
+        $FirstExpectedOutputs = @{
+            "NEW_VERSION" = "0.1.0"
+            "FIRST_RELEASE" = "true"
+        }
+        $FirstOutputsValid = Test-WorkflowOutput -ActOutput ($FirstResult.Logs) -StepName "Calculate New Version" -ExpectedOutputs $FirstExpectedOutputs
+        if (-not $FirstOutputsValid) { throw "First release output validation failed" }
+        
+        # Step 2: Patch bump (v0.1.0 → v0.1.1)
         Write-Host "⬆️  Testing patch bump (v0.1.0 → v0.1.1)..." -ForegroundColor Cyan
         $PatchResult = Invoke-WorkflowTest -Workflow "bump-version.yml" -Fixture "tests/bump-version/patch-bump-main.json"
         if (-not $PatchResult.Success) { throw "Patch bump failed" }
         
+        Write-Host "📊 Validating patch bump outputs..." -ForegroundColor Cyan
+        $PatchExpectedOutputs = @{
+            "NEW_VERSION" = "0.1.1"
+            "FIRST_RELEASE" = "false"
+        }
+        $PatchOutputsValid = Test-WorkflowOutput -ActOutput ($PatchResult.Logs) -StepName "Calculate New Version" -ExpectedOutputs $PatchExpectedOutputs
+        if (-not $PatchOutputsValid) { throw "Patch bump output validation failed" }
+        
+        # Step 3: Minor bump (v0.1.1 → v0.2.0)
         Write-Host "⬆️  Testing minor bump (v0.1.1 → v0.2.0)..." -ForegroundColor Cyan
         $MinorResult = Invoke-WorkflowTest -Workflow "bump-version.yml" -Fixture "tests/bump-version/minor-bump-main.json"
         if (-not $MinorResult.Success) { throw "Minor bump failed" }
         
+        Write-Host "📊 Validating minor bump outputs..." -ForegroundColor Cyan
+        $MinorExpectedOutputs = @{
+            "NEW_VERSION" = "0.2.0"
+            "FIRST_RELEASE" = "false"
+        }
+        $MinorOutputsValid = Test-WorkflowOutput -ActOutput ($MinorResult.Logs) -StepName "Calculate New Version" -ExpectedOutputs $MinorExpectedOutputs
+        if (-not $MinorOutputsValid) { throw "Minor bump output validation failed" }
+        
+        # Step 4: Major bump (v0.2.0 → v1.0.0)
         Write-Host "⬆️  Testing major bump (v0.2.0 → v1.0.0)..." -ForegroundColor Cyan
         $MajorResult = Invoke-WorkflowTest -Workflow "bump-version.yml" -Fixture "tests/bump-version/major-bump-v0-to-v1.json"
         if (-not $MajorResult.Success) { throw "Major bump failed" }
         
+        Write-Host "📊 Validating major bump outputs..." -ForegroundColor Cyan
+        $MajorExpectedOutputs = @{
+            "NEW_VERSION" = "1.0.0"
+            "FIRST_RELEASE" = "false"
+            "CURRENT_MAJOR" = "0"
+        }
+        $MajorOutputsValid = Test-WorkflowOutput -ActOutput ($MajorResult.Logs) -StepName "Calculate New Version" -ExpectedOutputs $MajorExpectedOutputs
+        if (-not $MajorOutputsValid) { throw "Major bump output validation failed" }
+        
         Write-Host "✅ Validating progression..." -ForegroundColor Cyan
-        $AllValid = $true
+        $AllValid = $FirstOutputsValid -and $PatchOutputsValid -and $MinorOutputsValid -and $MajorOutputsValid
         
         Write-TestResult -TestName $TestName -Passed $AllValid -Duration ((Get-Date) - $StartTime).TotalSeconds
         return $AllValid
