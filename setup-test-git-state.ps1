@@ -61,7 +61,9 @@ param(
         "FirstReleaseError", "MajorVersionMismatch", "ValidReleaseV0", "ValidReleaseV1",
         "ValidReleaseV1Patch", "DuplicateReleaseTag", "Reset"
     )]
-    [string]$Scenario
+    [string]$Scenario,
+    
+    [switch]$AutoCleanup
 )
 
 # Safety check - ensure we're in d-flows repository
@@ -74,10 +76,15 @@ function Test-GitStateReady {
     $repoRoot = git rev-parse --show-toplevel 2>$null
     if (-not $repoRoot -or -not (Test-Path (Join-Path $repoRoot ".github/workflows/bump-version.yml"))) {
         Write-Warning "This doesn't appear to be the d-flows repository."
-        $confirm = Read-Host "Are you sure you want to modify git state? (y/N)"
-        if ($confirm -ne "y" -and $confirm -ne "Y") {
-            Write-Output "Aborted by user."
-            exit 1
+        
+        if ($AutoCleanup) {
+            Write-Output "Running in automated mode. Proceeding without confirmation."
+        } else {
+            $confirm = Read-Host "Are you sure you want to modify git state? (y/N)"
+            if ($confirm -ne "y" -and $confirm -ne "Y") {
+                Write-Output "Aborted by user."
+                exit 1
+            }
         }
     }
 }
@@ -162,7 +169,14 @@ function Reset-TestGitState {
         }
         
         Write-Output ""
-        $cleanupChoice = Read-Host "Clean up test files and reset working tree to clean state? (y/N)"
+        
+        # Determine cleanup choice based on AutoCleanup parameter
+        if ($AutoCleanup) {
+            $cleanupChoice = "N"  # Default to N (don't cleanup) for automated runs
+            Write-Output "Auto-cleanup disabled. Keeping test files and working tree changes."
+        } else {
+            $cleanupChoice = Read-Host "Clean up test files and reset working tree to clean state? (y/N)"
+        }
         
         if ($cleanupChoice -eq "y" -or $cleanupChoice -eq "Y") {
             # Remove test state directory if it exists

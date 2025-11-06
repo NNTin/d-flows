@@ -477,7 +477,7 @@ function Invoke-ScenarioStep {
             "setup-git-state" {
                 $Scenario = $Step.scenario
                 if ($Verbose) { Write-Host "    → Running setup-test-git-state.ps1 -Scenario $Scenario" -ForegroundColor Gray }
-                & "$ScriptDir\setup-test-git-state.ps1" -Scenario $Scenario | Out-Null
+                & "$ScriptDir\setup-test-git-state.ps1" -Scenario $Scenario -AutoCleanup | Out-Null
                 return $true
             }
             "run-workflow" {
@@ -629,7 +629,7 @@ function New-TestReport {
 function Reset-GitState {
     try {
         if ($Verbose) { Write-Host "  Resetting git state..." -ForegroundColor Gray }
-        & "$ScriptDir\setup-test-git-state.ps1" -Scenario Reset | Out-Null
+        & "$ScriptDir\setup-test-git-state.ps1" -Scenario Reset -AutoCleanup | Out-Null
         return $true
     }
     catch {
