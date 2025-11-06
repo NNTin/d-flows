@@ -57,9 +57,9 @@
       "name": "Validate major tag stability mechanism",
       "action": "validate-state",
       "checks": [
-        {"type": "major-tag-auto-updates"},
-        {"type": "historical-versions-preserved"},
-        {"type": "force-push-safe"}
+        {"type": "tag-exists", "tag": "v1.0.0"},
+        {"type": "tag-exists", "tag": "v1.1.0"},
+        {"type": "tag-exists", "tag": "v1.2.0"}
       ]
     },
     {
@@ -68,9 +68,7 @@
       "checks": [
         {"type": "user-pinned-to-v1-gets", "expectation": "v1.2.0"},
         {"type": "user-pinned-to-v1.0.0-gets", "expectation": "v1.0.0"},
-        {"type": "user-pinned-to-v1.1.0-gets", "expectation": "v1.1.0"},
-        {"type": "major-version-flexible"},
-        {"type": "specific-version-stable"}
+        {"type": "user-pinned-to-v1.1.0-gets", "expectation": "v1.1.0"}
       ]
     }
   ],

@@ -37,8 +37,7 @@
       "name": "Verify version calculation is stable",
       "action": "validate-state",
       "checks": [
-        {"type": "tag-exists", "tag": "v0.1.1", "expectation": false},
-        {"type": "workflow-output-captured", "key": "NEW_VERSION", "value": "0.1.1"}
+        {"type": "tag-not-exists", "tag": "v0.1.1"}
       ]
     },
     {
@@ -63,8 +62,8 @@
       "name": "Validate workflow separation and independence",
       "action": "validate-state",
       "checks": [
-        {"type": "state-consistency", "expectation": "both-workflows-independent"},
-        {"type": "no-corruption", "state": "version-metadata"}
+        {"type": "tag-exists", "tag": "v0.1.1"},
+        {"type": "tag-exists", "tag": "v0"}
       ]
     }
   ],

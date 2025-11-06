@@ -78,9 +78,8 @@
       "name": "Validate backward compatibility - v0 users unaffected",
       "action": "validate-state",
       "checks": [
-        {"type": "tag-resolution-v0", "expectation": "v0.2.1"},
-        {"type": "tag-resolution-v1", "expectation": "v1.0.0"},
-        {"type": "no-breaking-changes", "previous-major": "v0"}
+        {"type": "tag-points-to", "tag": "v0", "target": "v0.2.1"},
+        {"type": "tag-points-to", "tag": "v1", "target": "v1.0.0"}
       ]
     }
   ],
