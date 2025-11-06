@@ -541,7 +541,9 @@ function Get-ScenarioFromJson {
     )
     
     try {
-        $FilePath = Join-Path $RepositoryRoot $ScenarioFile
+        # Convert forward slashes to backslashes for Windows compatibility
+        $ScenarioFilePath = $ScenarioFile -replace '/', '\'
+        $FilePath = Join-Path $RepositoryRoot $ScenarioFilePath
         
         if (-not (Test-Path $FilePath)) {
             Write-Host "❌ Scenario file not found: $FilePath" -ForegroundColor Red
@@ -744,7 +746,14 @@ function New-TestReport {
 function Reset-GitState {
     try {
         if ($Verbose) { Write-Host "  Resetting git state..." -ForegroundColor Gray }
-        & "$ScriptDir\setup-test-git-state.ps1" -Scenario Reset -AutoCleanup | Out-Null
+        
+        $SetupScript = Join-Path $ScriptDir "setup-test-git-state.ps1"
+        if (-not (Test-Path $SetupScript)) {
+            Write-Host "  Warning: Setup script not found at $SetupScript" -ForegroundColor Yellow
+            return $false
+        }
+        
+        & $SetupScript -Scenario Reset -AutoCleanup | Out-Null
         return $true
     }
     catch {

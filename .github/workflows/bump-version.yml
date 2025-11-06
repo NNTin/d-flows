@@ -207,10 +207,15 @@ jobs:
           echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_OUTPUT"
           
           # Print distinctive markers for act (ACT_TESTING_MODE)
+          # Output to stdout and step summary to ensure visibility
           if [[ -n "$ACT" ]]; then
             echo "OUTPUT: NEW_VERSION=$NEW_VERSION"
             echo "OUTPUT: FIRST_RELEASE=$FIRST_RELEASE"
             echo "OUTPUT: CURRENT_MAJOR=$CURRENT_MAJOR"
+            # Also write to step summary for act compatibility
+            echo "OUTPUT: NEW_VERSION=$NEW_VERSION" >> "$GITHUB_STEP_SUMMARY"
+            echo "OUTPUT: FIRST_RELEASE=$FIRST_RELEASE" >> "$GITHUB_STEP_SUMMARY"
+            echo "OUTPUT: CURRENT_MAJOR=$CURRENT_MAJOR" >> "$GITHUB_STEP_SUMMARY"
           fi
           
           # Enforce main-branch semantics (bypass for first releases)
