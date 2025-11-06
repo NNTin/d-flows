@@ -44,7 +44,7 @@ param(
 # Configuration
 $ErrorActionPreference = "Stop"
 $TestStartTime = Get-Date
-$RepositoryRoot = (git rev-parse --show-toplevel) -replace '\\', '/'
+$RepositoryRoot = git rev-parse --show-toplevel
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $IntegrationTestDir = Join-Path $RepositoryRoot "tests\integration"
 
@@ -190,10 +190,19 @@ function Test-WorkflowOutput {
     param(
         [string]$ActOutput,
         [string]$StepName,
-        [hashtable]$ExpectedOutputs
+        $ExpectedOutputs  # Accept both hashtable and PSCustomObject
     )
     
     $ParsedOutputs = @{}
+    
+    # Convert PSCustomObject to hashtable if needed
+    if ($ExpectedOutputs -is [System.Management.Automation.PSCustomObject]) {
+        $hashtable = @{}
+        foreach ($property in $ExpectedOutputs.PSObject.Properties) {
+            $hashtable[$property.Name] = $property.Value
+        }
+        $ExpectedOutputs = $hashtable
+    }
     
     if ([string]::IsNullOrEmpty($ActOutput) -or $null -eq $ExpectedOutputs -or $ExpectedOutputs.Count -eq 0) {
         if ($Verbose) {
