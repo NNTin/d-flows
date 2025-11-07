@@ -55,7 +55,7 @@ jobs:
           echo "📋 Git tags AFTER cleanup:"
           git tag -l || echo "No tags"
           
-          TAG_FILE=".test-state/test-tags.txt"
+          TAG_FILE="${TEST_STATE_PATH:-/tmp/test-state}/test-tags.txt"
           if [[ -f "$TAG_FILE" ]]; then
             echo "📋 Found test tags file: $TAG_FILE"
             echo "📋 Contents of test-tags.txt:"

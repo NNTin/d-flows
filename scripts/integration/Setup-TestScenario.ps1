@@ -26,7 +26,8 @@
     This script is designed to be:
     - Dot-sourceable for use by other integration testing scripts
     - Compatible with Apply-TestFixtures.ps1 and Backup-GitState.ps1
-    - Integrated with bump-version.yml workflow (lines 41-79)
+    - Integrated with bump-version.yml workflow (line 58)
+    - Exporting test-tags.txt file to system temp directory for bump-version.yml workflow access
 
 .PARAMETER ScenarioName
     Used by functions that require a specific scenario (e.g., Get-ScenarioDefinition, Set-TestScenario).
@@ -70,10 +71,17 @@
     - Branch: Optional branch name if tag should be on specific branch (default: main)
 
     Integration with bump-version.yml:
-    - The workflow reads test-tags.txt from system temp directory at lines 41-79
+    - The workflow reads test-tags.txt from /tmp/test-state/test-tags.txt (mounted from system temp) at line 58
     - Format must match: "tag_name commit_sha" (one per line)
     - All existing tags are deleted first, then restored from this file
-    - This ensures clean, reproducible state for each act run
+    - This ensures clean, reproducible state for each act run. The temp directory is automatically cleaned up after test execution.
+
+    Test State Storage:
+    - Test state stored in system temp at d-flows-test-state-<guid>/
+    - Each script execution gets unique GUID-based subdirectory for isolation
+    - Cross-platform: Windows (%TEMP%), Linux (/tmp)
+    - Directory is mounted to /tmp/test-state in Docker containers for act workflows
+    - The calling script (Run-ActTests.ps1) manages cleanup
 
     Compatibility:
     - Works with Apply-TestFixtures.ps1 for fixture application

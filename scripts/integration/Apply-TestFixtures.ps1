@@ -6,7 +6,7 @@
     This script applies test fixtures and scenarios to create reproducible git repository
     state (tags and branches) for integration testing with act. It parses fixture JSON files
     to extract scenario requirements, creates the necessary git state, and generates
-    .test-state/test-tags.txt for the bump-version.yml workflow.
+    test-tags.txt in system temp directory for the bump-version.yml workflow.
 
     The script supports:
     - Parsing fixture JSON files to extract scenarios
@@ -41,7 +41,7 @@
     Default: $false.
 
 .PARAMETER OutputPath
-    Custom path for the generated test-tags.txt file. Default: .test-state/test-tags.txt.
+    Custom path for the generated test-tags.txt file. Default: <temp>/d-flows-test-state-<guid>/test-tags.txt.
 
 .EXAMPLE
     # Dot-source to load functions
@@ -76,8 +76,9 @@
 
     Tag Format in test-tags.txt:
     - Plain text file: "tag_name commit_sha" (one per line)
-    - Matches format expected by bump-version.yml lines 58-79
-    - Comments starting with # are preserved
+    - Matches format expected by bump-version.yml line 58
+    - File is stored in system temp directory and mounted to /tmp/test-state in Docker containers
+    - Comments starting with # are allowed
 
     Edge Cases Handled:
     - Empty repository: Creates initial commit before adding tags
@@ -87,10 +88,16 @@
     - Detached HEAD: Handles gracefully during branch checkout
 
     Integration with bump-version.yml:
-    - The workflow reads .test-state/test-tags.txt at lines 41-79
-    - All existing tags are deleted first (line 53)
-    - Tags are restored from test-tags.txt (lines 65-70)
-    - This ensures clean, reproducible state for each act run
+    - The workflow reads test-tags.txt from /tmp/test-state/test-tags.txt (mounted from system temp) at line 58
+    - All existing tags are deleted first
+    - Tags are restored from test-tags.txt
+    - This ensures clean, reproducible state for each act run. The temp directory is managed by the calling script.
+
+    Test State Storage:
+    - Test state stored in system temp at d-flows-test-state-<guid>/
+    - Cross-platform temp path resolution (Windows: %TEMP%, Linux: /tmp)
+    - Each script execution gets unique GUID-based subdirectory for isolation
+    - Directory is mounted to /tmp/test-state in Docker containers
 
     Compatibility with Backup-GitState.ps1:
     - Can backup git state before applying fixtures: Backup-GitState

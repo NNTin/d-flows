@@ -102,12 +102,21 @@
     - Workflows detect act via $ACT environment variable
     - Workflows output "OUTPUT: KEY=VALUE" markers for validation
     - Workflows skip push operations when running under act
-    - Test tags file is accessible in container from temp directory
+    - Test state directory is mounted to /tmp/test-state in containers
     
     Docker Container Considerations:
     - Repository is mounted into container
     - No network access in container (skip remote validations)
     - Act configuration from .actrc is used automatically
+    - Test state directory is mounted as read-write volume
+    
+    Test State Management:
+    - Test state stored in system temp directory: d-flows-test-state-<guid>
+    - Each test run generates unique GUID for isolation
+    - Cross-platform: Windows (%TEMP%), Linux (/tmp)
+    - Automatically cleaned up after test execution
+    - Use -SkipCleanup to preserve for debugging
+    - Directory is mounted to /tmp/test-state in Docker containers for act workflows
     
     Expected Test Duration:
     - Individual tests typically take 30-120 seconds
@@ -222,7 +231,9 @@ function Get-RepositoryRoot {
     Create test state directories if they don't exist.
 
 .DESCRIPTION
-    Creates test state and logs directories in system temp location.
+    Creates test state and logs directories in system temp location with unique GUID-based naming.
+    Each script execution generates a unique GUID-based subdirectory (d-flows-test-state-<guid>)
+    to ensure test isolation and prevent conflicts between concurrent test runs.
 
 .EXAMPLE
     $testStateDir = New-TestStateDirectory
@@ -230,6 +241,13 @@ function Get-RepositoryRoot {
 
 .NOTES
     Returns the full path to the test state directory in temp.
+    
+    Directory is automatically cleaned up at script end unless -SkipCleanup is specified.
+    
+    Cross-platform temp path resolution:
+    - Windows: Uses %TEMP% environment variable
+    - Linux: Uses /tmp directory
+    - Resolved via [System.IO.Path]::GetTempPath()
 #>
 function New-TestStateDirectory {
     $testStatePath = Get-TestStateBasePath
@@ -252,6 +270,65 @@ function New-TestStateDirectory {
     }
 
     return $testStatePath
+}
+
+<#
+.SYNOPSIS
+    Remove test state directory and all contents.
+
+.DESCRIPTION
+    Deletes the test state directory recursively, including all backup files, logs, and metadata.
+    This function is called automatically at script end to clean up temporary test artifacts
+    unless the -SkipCleanup parameter is specified for debugging purposes.
+
+    Handles permission errors gracefully with try-catch to ensure cleanup doesn't fail the entire test run.
+
+.PARAMETER Path
+    Optional path to the directory to remove. Defaults to $TestStateDirectory global variable.
+    Example: "C:\Users\test\AppData\Local\Temp\d-flows-test-state-abc123"
+
+.EXAMPLE
+    # Remove the current test state directory
+    Remove-TestStateDirectory
+
+.EXAMPLE
+    # Remove a specific test state directory
+    Remove-TestStateDirectory -Path "C:\Users\test\AppData\Local\Temp\d-flows-test-state-xyz789"
+
+.NOTES
+    Called automatically at script end unless -SkipCleanup is specified.
+    
+    Use -SkipCleanup when:
+    - Debugging test failures and need to inspect test state
+    - Troubleshooting temp directory issues
+    - Manual inspection of backup files and logs
+    
+    Safe to call multiple times (checks for existence first).
+    
+    Cross-Platform:
+    - Windows: Removes directory from %TEMP%\d-flows-test-state-<guid>\
+    - Linux: Removes directory from /tmp/d-flows-test-state-<guid>/
+#>
+function Remove-TestStateDirectory {
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$Path = $TestStateDirectory
+    )
+
+    try {
+        if (Test-Path $Path) {
+            Write-Debug "$($Emojis.Debug) Removing test state directory: $Path"
+            Remove-Item -Path $Path -Recurse -Force -ErrorAction Stop
+            Write-Debug "$($Emojis.Debug) Test state directory removed successfully"
+            return $true
+        } else {
+            Write-Debug "$($Emojis.Debug) Test state directory does not exist: $Path"
+            return $true
+        }
+    } catch {
+        Write-DebugMessage -Type "WARNING" -Message "Failed to remove test state directory: $_"
+        return $false
+    }
 }
 
 <#
@@ -2523,6 +2600,19 @@ if ($MyInvocation.InvocationName -ne ".") {
     # Export report
     # How to view test logs: Check system temp directory for d-flows-test-state-*/logs/ directory
     $reportPath = Export-TestReport -TestResults $testResults
+    
+    # Cleanup test state directory
+    if (-not $SkipCleanup) {
+        Write-Debug "$($Emojis.Cleanup) Cleaning up test state directory"
+        $cleanupResult = Remove-TestStateDirectory
+        if ($cleanupResult) {
+            Write-DebugMessage -Type "SUCCESS" -Message "Test state directory cleaned up successfully"
+        } else {
+            Write-DebugMessage -Type "WARNING" -Message "Failed to clean up test state directory - may require manual removal"
+        }
+    } else {
+        Write-DebugMessage -Type "INFO" -Message "Test state directory preserved for debugging: $TestStateDirectory"
+    }
     
     # Exit with appropriate code
     $failedTests = @($testResults | Where-Object { -not $_.Success }).Count

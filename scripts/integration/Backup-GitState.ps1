@@ -46,7 +46,8 @@
     - Branches: JSON file "branches-<name>.json" with structure containing currentBranch and branches array
     - Manifest: JSON file "manifest-<name>.json" with backup metadata
 
-    Storage Location: System temp directory in d-flows-test-state-<guid>/backup/
+    Storage Location: System temp directory (Windows: %TEMP%, Linux: /tmp) in subdirectory d-flows-test-state-<guid>/backup/
+    Each script execution generates a unique GUID for isolation. The temp directory is managed by the calling script (e.g., Run-ActTests.ps1).
 
     Edge Cases Handled:
     - Empty repositories (no tags/branches)
@@ -57,8 +58,8 @@
     - Permission issues
 
     Compatibility:
-    - Tag format matches .github/workflows/bump-version.yml line 65-70 format
-    - Integrates with .test-state/test-tags.txt used by workflow
+    - Tag format matches .github/workflows/bump-version.yml line 58 format
+    - Integrates with test-tags.txt in temp directory, mounted to /tmp/test-state in Docker containers
 #>
 
 # ============================================================================
