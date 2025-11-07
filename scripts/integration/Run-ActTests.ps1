@@ -1151,8 +1151,8 @@ function Validate-TagPointsTo {
     )
     
     try {
-        $tagSha = git rev-parse $Tag 2>$null
-        $targetSha = git rev-parse $Target 2>$null
+        $tagSha = git rev-parse "$Tag^{commit}" 2>$null
+        $targetSha = git rev-parse "$Target^{commit}" 2>$null
         
         $matches = ($tagSha -eq $targetSha)
         
