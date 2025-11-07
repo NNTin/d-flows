@@ -64,7 +64,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: 
+        run: |
           if [[ -n "$ACT" ]]; then        
             VERSION="v${{ inputs.version }}"
             git tag -a "$VERSION" -f -m "Release $VERSION"
@@ -100,10 +100,14 @@ jobs:
           git tag -a "v$MAJOR_VERSION" -f -m "Update v$MAJOR_VERSION -> v${{ inputs.version }}"
 
       - name: Push major tag
-        if: ${{ !env.ACT }} # only run if NOT running under act
         shell: bash
         run: |
-          git push origin "v$MAJOR_VERSION"
+          if [[ -n "$ACT" ]]; then        
+            git remote add host /github/workspace
+            git push host --tags
+          else
+            git push origin "v$MAJOR_VERSION"
+          fi
 
       - name: Update step summary with major tag information
         shell: bash
