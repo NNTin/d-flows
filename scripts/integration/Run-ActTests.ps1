@@ -666,6 +666,9 @@ function Invoke-ActWorkflow {
     # Set ACT environment variable for workflows
     $actArgs += "--env"
     $actArgs += "ACT=true"
+
+    # Bind current directory, this will write to git repository
+    $actArgs += "--bind"
     
     # Execute act and capture output
     $startTime = Get-Date
