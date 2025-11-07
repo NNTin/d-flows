@@ -241,19 +241,18 @@ Write-Debug "$($Emojis.Debug) Loaded $($ScenarioDefinitions.Count) scenario defi
     Throws an error if not in a git repository.
 #>
 function Get-RepositoryRoot {
-    $currentPath = Get-Location
-    $searchPath = $currentPath
+    $searchPath = (Get-Location).Path
 
-    while ($searchPath.Path -ne (Split-Path $searchPath.Path)) {
+    while ($searchPath -ne (Split-Path $searchPath)) {
         Write-Debug "$($Emojis.Debug) Searching for .git in: $searchPath"
         
-        $gitPath = Join-Path $searchPath.Path ".git"
+        $gitPath = Join-Path $searchPath ".git"
         if (Test-Path $gitPath) {
-            Write-Debug "$($Emojis.Debug) Found repository root: $($searchPath.Path)"
-            return $searchPath.Path
+            Write-Debug "$($Emojis.Debug) Found repository root: $searchPath"
+            return $searchPath
         }
         
-        $searchPath = Split-Path $searchPath.Path -Parent
+        $searchPath = Split-Path $searchPath -Parent
     }
 
     throw "❌ Not in a git repository. Please navigate to the repository root and try again."
@@ -325,7 +324,13 @@ function Write-DebugMessage {
         default   { "ℹ️" }
     }
 
-    $color = $Colors[$Type.ToLower()]
+    $color = switch ($Type) {
+        "INFO"    { $Colors.Info }
+        "SUCCESS" { $Colors.Success }
+        "WARNING" { $Colors.Warning }
+        "ERROR"   { $Colors.Error }
+        default   { $Colors.Info }
+    }
     
     Write-Host "$emoji $Message" -ForegroundColor $color
 }

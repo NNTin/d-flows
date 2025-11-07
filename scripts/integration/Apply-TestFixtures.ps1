@@ -296,7 +296,13 @@ function Write-DebugMessage {
         default   { "ℹ️" }
     }
 
-    $color = $Colors[$Type.ToLower()]
+    $color = switch ($Type) {
+        "INFO"    { $Colors.Info }
+        "SUCCESS" { $Colors.Success }
+        "WARNING" { $Colors.Warning }
+        "ERROR"   { $Colors.Error }
+        default   { $Colors.Info }
+    }
     
     Write-Host "$emoji $Message" -ForegroundColor $color
 }
@@ -929,10 +935,10 @@ function Export-TestTagsFile {
         Write-DebugMessage -Type "INFO" -Message "Generating test-tags.txt file"
         Write-Debug "$($Emojis.Debug) Output path: $OutputPath"
 
-        # If no tags specified, get all tags
+        # Only export tags that were explicitly passed
         if (-not $Tags -or $Tags.Count -eq 0) {
-            $Tags = @(git tag -l)
-            Write-Debug "$($Emojis.Debug) No tags specified, using all repository tags: $($Tags.Count) tags"
+            Write-Debug "$($Emojis.Debug) No tags specified, will write header only"
+            $Tags = @()
         }
 
         # Build file content
@@ -967,7 +973,8 @@ function Export-TestTagsFile {
         # Write to file
         $fileContent | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
         
-        Write-DebugMessage -Type "SUCCESS" -Message "Test-tags.txt generated with $($fileContent.Count - 3) tags"
+        $tagCount = $fileContent.Count - 3
+        Write-DebugMessage -Type "SUCCESS" -Message "Test-tags.txt generated with $tagCount tags"
         Write-Debug "$($Emojis.Debug) File path: $OutputPath"
 
         return $OutputPath
@@ -1080,7 +1087,8 @@ function Apply-Scenario {
         [string]$ScenarioName,
         
         [bool]$CleanState = $false,
-        [bool]$Force = $false
+        [bool]$Force = $false,
+        [object]$ExpectedState = $null
     )
 
     try {
@@ -1094,6 +1102,34 @@ function Apply-Scenario {
 
         $scenario = $ScenarioDefinitions[$ScenarioName]
         Write-Debug "$($Emojis.Scenario) Scenario description: $($scenario.Description)"
+
+        # Apply expectedState overrides if provided
+        if ($ExpectedState) {
+            Write-Debug "$($Emojis.Debug) Applying expectedState overrides from fixture"
+            
+            # Override tags if specified in expectedState
+            if ($ExpectedState.tags) {
+                Write-Debug "$($Emojis.Debug) Overriding tags from fixture: $($ExpectedState.tags -join ', ')"
+                $scenario.Tags = @()
+                foreach ($tagName in $ExpectedState.tags) {
+                    $scenario.Tags += @{ Name = $tagName; CommitMessage = "Release $tagName" }
+                }
+            }
+            
+            # Override branches if specified in expectedState
+            if ($ExpectedState.branches) {
+                Write-Debug "$($Emojis.Debug) Overriding branches from fixture: $($ExpectedState.branches -join ', ')"
+                $scenario.Branches = $ExpectedState.branches
+            }
+            
+            # Override currentBranch if specified in expectedState
+            if ($ExpectedState.currentBranch) {
+                Write-Debug "$($Emojis.Debug) Overriding currentBranch from fixture: $($ExpectedState.currentBranch)"
+                $scenario.CurrentBranch = $ExpectedState.currentBranch
+            }
+            
+            Write-DebugMessage -Type "INFO" -Message "Fixture-specific state overrides applied to scenario"
+        }
 
         # Clean state if requested
         if ($CleanState) {
@@ -1149,9 +1185,9 @@ function Apply-Scenario {
                 # If we have tags, point branch to appropriate tag's commit
                 # Otherwise create at HEAD
                 $branchSha = $null
-                foreach ($tagName in $scenario.Tags) {
-                    if ($tagCommitMap.ContainsKey($tagName)) {
-                        $branchSha = $tagCommitMap[$tagName]
+                foreach ($tag in $scenario.Tags) {
+                    if ($tagCommitMap.ContainsKey($tag.Name)) {
+                        $branchSha = $tagCommitMap[$tag.Name]
                         break
                     }
                 }
@@ -1263,6 +1299,7 @@ function Apply-TestFixtures {
         Write-DebugMessage -Type "INFO" -Message "Starting test fixture application"
 
         $scenarioToApply = $null
+        $fixtureOverrides = $null
 
         # Extract scenario from fixture if provided
         if ($FixturePath) {
@@ -1276,12 +1313,24 @@ function Apply-TestFixtures {
                 Write-DebugMessage -Type "INFO" -Message "Fixture content available but scenario extraction failed"
                 return $null
             }
+
+            # Extract expected state from fixture if present
+            $expectedState = Get-ExpectedStateFromFixture -FixtureContent $content
+            if ($expectedState) {
+                Write-Debug "$($Emojis.Debug) Found expectedState in fixture - applying overrides"
+                $fixtureOverrides = $expectedState
+            }
         } elseif ($Scenario) {
             $scenarioToApply = $Scenario
         }
 
-        # Apply scenario
-        $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force
+        # Apply scenario with optional fixture overrides
+        if ($fixtureOverrides) {
+            Write-Debug "$($Emojis.Debug) Applying fixture-specific state overrides to scenario '$scenarioToApply'"
+            $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -ExpectedState $fixtureOverrides
+        } else {
+            $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force
+        }
 
         # Update output path if specified
         if ($OutputPath -and $result) {
