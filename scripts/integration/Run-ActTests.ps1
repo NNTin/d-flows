@@ -658,11 +658,11 @@ function Invoke-ActWorkflow {
         $actArgs += $JobName
     }
     
-    # Add secrets file if exists
-    if (Test-Path ".secrets") {
-        $actArgs += "--secret-file"
-        $actArgs += ".secrets"
-    }
+    # Commented: disable usage of secrets file
+    # if (Test-Path ".secrets") {
+    #     $actArgs += "--secret-file"
+    #     $actArgs += ".secrets"
+    # }
     
     # Set ACT environment variable for workflows
     $actArgs += "--env"
