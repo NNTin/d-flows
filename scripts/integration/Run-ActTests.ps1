@@ -731,7 +731,7 @@ function Parse-ActOutput {
     $lines = $Output -split "`n"
     
     foreach ($line in $lines) {
-        if ($line -match '^OUTPUT:\s*([^=]+)=(.*)$') {
+        if ($line -match 'OUTPUT:\s*([^=]+)=(.*)$') {
             $key = $matches[1].Trim()
             $value = $matches[2].Trim()
             $outputs[$key] = $value
