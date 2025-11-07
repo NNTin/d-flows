@@ -55,6 +55,7 @@ jobs:
           fi
 
       - name: Configure Git for bot user
+        if: ${{ !env.ACT }} # only run if NOT running under act
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
