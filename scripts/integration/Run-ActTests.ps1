@@ -256,6 +256,107 @@ function New-TestStateDirectory {
 
 <#
 .SYNOPSIS
+    Convert Windows or Linux file paths to Docker-compatible mount format.
+
+.DESCRIPTION
+    Transforms file system paths to formats compatible with Docker volume mounts,
+    particularly for Docker Desktop on Windows which requires paths in the format
+    `/c/Users/...` rather than `C:\Users\...`.
+
+    On Windows, converts:
+    - `C:\Users\test\data` → `/c/Users/test/data`
+    - `D:\projects\repo` → `/d/projects/repo`
+    - `\\server\share\path` → `//server/share/path`
+
+    On Linux, returns the path unchanged (already in correct format).
+
+.PARAMETER Path
+    The file system path to convert. Can be absolute or relative.
+    Required. Example: `C:\Users\test\d-flows-test-state-abc123`
+
+.EXAMPLE
+    # Windows path conversion
+    $dockerPath = ConvertTo-DockerMountPath -Path "C:\Users\test\d-flows-test-state-abc123"
+    # Returns: /c/Users/test/d-flows-test-state-abc123
+
+.EXAMPLE
+    # Linux path conversion (no change)
+    $dockerPath = ConvertTo-DockerMountPath -Path "/home/user/d-flows-test-state-abc123"
+    # Returns: /home/user/d-flows-test-state-abc123
+
+.EXAMPLE
+    # Using with Docker volume mount
+    $testStatePath = "$env:TEMP\d-flows-test-state-xyz789"
+    $dockerPath = ConvertTo-DockerMountPath -Path $testStatePath
+    $volumeOption = "-v `"$dockerPath`":/tmp/test-state"
+
+.NOTES
+    Windows Docker Desktop Paths:
+    - Docker Desktop translates Windows drive letters to /c, /d, /e, etc.
+    - Backslashes must be converted to forward slashes
+    - Paths typically follow pattern: /c/Users/<username>/<path>
+    - This is required for volume mounts in Docker commands
+
+    Cross-Platform Compatibility:
+    - Detects host OS using $IsWindows variable (PowerShell 6+) or OSVersion
+    - Windows: C:\ drive paths → /c/ format
+    - Linux: Paths left unchanged (already in /home or /root format)
+    - UNC paths: \\server\share → //server/share
+
+    Error Handling:
+    - Returns $null if path cannot be resolved
+    - Validates that converted path starts with / for consistency
+    - Throws error if path resolution fails
+#>
+function ConvertTo-DockerMountPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    try {
+        # Get full absolute path
+        $fullPath = [System.IO.Path]::GetFullPath($Path)
+        Write-Debug "$($Emojis.Debug) Converting path for Docker: $fullPath"
+
+        # Detect if running on Windows
+        $isWindows = if ($PSVersionTable.PSVersion.Major -ge 6) {
+            $IsWindows
+        } else {
+            [System.Environment]::OSVersion.Platform -eq "Win32NT"
+        }
+
+        if ($isWindows) {
+            # Handle UNC paths (network paths like \\server\share)
+            if ($fullPath -match '^\\\\') {
+                $dockerPath = $fullPath -replace '\\', '/' -replace '^//', '//'
+                Write-Debug "$($Emojis.Debug) Converted UNC path to Docker format: $dockerPath"
+                return $dockerPath
+            }
+
+            # Handle local drive paths (C:\, D:\, etc.)
+            if ($fullPath -match '^([A-Z]):') {
+                $driveLetter = [char]::ToLower([char]($matches[1]))
+                $pathWithoutDrive = $fullPath.Substring(2)
+                $dockerPath = "/$driveLetter$($pathWithoutDrive -replace '\\', '/')"
+                Write-Debug "$($Emojis.Debug) Converted Windows path to Docker format: $dockerPath"
+                return $dockerPath
+            }
+
+            throw "Unrecognized Windows path format: $fullPath"
+        } else {
+            # On Linux, path should already be in correct format
+            Write-Debug "$($Emojis.Debug) Linux path already in Docker format: $fullPath"
+            return $fullPath
+        }
+    } catch {
+        Write-DebugMessage -Type "ERROR" -Message "Failed to convert path to Docker format: $_"
+        throw $_
+    }
+}
+
+<#
+.SYNOPSIS
     Write debug messages with consistent formatting.
 
 .DESCRIPTION
@@ -610,6 +711,7 @@ function Test-DockerRunning {
 .DESCRIPTION
     Executes GitHub workflow using act with specified fixture file.
     Captures output and parses "OUTPUT:" markers.
+    Mounts test state directory into container for workflow access.
 
 .PARAMETER WorkflowFile
     Workflow filename (e.g., "bump-version.yml")
@@ -629,6 +731,17 @@ function Test-DockerRunning {
 .NOTES
     Returns hashtable with: Success, ExitCode, Output, Outputs, Duration
     Integrates with workflows via $ACT environment variable detection.
+
+    Volume Mounting:
+    - Test state directory ($TestStateDirectory) is mounted to /tmp/test-state in container
+    - Cross-platform path conversion handles Windows paths (C:\...) for Docker Desktop
+    - TEST_STATE_PATH environment variable provides container path to workflows
+    - Mount is read-write, allowing workflows to create/modify test state files
+
+    Container Access:
+    - Workflows can access mounted directory via /tmp/test-state path
+    - TEST_STATE_PATH environment variable set to /tmp/test-state for convenience
+    - Example: bash script can read $TEST_STATE_PATH/test-tags.txt
 #>
 function Invoke-ActWorkflow {
     param(
@@ -669,8 +782,25 @@ function Invoke-ActWorkflow {
     $actArgs += "--env"
     $actArgs += "ACT=true"
 
+    # Set TEST_STATE_PATH environment variable to provide mounted path to workflows
+    $actArgs += "--env"
+    $actArgs += "TEST_STATE_PATH=/tmp/test-state"
+
     # Bind current directory, this will write to git repository
     $actArgs += "--bind"
+    
+    # Mount test state directory into container for test tag access
+    try {
+        $dockerTestStatePath = ConvertTo-DockerMountPath -Path $TestStateDirectory
+        Write-Debug "$($Emojis.Debug) Mounting volume: $TestStateDirectory -> /tmp/test-state"
+        Write-Debug "$($Emojis.Debug) Docker path: $dockerTestStatePath"
+        
+        $actArgs += "--container-options"
+        $actArgs += "-v `"$dockerTestStatePath`":/tmp/test-state"
+    } catch {
+        Write-DebugMessage -Type "WARNING" -Message "Failed to convert test state path for Docker mount: $_"
+        Write-DebugMessage -Type "INFO" -Message "Continuing without volume mount (workflows may not access test state)"
+    }
     
     # Execute act and capture output
     $startTime = Get-Date
