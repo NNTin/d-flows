@@ -864,6 +864,10 @@ function Invoke-ActWorkflow {
     #     $actArgs += ".secrets"
     # }
     
+    # This is only used in local dev environment, on CI secrets.GITHUB_TOKEN or env.GITHUB_TOKEN is used
+    $actArgs += "--env"
+    $actArgs += "TOKEN_FALLBACK=${env:GITHUB_TOKEN}"
+    
     # Set ACT environment variable for workflows
     $actArgs += "--env"
     $actArgs += "ACT=true"
