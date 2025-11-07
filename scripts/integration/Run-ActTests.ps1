@@ -2363,11 +2363,22 @@ if ($MyInvocation.InvocationName -ne ".") {
             $result = Invoke-IntegrationTest -FixturePath $fixture.FilePath -SkipBackup $SkipBackup -SkipCleanup $SkipCleanup
             $testResults += $result
         }
-        else {
+        elseif ($RunAll) {
             # Run all tests
             # How to run all tests: Run-ActTests -RunAll
             Write-DebugMessage -Type "INFO" -Message "Running all integration tests"
             $testResults = Invoke-AllIntegrationTests -StopOnFailure $StopOnFailure -SkipBackup $SkipBackup -SkipCleanup $SkipCleanup
+        }
+        else {
+            # No execution mode specified
+            Write-DebugMessage -Type "WARNING" -Message "No test execution mode specified. Use -RunAll to run all tests, -TestFixturePath for a specific test, or -TestName to search for a test."
+            Write-Host ""
+            Write-Host "Usage:" -ForegroundColor Yellow
+            Write-Host "  .\scripts\integration\Run-ActTests.ps1 -RunAll                                                      # Run all tests" -ForegroundColor Gray
+            Write-Host "  .\scripts\integration\Run-ActTests.ps1 -TestFixturePath 'tests/integration/v0-to-v1-release-cycle.json'  # Run specific test" -ForegroundColor Gray
+            Write-Host "  .\scripts\integration\Run-ActTests.ps1 -TestName 'Test Name'                                       # Search for and run test" -ForegroundColor Gray
+            Write-Host ""
+            exit 0
         }
     } catch {
         Write-DebugMessage -Type "ERROR" -Message "Test execution failed: $_"
