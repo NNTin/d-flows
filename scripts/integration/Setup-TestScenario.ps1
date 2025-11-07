@@ -956,7 +956,7 @@ function Set-TestScenario {
                     $branchesCreated += $branch
                 }
             } catch {
-                Write-DebugMessage -Type "WARNING" -Message "Failed to create branch $branch: $_"
+                Write-DebugMessage -Type "WARNING" -Message "Failed to create branch ${branch}: $_"
                 continue
             }
         }

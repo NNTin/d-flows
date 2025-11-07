@@ -381,7 +381,7 @@ function Write-TestResult {
     $durationText = "{0:N2}s" -f $Duration.TotalSeconds
     
     Write-Host ""
-    Write-Host "$emoji Test $status: $TestName ($durationText)" -ForegroundColor $color
+    Write-Host "$emoji Test ${status}: $TestName ($durationText)" -ForegroundColor $color
     
     if ($Message) {
         Write-Host "   $Message" -ForegroundColor Gray
@@ -1269,7 +1269,7 @@ function Validate-MajorIncrement {
     
     $valid = ($To -eq ($From + 1))
     
-    Write-Debug "$($Emojis.Validation) Major increment $From -> $To: $valid"
+    Write-Debug "$($Emojis.Validation) Major increment $From -> ${To}: $valid"
     
     return @{
         Success = $valid

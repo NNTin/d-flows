@@ -1206,7 +1206,7 @@ function Apply-Scenario {
                     $branchesCreated += $branch
                 }
             } catch {
-                Write-DebugMessage -Type "WARNING" -Message "Failed to create branch $branch: $_"
+                Write-DebugMessage -Type "WARNING" -Message "Failed to create branch ${branch}: $_"
                 continue
             }
         }
