@@ -161,6 +161,12 @@ function Get-TestStateBasePath {
 $TestStateDirectory = Get-TestStateBasePath
 $TestLogsDirectory = Join-Path (Get-TestStateBasePath) "logs"
 $IntegrationTestsDirectory = "tests/integration"
+
+# Set shared environment variable for test state directory used by dot-sourced scripts
+# This ensures Setup-TestScenario.ps1 and Apply-TestFixtures.ps1 use the same directory
+# instead of generating their own unique GUIDs, preventing test state GUID mismatch
+$env:DFLOWS_TEST_STATE_BASE = $TestStateDirectory
+
 # Use built-in $DebugPreference and $VerbosePreference for output control
 # Callers can use -Debug and -Verbose common parameters to control this
 

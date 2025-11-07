@@ -112,7 +112,15 @@
 $script:TestStateGuid = [guid]::NewGuid().ToString('N')
 
 # Get temp-based test state directory path
+# If Run-ActTests.ps1 has set $env:DFLOWS_TEST_STATE_BASE, use that to ensure unified test state
+# Otherwise, generate a new GUID-based path for standalone use
 function Get-TestStateBasePath {
+    # Check if shared environment variable is set (when called from Run-ActTests.ps1)
+    if ($env:DFLOWS_TEST_STATE_BASE) {
+        return $env:DFLOWS_TEST_STATE_BASE
+    }
+    
+    # Fall back to GUID-based path for standalone use
     $tempPath = [System.IO.Path]::GetTempPath()
     $testStateDirName = "d-flows-test-state-$($script:TestStateGuid)"
     return Join-Path $tempPath $testStateDirName
@@ -864,11 +872,18 @@ function Clear-GitState {
 .PARAMETER GenerateTestTagsFile
     Generate test-tags.txt in temp directory for bump-version.yml (default: true).
 
+.PARAMETER OutputPath
+    Custom output path for test-tags.txt file (optional). If not provided, uses shared test state base path
+    or generates GUID-based path. When called from Run-ActTests.ps1, the shared directory is used automatically.
+
 .EXAMPLE
     Set-TestScenario -ScenarioName "FirstRelease"
 
 .EXAMPLE
     Set-TestScenario -ScenarioName "MajorBumpV0ToV1" -CleanState $true -Force $true
+
+.EXAMPLE
+    Set-TestScenario -ScenarioName "MajorBumpV0ToV1" -OutputPath "C:\temp\my-test-state\test-tags.txt"
 
 .NOTES
     Integrates with bump-version.yml workflow which reads test-tags.txt from temp directory (lines 41-79).
@@ -881,7 +896,8 @@ function Set-TestScenario {
         
         [bool]$CleanState = $false,
         [bool]$Force = $false,
-        [bool]$GenerateTestTagsFile = $true
+        [bool]$GenerateTestTagsFile = $true,
+        [string]$OutputPath
     )
 
     try {
@@ -987,7 +1003,11 @@ function Set-TestScenario {
         # Generate test-tags.txt
         $testTagsPath = $null
         if ($GenerateTestTagsFile) {
-            $testTagsPath = Export-TestTagsFile -Tags $tagsCreated
+            if ($OutputPath) {
+                $testTagsPath = Export-TestTagsFile -Tags $tagsCreated -OutputPath $OutputPath
+            } else {
+                $testTagsPath = Export-TestTagsFile -Tags $tagsCreated
+            }
         }
 
         Write-DebugMessage -Type "SUCCESS" -Message "Scenario applied successfully: $ScenarioName"

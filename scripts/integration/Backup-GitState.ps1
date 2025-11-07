@@ -718,6 +718,8 @@ function Backup-GitState {
         # Backup branches
         $branchesBackupPath = Backup-GitBranches -BackupPath (Join-Path $backupDir "branches-$BackupName.json") -IncludeRemote $IncludeRemoteBranches
 
+        $repoRoot = Get-RepositoryRoot
+
         # Create manifest file
         $manifestPath = Join-Path $backupDir "manifest-$BackupName.json"
         $manifest = @{

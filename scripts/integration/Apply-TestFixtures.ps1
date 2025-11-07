@@ -113,7 +113,15 @@
 $script:TestStateGuid = [guid]::NewGuid().ToString('N')
 
 # Get temp-based test state directory path
+# If Run-ActTests.ps1 has set $env:DFLOWS_TEST_STATE_BASE, use that to ensure unified test state
+# Otherwise, generate a new GUID-based path for standalone use
 function Get-TestStateBasePath {
+    # Check if shared environment variable is set (when called from Run-ActTests.ps1)
+    if ($env:DFLOWS_TEST_STATE_BASE) {
+        return $env:DFLOWS_TEST_STATE_BASE
+    }
+    
+    # Fall back to GUID-based path for standalone use
     $tempPath = [System.IO.Path]::GetTempPath()
     $testStateDirName = "d-flows-test-state-$($script:TestStateGuid)"
     return Join-Path $tempPath $testStateDirName
@@ -1094,7 +1102,8 @@ function Apply-Scenario {
         
         [bool]$CleanState = $false,
         [bool]$Force = $false,
-        [object]$ExpectedState = $null
+        [object]$ExpectedState = $null,
+        [string]$OutputPath
     )
 
     try {
@@ -1230,7 +1239,12 @@ function Apply-Scenario {
         }
 
         # Generate test-tags.txt
-        $testTagsPath = Export-TestTagsFile -Tags $tagsCreated
+        $testTagsPath = $null
+        if ($OutputPath) {
+            $testTagsPath = Export-TestTagsFile -Tags $tagsCreated -OutputPath $OutputPath
+        } else {
+            $testTagsPath = Export-TestTagsFile -Tags $tagsCreated
+        }
 
         Write-DebugMessage -Type "SUCCESS" -Message "Scenario applied successfully: $ScenarioName"
 
@@ -1333,14 +1347,23 @@ function Apply-TestFixtures {
         # Apply scenario with optional fixture overrides
         if ($fixtureOverrides) {
             Write-Debug "$($Emojis.Debug) Applying fixture-specific state overrides to scenario '$scenarioToApply'"
-            $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -ExpectedState $fixtureOverrides
+            if ($OutputPath) {
+                $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -ExpectedState $fixtureOverrides -OutputPath $OutputPath
+            } else {
+                $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -ExpectedState $fixtureOverrides
+            }
         } else {
-            $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force
+            if ($OutputPath) {
+                $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -OutputPath $OutputPath
+            } else {
+                $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force
+            }
         }
 
-        # Update output path if specified
-        if ($OutputPath -and $result) {
-            Write-Debug "$($Emojis.Debug) Regenerating test-tags.txt at custom path"
+        # Update output path if specified (already handled in Apply-Scenario if OutputPath provided)
+        # This is kept for backward compatibility but shouldn't regenerate if already done
+        if ($OutputPath -and $result -and -not $result.TestTagsFile) {
+            Write-Debug "$($Emojis.Debug) Regenerating test-tags.txt at custom path (fallback)"
             $result.TestTagsFile = Export-TestTagsFile -OutputPath $OutputPath -Tags $result.TagsCreated
         }
 
