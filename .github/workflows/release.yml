@@ -54,19 +54,23 @@ jobs:
             exit 1
           fi
 
-      - name: Create release
-        if: ${{ !env.ACT }} # only run if NOT running under act
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "v${{ inputs.version }}" --generate-notes --title "Release v${{ inputs.version }}" --target "${{ github.sha }}"
-
       - name: Configure Git for bot user
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: 
+          if [[ -n "$ACT" ]]; then        
+            VERSION="v${{ inputs.version }}"
+            git tag -a "$VERSION" -f -m "Release $VERSION"
+          else
+            gh release create "v${{ inputs.version }}" --generate-notes --title "Release v${{ inputs.version }}" --target "${{ github.sha }}"
+          fi
 
       - name: Extract major version
         id: extract-major-version
