@@ -376,6 +376,12 @@ function Backup-GitBranches {
                 continue
             }
 
+            # Skip symbolic refs (the ones with '->')
+            if ($branchName -match "->") { 
+                # Extract actual branch after '->'
+                $branchName = ($branchName -split '->')[1].Trim()
+            }
+
             try {
                 # Get commit SHA for this branch
                 $sha = git rev-parse $branchName 2>$null
