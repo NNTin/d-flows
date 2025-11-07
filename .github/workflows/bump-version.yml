@@ -65,6 +65,7 @@ jobs:
             
             while IFS=' ' read -r tag_name commit_sha; do
               if [[ -n "$tag_name" ]] && [[ -n "$commit_sha" ]]; then
+                commit_sha=$(echo "$commit_sha" | tr -d '\r')
                 echo "Creating test tag: $tag_name at $commit_sha"
                 git tag "$tag_name" "$commit_sha" 2>/dev/null || echo "Tag $tag_name already exists"
               fi
