@@ -941,11 +941,8 @@ function Export-TestTagsFile {
             $Tags = @()
         }
 
-        # Build file content
+        # Build file content (no header - direct tag entries only)
         $fileContent = @()
-        $fileContent += "# Test tags for act integration testing"
-        $fileContent += "# Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-        $fileContent += ""
 
         foreach ($tag in $Tags) {
             try {
@@ -973,7 +970,7 @@ function Export-TestTagsFile {
         # Write to file
         $fileContent | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
         
-        $tagCount = $fileContent.Count - 3
+        $tagCount = $fileContent.Count
         Write-DebugMessage -Type "SUCCESS" -Message "Test-tags.txt generated with $tagCount tags"
         Write-Debug "$($Emojis.Debug) File path: $OutputPath"
 
