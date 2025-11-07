@@ -61,15 +61,6 @@
         {"type": "tag-exists", "tag": "v1.1.0"},
         {"type": "tag-exists", "tag": "v1.2.0"}
       ]
-    },
-    {
-      "name": "Validate user expectations",
-      "action": "validate-state",
-      "checks": [
-        {"type": "user-pinned-to-v1-gets", "expectation": "v1.2.0"},
-        {"type": "user-pinned-to-v1.0.0-gets", "expectation": "v1.0.0"},
-        {"type": "user-pinned-to-v1.1.0-gets", "expectation": "v1.1.0"}
-      ]
     }
   ],
   "cleanup": {

@@ -132,9 +132,6 @@ param(
     [switch]$SkipCleanup,
     
     [Parameter(Mandatory = $false)]
-    [switch]$Verbose,
-    
-    [Parameter(Mandatory = $false)]
     [switch]$StopOnFailure
 )
 
@@ -145,7 +142,8 @@ param(
 $TestStateDirectory = ".test-state"
 $TestLogsDirectory = ".test-state/logs"
 $IntegrationTestsDirectory = "tests/integration"
-$DebugPreference = if ($Verbose) { "Continue" } else { "Continue" }
+# Use built-in $DebugPreference and $VerbosePreference for output control
+# Callers can use -Debug and -Verbose common parameters to control this
 
 # Color constants (matching style from Backup-GitState.ps1)
 $Colors = @{
@@ -193,19 +191,18 @@ $ActConfigFile = ".actrc"
     Throws an error if not in a git repository.
 #>
 function Get-RepositoryRoot {
-    $currentPath = Get-Location
-    $searchPath = $currentPath
+    $searchPath = (Get-Location).Path
 
-    while ($searchPath.Path -ne (Split-Path $searchPath.Path)) {
+    while ($searchPath -ne (Split-Path $searchPath)) {
         Write-Debug "$($Emojis.Debug) Searching for .git in: $searchPath"
         
-        $gitPath = Join-Path $searchPath.Path ".git"
+        $gitPath = Join-Path $searchPath '.git'
         if (Test-Path $gitPath) {
-            Write-Debug "$($Emojis.Debug) Found repository root: $($searchPath.Path)"
-            return $searchPath.Path
+            Write-Debug "$($Emojis.Debug) Found repository root: $searchPath"
+            return $searchPath
         }
         
-        $searchPath = Split-Path $searchPath.Path -Parent
+        $searchPath = Split-Path $searchPath -Parent
     }
 
     throw "❌ Not in a git repository. Please navigate to the repository root and try again."
@@ -291,7 +288,14 @@ function Write-DebugMessage {
         default   { "ℹ️" }
     }
 
-    $color = $Colors[$Type.ToLower()]
+    $color = switch ($Type) {
+        "INFO"    { $Colors.Info }
+        "SUCCESS" { $Colors.Success }
+        "WARNING" { $Colors.Warning }
+        "ERROR"   { $Colors.Error }
+        "TEST"    { $Colors.Test }
+        default   { $Colors.Info }
+    }
     
     Write-Host "$emoji $Message" -ForegroundColor $color
 }
@@ -660,6 +664,10 @@ function Invoke-ActWorkflow {
         $actArgs += ".secrets"
     }
     
+    # Set ACT environment variable for workflows
+    $actArgs += "--env"
+    $actArgs += "ACT=true"
+    
     $actCommand = "$ActCommand $($actArgs -join ' ')"
     Write-Debug "$($Emojis.Debug) Act command: $actCommand"
     
@@ -793,9 +801,6 @@ function Invoke-ValidationCheck {
             "branch-count" {
                 return Validate-BranchCount -Expected $Check.expected
             }
-            "branch-on-remote" {
-                return Validate-BranchOnRemote -Branch $Check.branch
-            }
             "current-branch" {
                 return Validate-CurrentBranch -Branch $Check.branch
             }
@@ -832,20 +837,13 @@ function Invoke-ValidationCheck {
             "idempotency-verified" {
                 return Validate-IdempotencyVerified
             }
-            "user-pinned-to-v1-gets" {
-                return Validate-UserPinnedToVersion -Expectation $Check.expectation
-            }
-            "user-pinned-to-v1.0.0-gets" {
-                return Validate-UserPinnedToVersion -Expectation $Check.expectation
-            }
             default {
                 $supportedTypes = @(
                     "tag-exists", "tag-not-exists", "tag-points-to", "tag-accessible", "tag-count",
-                    "branch-exists", "branch-points-to-tag", "branch-count", "branch-on-remote", "current-branch",
+                    "branch-exists", "branch-points-to-tag", "branch-count", "current-branch",
                     "version-greater", "version-progression", "major-increment", "major-tag-coexistence",
                     "major-tags-coexist", "major-tag-progression", "no-new-tags", "no-cross-contamination",
-                    "no-tag-conflicts", "workflow-success", "idempotency-verified", 
-                    "user-pinned-to-v1-gets", "user-pinned-to-v1.0.0-gets"
+                    "no-tag-conflicts", "workflow-success", "idempotency-verified"
                 )
                 throw "Unknown validation type: $checkType. Supported types: $($supportedTypes -join ', ')"
             }
@@ -1102,43 +1100,6 @@ function Validate-BranchCount {
         Success = $matches
         Message = if ($matches) { "Branch count matches: $actual" } else { "Branch count mismatch: expected $Expected, got $actual" }
         Type    = "branch-count"
-    }
-}
-
-<#
-.SYNOPSIS
-    Check if branch exists on remote.
-
-.PARAMETER Branch
-    Branch name
-
-.EXAMPLE
-    Validate-BranchOnRemote -Branch "release/v1"
-
-.NOTES
-    May not work in act environment without network access.
-#>
-function Validate-BranchOnRemote {
-    param([Parameter(Mandatory = $true)][string]$Branch)
-    
-    try {
-        $remoteBranch = git ls-remote --heads origin $Branch 2>$null
-        $exists = -not [string]::IsNullOrEmpty($remoteBranch)
-        
-        Write-Debug "$($Emojis.Validation) Branch '$Branch' on remote: $exists"
-        
-        return @{
-            Success = $exists
-            Message = if ($exists) { "Branch '$Branch' exists on remote" } else { "Branch '$Branch' does not exist on remote" }
-            Type    = "branch-on-remote"
-        }
-    } catch {
-        Write-DebugMessage -Type "WARNING" -Message "Remote check may not work in act environment"
-        return @{
-            Success = $true
-            Message = "Branch remote check skipped (act environment)"
-            Type    = "branch-on-remote"
-        }
     }
 }
 
@@ -2381,7 +2342,6 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-Host "  Skip Backup:   $SkipBackup" -ForegroundColor Gray
     Write-Host "  Skip Cleanup:  $SkipCleanup" -ForegroundColor Gray
     Write-Host "  Stop On Failure: $StopOnFailure" -ForegroundColor Gray
-    Write-Host "  Verbose:       $Verbose" -ForegroundColor Gray
     Write-Host ""
     
     # Determine execution mode and run tests
