@@ -37,6 +37,7 @@ jobs:
           ref: ${{ inputs.target_branch }}
           fetch-depth: 0
           fetch-tags: false  # Disabled to prevent remote tag fetching during act tests
+          token: ${{ secrets.GITHUB_TOKEN || env.GITHUB_TOKEN }}
 
       - name: Setup test tags when running under act
         if: ${{ env.ACT }}
