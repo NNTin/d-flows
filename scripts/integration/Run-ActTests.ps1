@@ -881,8 +881,9 @@ function Invoke-ActWorkflow {
         Write-Debug "$($Emojis.Debug) Mounting volume: $TestStateDirectory -> /tmp/test-state"
         Write-Debug "$($Emojis.Debug) Docker path: $dockerTestStatePath"
         
+        $mountOption = "--mount type=bind,src=$dockerTestStatePath,dst=/tmp/test-state"
         $actArgs += "--container-options"
-        $actArgs += "--mount type=bind,src=$dockerTestStatePath,dst=/tmp/test-state"
+        $actArgs += $mountOption
     } catch {
         Write-DebugMessage -Type "WARNING" -Message "Failed to convert test state path for Docker mount: $_"
         Write-DebugMessage -Type "INFO" -Message "Continuing without volume mount (workflows may not access test state)"
