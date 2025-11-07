@@ -988,6 +988,7 @@ function Set-TestScenario {
             CurrentBranch     = $scenario.CurrentBranch
             TestTagsFile      = $testTagsPath
             CommitMap         = $commitMap
+            Success           = $true
         }
     } catch {
         Write-DebugMessage -Type "ERROR" -Message "Failed to apply scenario: $_"
