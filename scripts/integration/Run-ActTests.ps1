@@ -881,7 +881,7 @@ function Invoke-ActWorkflow {
         Write-Debug "$($Emojis.Debug) Mounting volume: $TestStateDirectory -> /tmp/test-state"
         Write-Debug "$($Emojis.Debug) Docker path: $dockerTestStatePath"
         
-        $mountOption = "--mount type=bind,src=$dockerTestStatePath,dst=/tmp/test-state"
+        $mountOption = '"--mount type=bind,src=$dockerTestStatePath,dst=/tmp/test-state"'
         $actArgs += "--container-options"
         $actArgs += $mountOption
     } catch {
