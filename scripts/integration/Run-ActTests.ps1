@@ -168,8 +168,7 @@ $Emojis = @{
     Restore    = "♻️"
 }
 
-$ActCommand = "act"
-$ActConfigFile = ".actrc"
+$ActCommand = Get-Command "act" | Select-Object -ExpandProperty Source
 
 # ============================================================================
 # Helper Functions
@@ -668,17 +667,16 @@ function Invoke-ActWorkflow {
     $actArgs += "--env"
     $actArgs += "ACT=true"
     
-    $actCommand = "$ActCommand $($actArgs -join ' ')"
-    Write-Debug "$($Emojis.Debug) Act command: $actCommand"
-    
     # Execute act and capture output
     $startTime = Get-Date
     
     try {
+        Write-Debug "$($Emojis.Debug) ActCommand: $ActCommand"
+        Write-Debug "$($Emojis.Debug) actArgs: $actArgs"
         if ($CaptureOutput) {
-            $output = & $ActCommand $actArgs 2>&1 | Out-String
+            $output = & $ActCommand @actArgs 2>&1 | Out-String
         } else {
-            & $ActCommand $actArgs
+            & $ActCommand @actArgs
             $output = ""
         }
         
