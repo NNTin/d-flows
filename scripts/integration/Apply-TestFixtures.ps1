@@ -102,7 +102,17 @@
 # Global Variables and Configuration
 # ============================================================================
 
-$TestStateDirectory = ".test-state"
+# Generate a unique GUID for this script execution to ensure consistent temp directory naming
+$script:TestStateGuid = [guid]::NewGuid().ToString('N')
+
+# Get temp-based test state directory path
+function Get-TestStateBasePath {
+    $tempPath = [System.IO.Path]::GetTempPath()
+    $testStateDirName = "d-flows-test-state-$($script:TestStateGuid)"
+    return Join-Path $tempPath $testStateDirName
+}
+
+$TestStateDirectory = Get-TestStateBasePath
 $TestTagsFile = "test-tags.txt"
 $DebugPreference = "Continue"
 
@@ -235,26 +245,19 @@ function Get-RepositoryRoot {
     Create the test state directory if it doesn't exist.
 
 .DESCRIPTION
-    Creates .test-state directory relative to the repository root.
-
-.PARAMETER RepositoryRoot
-    The root directory of the git repository.
+    Creates test state directory in system temp location.
 
 .EXAMPLE
-    $testStateDir = New-TestStateDirectory -RepositoryRoot "C:\repo"
+    $testStateDir = New-TestStateDirectory
 
 .NOTES
-    Returns the full path to the test state directory.
+    Returns the full path to the test state directory in temp.
 #>
 function New-TestStateDirectory {
-    param(
-        [string]$RepositoryRoot = (Get-RepositoryRoot)
-    )
-
-    $fullTestStatePath = Join-Path $RepositoryRoot $TestStateDirectory
+    $fullTestStatePath = Get-TestStateBasePath
     
     if (-not (Test-Path $fullTestStatePath)) {
-        Write-Debug "$($Emojis.Debug) Creating test state directory: $fullTestStatePath"
+        Write-Debug "$($Emojis.Debug) Creating temp test state directory: $fullTestStatePath"
         New-Item -ItemType Directory -Path $fullTestStatePath -Force | Out-Null
         Write-Debug "$($Emojis.Debug) Test state directory created"
     } else {
@@ -927,8 +930,7 @@ function Export-TestTagsFile {
     try {
         # Default output path if not provided
         if (-not $OutputPath) {
-            $repoRoot = Get-RepositoryRoot
-            $testStateDir = New-TestStateDirectory -RepositoryRoot $repoRoot
+            $testStateDir = New-TestStateDirectory
             $OutputPath = Join-Path $testStateDir $TestTagsFile
         }
 

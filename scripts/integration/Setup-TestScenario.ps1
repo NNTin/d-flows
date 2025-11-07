@@ -70,7 +70,7 @@
     - Branch: Optional branch name if tag should be on specific branch (default: main)
 
     Integration with bump-version.yml:
-    - The workflow reads .test-state/test-tags.txt at lines 41-79
+    - The workflow reads test-tags.txt from system temp directory at lines 41-79
     - Format must match: "tag_name commit_sha" (one per line)
     - All existing tags are deleted first, then restored from this file
     - This ensures clean, reproducible state for each act run
@@ -100,7 +100,17 @@
 # Global Variables and Configuration
 # ============================================================================
 
-$TestStateDirectory = ".test-state"
+# Generate a unique GUID for this script execution to ensure consistent temp directory naming
+$script:TestStateGuid = [guid]::NewGuid().ToString('N')
+
+# Get temp-based test state directory path
+function Get-TestStateBasePath {
+    $tempPath = [System.IO.Path]::GetTempPath()
+    $testStateDirName = "d-flows-test-state-$($script:TestStateGuid)"
+    return Join-Path $tempPath $testStateDirName
+}
+
+$TestStateDirectory = Get-TestStateBasePath
 $TestTagsFile = "test-tags.txt"
 $DebugPreference = "Continue"
 
@@ -263,26 +273,19 @@ function Get-RepositoryRoot {
     Create the test state directory if it doesn't exist.
 
 .DESCRIPTION
-    Creates .test-state directory relative to the repository root.
-
-.PARAMETER RepositoryRoot
-    The root directory of the git repository.
+    Creates test state directory in system temp location.
 
 .EXAMPLE
-    $testStateDir = New-TestStateDirectory -RepositoryRoot "C:\repo"
+    $testStateDir = New-TestStateDirectory
 
 .NOTES
-    Returns the full path to the test state directory.
+    Returns the full path to the test state directory in temp.
 #>
 function New-TestStateDirectory {
-    param(
-        [string]$RepositoryRoot = (Get-RepositoryRoot)
-    )
-
-    $fullTestStatePath = Join-Path $RepositoryRoot $TestStateDirectory
+    $fullTestStatePath = Get-TestStateBasePath
     
     if (-not (Test-Path $fullTestStatePath)) {
-        Write-Debug "$($Emojis.Debug) Creating test state directory: $fullTestStatePath"
+        Write-Debug "$($Emojis.Debug) Creating temp test state directory: $fullTestStatePath"
         New-Item -ItemType Directory -Path $fullTestStatePath -Force | Out-Null
         Write-Debug "$($Emojis.Debug) Test state directory created"
     } else {
@@ -851,7 +854,7 @@ function Clear-GitState {
     Force overwrite existing tags/branches (default: false).
 
 .PARAMETER GenerateTestTagsFile
-    Generate .test-state/test-tags.txt for bump-version.yml (default: true).
+    Generate test-tags.txt in temp directory for bump-version.yml (default: true).
 
 .EXAMPLE
     Set-TestScenario -ScenarioName "FirstRelease"
@@ -860,7 +863,7 @@ function Clear-GitState {
     Set-TestScenario -ScenarioName "MajorBumpV0ToV1" -CleanState $true -Force $true
 
 .NOTES
-    Integrates with bump-version.yml workflow which reads .test-state/test-tags.txt (lines 41-79).
+    Integrates with bump-version.yml workflow which reads test-tags.txt from temp directory (lines 41-79).
     Use Backup-GitState.ps1 to backup state before applying scenarios.
 #>
 function Set-TestScenario {
@@ -1008,7 +1011,7 @@ function Set-TestScenario {
     Exports git tags in format expected by bump-version.yml (lines 58-79).
 
 .PARAMETER OutputPath
-    Custom output path (defaults to .test-state/test-tags.txt).
+    Custom output path (defaults to temp directory test-tags.txt).
 
 .PARAMETER Tags
     Array of tag names to export (defaults to all tags).
@@ -1028,8 +1031,7 @@ function Export-TestTagsFile {
     try {
         # Default output path if not provided
         if (-not $OutputPath) {
-            $repoRoot = Get-RepositoryRoot
-            $testStateDir = New-TestStateDirectory -RepositoryRoot $repoRoot
+            $testStateDir = New-TestStateDirectory
             $OutputPath = Join-Path $testStateDir $TestTagsFile
         }
 

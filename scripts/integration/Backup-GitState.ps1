@@ -4,8 +4,8 @@
 
 .DESCRIPTION
     This script provides functions to backup and restore git repository state, including all tags
-    and branches. Backups are stored with timestamp-based filenames in the .test-state/backup/
-    directory for later restoration. This is essential for integration testing with act, where
+    and branches. Backups are stored with timestamp-based filenames in a system temp directory
+    for later restoration. This is essential for integration testing with act, where
     tests may modify the git repository state.
 
     The script includes functions for:
@@ -46,7 +46,7 @@
     - Branches: JSON file "branches-<name>.json" with structure containing currentBranch and branches array
     - Manifest: JSON file "manifest-<name>.json" with backup metadata
 
-    Storage Location: .test-state/backup/ (relative to repository root)
+    Storage Location: System temp directory in d-flows-test-state-<guid>/backup/
 
     Edge Cases Handled:
     - Empty repositories (no tags/branches)
@@ -65,7 +65,18 @@
 # Global Variables and Configuration
 # ============================================================================
 
-$BackupDirectory = ".test-state/backup"
+# Generate a unique GUID for this script execution to ensure consistent temp directory naming
+$script:BackupStateGuid = [guid]::NewGuid().ToString('N')
+
+# Get temp-based backup directory path
+function Get-BackupBasePath {
+    $tempPath = [System.IO.Path]::GetTempPath()
+    $testStateDirName = "d-flows-test-state-$($script:BackupStateGuid)"
+    $backupSubDir = Join-Path $testStateDirName "backup"
+    return Join-Path $tempPath $backupSubDir
+}
+
+$BackupDirectory = Get-BackupBasePath
 $DebugPreference = "Continue"
 
 # Color constants (matching style from verify-act-setup.ps1)
@@ -128,31 +139,24 @@ function Get-RepositoryRoot {
 
 <#
 .SYNOPSIS
-    Create the backup directory if it doesn't exist.
+    Create backup directory if it doesn't exist.
 
 .DESCRIPTION
-    Creates .test-state/backup/ directory relative to the repository root.
+    Creates backup directory in system temp location.
     Handles cases where directory already exists (no error).
 
-.PARAMETER RepositoryRoot
-    The root directory of the git repository.
-
 .EXAMPLE
-    $backupDir = New-BackupDirectory -RepositoryRoot "C:\repo"
+    $backupDir = New-BackupDirectory
     Write-Host "Backup directory: $backupDir"
 
 .NOTES
-    Returns the full path to the backup directory.
+    Returns the full path to the backup directory in temp.
 #>
 function New-BackupDirectory {
-    param(
-        [string]$RepositoryRoot = (Get-RepositoryRoot)
-    )
-
-    $fullBackupPath = Join-Path $RepositoryRoot $BackupDirectory
+    $fullBackupPath = Get-BackupBasePath
     
     if (-not (Test-Path $fullBackupPath)) {
-        Write-Debug "$($Emojis.Debug) Creating backup directory: $fullBackupPath"
+        Write-Debug "$($Emojis.Debug) Creating temp backup directory: $fullBackupPath"
         New-Item -ItemType Directory -Path $fullBackupPath -Force | Out-Null
         Write-Debug "$($Emojis.Debug) Backup directory created"
     } else {
@@ -255,12 +259,11 @@ function Backup-GitTags {
     Write-DebugMessage -Type "INFO" -Message "Starting git tags backup"
     
     try {
-        $repoRoot = Get-RepositoryRoot
-        Write-Debug "$($Emojis.Debug) Repository root: $repoRoot"
+        Write-Debug "$($Emojis.Debug) Backing up git tags"
 
         # Generate backup path if not provided
         if (-not $BackupPath) {
-            $backupDir = New-BackupDirectory -RepositoryRoot $repoRoot
+            $backupDir = New-BackupDirectory
             $timestamp = Get-BackupTimestamp
             $BackupPath = Join-Path $backupDir "tags-$timestamp.txt"
         }
@@ -339,12 +342,11 @@ function Backup-GitBranches {
     Write-DebugMessage -Type "INFO" -Message "Starting git branches backup"
     
     try {
-        $repoRoot = Get-RepositoryRoot
-        Write-Debug "$($Emojis.Debug) Repository root: $repoRoot"
+        Write-Debug "$($Emojis.Debug) Backing up git branches"
 
         # Generate backup path if not provided
         if (-not $BackupPath) {
-            $backupDir = New-BackupDirectory -RepositoryRoot $repoRoot
+            $backupDir = New-BackupDirectory
             $timestamp = Get-BackupTimestamp
             $BackupPath = Join-Path $backupDir "branches-$timestamp.json"
         }
@@ -700,8 +702,7 @@ function Backup-GitState {
     Write-DebugMessage -Type "INFO" -Message "Starting complete git state backup"
     
     try {
-        $repoRoot = Get-RepositoryRoot
-        $backupDir = New-BackupDirectory -RepositoryRoot $repoRoot
+        $backupDir = New-BackupDirectory
 
         # Generate backup name if not provided
         if (-not $BackupName) {
@@ -784,8 +785,7 @@ function Restore-GitState {
     Write-DebugMessage -Type "INFO" -Message "Starting complete git state restore"
     
     try {
-        $repoRoot = Get-RepositoryRoot
-        $backupDir = New-BackupDirectory -RepositoryRoot $repoRoot
+        $backupDir = New-BackupDirectory
         
         # Locate and read manifest file
         $manifestPath = Join-Path $backupDir "manifest-$BackupName.json"
@@ -840,8 +840,7 @@ function Get-AvailableBackups {
     Write-DebugMessage -Type "INFO" -Message "Listing available backups"
     
     try {
-        $repoRoot = Get-RepositoryRoot
-        $backupDir = New-BackupDirectory -RepositoryRoot $repoRoot
+        $backupDir = New-BackupDirectory
         
         $manifestFiles = @(Get-ChildItem -Path $backupDir -Filter "manifest-*.json" -ErrorAction SilentlyContinue)
         Write-Debug "$($Emojis.Debug) Found $($manifestFiles.Count) backup manifests"

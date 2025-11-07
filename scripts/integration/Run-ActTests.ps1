@@ -96,13 +96,13 @@
     - Detailed test results with pass/fail status
     - Colored output with emoji indicators
     - DEBUG messages for troubleshooting
-    - JSON report exported to .test-state/logs/
+    - JSON report exported to system temp logs directory
     
     Workflow Integration:
     - Workflows detect act via $ACT environment variable
     - Workflows output "OUTPUT: KEY=VALUE" markers for validation
     - Workflows skip push operations when running under act
-    - Test tags file (.test-state/test-tags.txt) is accessible in container
+    - Test tags file is accessible in container from temp directory
     
     Docker Container Considerations:
     - Repository is mounted into container
@@ -139,8 +139,18 @@ param(
 # Global Variables and Configuration
 # ============================================================================
 
-$TestStateDirectory = ".test-state"
-$TestLogsDirectory = ".test-state/logs"
+# Generate a unique GUID for this script execution to ensure consistent temp directory naming
+$script:TestStateGuid = [guid]::NewGuid().ToString('N')
+
+# Get temp-based test state directory path
+function Get-TestStateBasePath {
+    $tempPath = [System.IO.Path]::GetTempPath()
+    $testStateDirName = "d-flows-test-state-$($script:TestStateGuid)"
+    return Join-Path $tempPath $testStateDirName
+}
+
+$TestStateDirectory = Get-TestStateBasePath
+$TestLogsDirectory = Join-Path (Get-TestStateBasePath) "logs"
 $IntegrationTestsDirectory = "tests/integration"
 # Use built-in $DebugPreference and $VerbosePreference for output control
 # Callers can use -Debug and -Verbose common parameters to control this
@@ -212,29 +222,21 @@ function Get-RepositoryRoot {
     Create test state directories if they don't exist.
 
 .DESCRIPTION
-    Creates .test-state and .test-state/logs directories for test execution.
-    Similar pattern to Setup-TestScenario.ps1 lines 223-247.
-
-.PARAMETER RepositoryRoot
-    The root directory of the git repository. Optional, defaults to Get-RepositoryRoot.
+    Creates test state and logs directories in system temp location.
 
 .EXAMPLE
     $testStateDir = New-TestStateDirectory
     Write-Host "Test state directory: $testStateDir"
 
 .NOTES
-    Returns the full path to the test state directory.
+    Returns the full path to the test state directory in temp.
 #>
 function New-TestStateDirectory {
-    param(
-        [string]$RepositoryRoot = (Get-RepositoryRoot)
-    )
-
-    $testStatePath = Join-Path $RepositoryRoot $TestStateDirectory
-    $testLogsPath = Join-Path $RepositoryRoot $TestLogsDirectory
+    $testStatePath = Get-TestStateBasePath
+    $testLogsPath = $TestLogsDirectory
     
     if (-not (Test-Path $testStatePath)) {
-        Write-Debug "$($Emojis.Debug) Creating test state directory: $testStatePath"
+        Write-Debug "$($Emojis.Debug) Creating temp test state directory: $testStatePath"
         New-Item -ItemType Directory -Path $testStatePath -Force | Out-Null
         Write-Debug "$($Emojis.Debug) Test state directory created"
     } else {
@@ -242,7 +244,7 @@ function New-TestStateDirectory {
     }
     
     if (-not (Test-Path $testLogsPath)) {
-        Write-Debug "$($Emojis.Debug) Creating test logs directory: $testLogsPath"
+        Write-Debug "$($Emojis.Debug) Creating temp test logs directory: $testLogsPath"
         New-Item -ItemType Directory -Path $testLogsPath -Force | Out-Null
         Write-Debug "$($Emojis.Debug) Test logs directory created"
     } else {
@@ -2219,7 +2221,7 @@ function Write-TestSummary {
     Export test results to JSON file.
 
 .DESCRIPTION
-    Saves test report to .test-state/logs/ directory.
+    Saves test report to system temp logs directory.
 
 .PARAMETER TestResults
     Array of test result objects
@@ -2244,8 +2246,7 @@ function Export-TestReport {
 
     # Generate output path if not provided
     if (-not $OutputPath) {
-        $repoRoot = Get-RepositoryRoot
-        $logsDir = Join-Path $repoRoot $TestLogsDirectory
+        $logsDir = $TestLogsDirectory
         New-TestStateDirectory | Out-Null
         
         $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -2390,7 +2391,7 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-TestSummary -TestResults $testResults
     
     # Export report
-    # How to view test logs: Check .test-state/logs/ directory for detailed logs
+    # How to view test logs: Check system temp directory for d-flows-test-state-*/logs/ directory
     $reportPath = Export-TestReport -TestResults $testResults
     
     # Exit with appropriate code
