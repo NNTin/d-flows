@@ -22,7 +22,6 @@ jobs:
       MAJOR_VERSION: ${{ steps.extract-major-version.outputs.MAJOR_VERSION }}
     steps:
       - name: Checkout code
-        if: ${{ !env.ACT }}  # Skip checkout when running under act - repository is already mounted
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
