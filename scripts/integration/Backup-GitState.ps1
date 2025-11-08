@@ -596,6 +596,27 @@ function Restore-GitBranches {
         Write-Debug "$($Emojis.Debug) Original current branch: $currentBranch"
         Write-Debug "$($Emojis.Debug) Found $($branches.Count) branches to restore"
 
+        # Store current branch and prepare for restoration
+        $originalCurrentBranch = git rev-parse --abbrev-ref HEAD 2>$null
+        $currentCommitSha = git rev-parse HEAD 2>$null
+        $tempBranchName = "temp-restore-$(Get-Date -Format 'yyyyMMddHHmmss')"
+        $tempBranchCreated = $false
+
+        # Create and checkout temporary branch to avoid "cannot delete current branch" errors
+        if ($Force -and $originalCurrentBranch -ne "HEAD") {
+            try {
+                git checkout -b $tempBranchName $currentCommitSha 2>&1 | Out-Null
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Debug "$($Emojis.Debug) Created and checked out temporary branch: $tempBranchName"
+                    $tempBranchCreated = $true
+                } else {
+                    Write-DebugMessage -Type "WARNING" -Message "Failed to create temporary branch, continuing without switching"
+                }
+            } catch {
+                Write-DebugMessage -Type "WARNING" -Message "Error creating temporary branch: $_"
+            }
+        }
+
         $restoredCount = 0
 
         foreach ($branch in $branches) {
@@ -618,10 +639,8 @@ function Restore-GitBranches {
 
                 # Delete existing branch if force is enabled
                 if ($existingBranch -and $Force) {
-                    # Don't delete current branch
-                    $currentCheck = git rev-parse --abbrev-ref HEAD
-                    if ($currentCheck -ne $branchName) {
-                        git branch -D $branchName
+                    git branch -D $branchName 2>&1 | Out-Null
+                    if ($LASTEXITCODE -eq 0) {
                         Write-Debug "$($Emojis.Debug) Deleted existing branch for force restore: $branchName"
                     }
                 }
@@ -637,6 +656,25 @@ function Restore-GitBranches {
             } catch {
                 Write-DebugMessage -Type "WARNING" -Message "Error restoring branch '$($branch.name)': $_"
                 continue
+            }
+        }
+
+        # Delete temporary branch if one was created
+        if ($tempBranchCreated) {
+            try {
+                # First checkout away from the temp branch
+                if ($currentBranch -and $currentBranch -ne "HEAD") {
+                    git checkout $currentBranch 2>&1 | Out-Null
+                }
+                # Then delete the temp branch
+                git branch -D $tempBranchName 2>&1 | Out-Null
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Debug "$($Emojis.Debug) Deleted temporary branch: $tempBranchName"
+                } else {
+                    Write-DebugMessage -Type "WARNING" -Message "Failed to delete temporary branch: $tempBranchName"
+                }
+            } catch {
+                Write-DebugMessage -Type "WARNING" -Message "Error deleting temporary branch: $_"
             }
         }
 

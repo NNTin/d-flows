@@ -984,8 +984,15 @@ function Parse-ActOutput {
 .PARAMETER Check
     Hashtable with 'type' and other properties
 
+.PARAMETER ActResult
+    The workflow execution result needed for workflow-success validation.
+    This is passed from the test context and contains the result from the most recent run-workflow step.
+
 .EXAMPLE
     $result = Invoke-ValidationCheck -Check @{ type = "tag-exists"; tag = "v1.0.0" }
+
+.EXAMPLE
+    $result = Invoke-ValidationCheck -Check @{ type = "workflow-success"; workflow = "bump-version" } -ActResult $lastActResult
 
 .NOTES
     Returns hashtable with: Success, Message, Type
@@ -993,7 +1000,10 @@ function Parse-ActOutput {
 function Invoke-ValidationCheck {
     param(
         [Parameter(Mandatory = $true)]
-        [object]$Check
+        [object]$Check,
+        
+        [Parameter(Mandatory = $false)]
+        [object]$ActResult
     )
 
     $checkType = $Check.type
@@ -1056,7 +1066,15 @@ function Invoke-ValidationCheck {
                 return Validate-NoTagConflicts
             }
             "workflow-success" {
-                return Validate-WorkflowSuccess -Workflow $Check.workflow -ActResult $Check.actResult
+                # Validate that ActResult is available for workflow-success checks
+                if (-not $ActResult) {
+                    return @{
+                        Success = $false
+                        Message = "workflow-success validation requires a preceding run-workflow step. ActResult is null."
+                        Type    = $checkType
+                    }
+                }
+                return Validate-WorkflowSuccess -Workflow $Check.workflow -ActResult $ActResult
             }
             "idempotency-verified" {
                 return Validate-IdempotencyVerified
@@ -1928,18 +1946,38 @@ function Invoke-RunWorkflow {
 .PARAMETER Step
     Step object from fixture
 
+.PARAMETER TestContext
+    Test execution context containing state from previous steps, including the last ActResult from run-workflow steps.
+    This allows validate-state steps to access workflow execution results for workflow-success validation.
+
 .EXAMPLE
     $result = Invoke-ValidateState -Step $step
+
+.EXAMPLE
+    $result = Invoke-ValidateState -Step $step -TestContext $testContext
 
 .NOTES
     Returns hashtable with: Success, Message, CheckResults, PassedCount, FailedCount
 #>
 function Invoke-ValidateState {
-    param([Parameter(Mandatory = $true)][object]$Step)
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Step,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$TestContext
+    )
     
     $checks = $Step.checks
     
     Write-Debug "$($Emojis.Validation) Performing $($checks.Count) validation checks"
+    
+    # Extract ActResult from test context if available
+    $lastActResult = $null
+    if ($TestContext -and $TestContext.ContainsKey('LastActResult')) {
+        $lastActResult = $TestContext.LastActResult
+        Write-Debug "$($Emojis.Debug) Using ActResult from test context"
+    }
     
     $checkResults = @()
     $passedCount = 0
@@ -1947,7 +1985,7 @@ function Invoke-ValidateState {
     
     foreach ($check in $checks) {
         try {
-            $result = Invoke-ValidationCheck -Check $check
+            $result = Invoke-ValidationCheck -Check $check -ActResult $lastActResult
             $checkResults += $result
             
             if ($result.Success) {
@@ -2073,16 +2111,29 @@ function Invoke-Comment {
 .PARAMETER StepIndex
     Step number for logging
 
+.PARAMETER TestContext
+    Test execution context hashtable that maintains state between test steps.
+    Used to pass ActResult from run-workflow steps to validate-state steps.
+
 .EXAMPLE
     $result = Invoke-TestStep -Step $step -StepIndex 1
+
+.EXAMPLE
+    $result = Invoke-TestStep -Step $step -StepIndex 1 -TestContext $testContext
 
 .NOTES
     Supported actions: setup-git-state, run-workflow, validate-state, execute-command, comment
 #>
 function Invoke-TestStep {
     param(
-        [Parameter(Mandatory = $true)][object]$Step,
-        [Parameter(Mandatory = $true)][int]$StepIndex
+        [Parameter(Mandatory = $true)]
+        [object]$Step,
+        
+        [Parameter(Mandatory = $true)]
+        [int]$StepIndex,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$TestContext
     )
 
     $action = $Step.action
@@ -2098,7 +2149,7 @@ function Invoke-TestStep {
                 Invoke-RunWorkflow -Step $Step
             }
             "validate-state" {
-                Invoke-ValidateState -Step $Step
+                Invoke-ValidateState -Step $Step -TestContext $TestContext
             }
             "execute-command" {
                 Invoke-ExecuteCommand -Step $Step
@@ -2203,6 +2254,12 @@ function Invoke-TestCleanup {
 
 .NOTES
     Returns test result object with: TestName, Success, Duration, StepResults, Message
+    
+    Test Context Mechanism:
+    - A test execution context (hashtable) is initialized at the start of each test
+    - The context stores the LastActResult from run-workflow steps
+    - This allows validate-state steps to access workflow results for workflow-success checks
+    - The context is automatically passed between steps during test execution
 #>
 function Invoke-IntegrationTest {
     param(
@@ -2229,6 +2286,10 @@ function Invoke-IntegrationTest {
         
         Write-Debug "$($Emojis.Debug) Test configuration: SkipBackup=$SkipBackup, SkipCleanup=$SkipCleanup"
         
+        # Initialize test execution context for sharing state between steps
+        $testContext = @{ LastActResult = $null }
+        Write-Debug "$($Emojis.Debug) Initialized test execution context"
+        
         # Backup git state
         # Integration with Backup-GitState.ps1: Call Backup-GitState before each test
         if (-not $SkipBackup) {
@@ -2244,8 +2305,14 @@ function Invoke-IntegrationTest {
             $step = $fixture.steps[$i]
             $stepIndex = $i + 1
             
-            $stepResult = Invoke-TestStep -Step $step -StepIndex $stepIndex
+            $stepResult = Invoke-TestStep -Step $step -StepIndex $stepIndex -TestContext $testContext
             $stepResults += $stepResult
+            
+            # Store ActResult in context if this was a run-workflow step
+            if ($stepResult.ActResult) {
+                $testContext.LastActResult = $stepResult.ActResult
+                Write-Debug "$($Emojis.Debug) Stored ActResult in test context for step $stepIndex"
+            }
             
             if (-not $stepResult.Success) {
                 $allStepsPassed = $false
