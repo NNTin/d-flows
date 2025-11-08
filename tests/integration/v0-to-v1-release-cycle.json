@@ -38,7 +38,7 @@
       "name": "Validate release artifacts",
       "action": "validate-state",
       "checks": [
-        {"type": "tag-exists", "tag": "v0.2.2"},
+        {"type": "version-greater", "current": "0.2.1", "new": "0.2.2"},
         {"type": "tag-exists", "tag": "v0.2.1"},
         {"type": "workflow-success", "workflow": "bump-version.yml"}
       ]
