@@ -13,7 +13,56 @@
       }
     },
     {
-      "name": "Execute bump-version workflow",
+      "name": "Validate release artifacts",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v0.2.1"}
+      ]
+    },
+    {
+      "name": "Execute patch bump-version workflow",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/patch-bump-main.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "0.2.2",
+        "FIRST_RELEASE": "false",
+        "CURRENT_MAJOR": "0"
+      },
+      "expectedStepSummary": [
+        "🔼 patch bump: 0.2.1 → 0.2.2",
+        "✅ Version validation passed"
+      ]
+    },
+    {
+      "name": "Validate release artifacts",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v0.2.2"},
+        {"type": "tag-exists", "tag": "v0.2.1"},
+        {"type": "workflow-success", "workflow": "bump-version.yml"}
+      ]
+    },
+    {
+      "name": "Execute release workflow",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v0.2.2.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "0"
+      }
+    },
+    {
+      "name": "Validate release artifacts",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v0"},
+        {"type": "tag-points-to", "tag": "v0", "target": "v0.2.2"},
+        {"type": "workflow-success", "workflow": "release.yml"}
+      ]
+    },
+    {
+      "name": "Execute major bump-version workflow",
       "action": "run-workflow",
       "workflow": "bump-version.yml",
       "fixture": "tests/bump-version/major-bump-v0-to-v1.json",
@@ -23,7 +72,7 @@
         "CURRENT_MAJOR": "0"
       },
       "expectedStepSummary": [
-        "🔼 major bump: 0.2.1 → 1.0.0",
+        "🔼 major bump: 0.2.2 → 1.0.0",
         "✅ Version validation passed"
       ]
     },
@@ -52,8 +101,9 @@
         {"type": "tag-exists", "tag": "v1"},
         {"type": "tag-points-to", "tag": "v1", "target": "v1.0.0"},
         {"type": "branch-exists", "branch": "release/v0"},
-        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.1"},
+        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.2"},
         {"type": "tag-exists", "tag": "v0.2.1"},
+        {"type": "tag-exists", "tag": "v0.2.2"},
         {"type": "workflow-success", "workflow": "release.yml"}
       ]
     },
@@ -62,7 +112,7 @@
       "action": "validate-state",
       "checks": [
         {"type": "branch-exists", "branch": "release/v0"},
-        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.1"}
+        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.2"}
       ]
     },
     {
@@ -70,6 +120,7 @@
       "action": "validate-state",
       "checks": [
         {"type": "tag-accessible", "tag": "v0.2.1"},
+        {"type": "tag-accessible", "tag": "v0.2.2"},
         {"type": "tag-accessible", "tag": "v1.0.0"},
         {"type": "major-tags-coexist", "tags": ["v0", "v1"]}
       ]
