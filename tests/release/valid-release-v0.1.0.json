@@ -1,0 +1,12 @@
+{
+  "_comment": "Test fixture for a valid first release (v0.1.0). Tests the release workflow's ability to create a GitHub release with proper version format. This tests the basic release creation flow as called by bump-version.yml. Git state required: No existing tag v0.1.0, main branch checked out with at least one commit. Expected outcome: Workflow should validate version format (semantic versioning), create GitHub release with tag v0.1.0, create major tag v0 pointing to v0.1.0, generate release notes automatically. Setup: Run 'setup-test-git-state.ps1 -Scenario ValidReleaseV0' before testing.",
+  "pull_request": null,
+  "inputs": {
+    "version": "0.1.0"
+  },
+  "github": {
+    "actor": "test-user",
+    "repository": "test-org/test-repo",
+    "workflow": "Release Workflow"
+  }
+}

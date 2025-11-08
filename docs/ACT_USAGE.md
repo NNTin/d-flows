@@ -1,0 +1,561 @@
+# ACT Usage Guide 🎭
+
+> Comprehensive testing documentation for GitHub Actions workflows using act
+
+This document complements the [`ACT_SETUP_GUIDE.md`](./ACT_SETUP_GUIDE.md) and focuses specifically on testing the `step-summary.yml` and `discord-notify.yml` workflows with various input combinations and scenarios.
+
+> **Note**: This guide covers unit testing of individual workflows. For integration testing of complete release cycles and multi-workflow scenarios, see [INTEGRATION_TESTING.md](./INTEGRATION_TESTING.md).
+
+## Prerequisites 📋
+
+Before using this guide, ensure you have:
+
+1. ✅ Completed the setup in [`ACT_SETUP_GUIDE.md`](./ACT_SETUP_GUIDE.md)
+2. ✅ Valid `.actrc` configuration file
+3. ✅ `.secrets` file created from `.secrets.template` (for Discord webhook testing)
+4. 🐳 Docker running and act installed
+
+## Test Fixtures Overview 📁
+
+The `tests/` directory contains organized JSON event files for different test scenarios:
+
+```
+tests/
+├── step-summary/           # Step Summary workflow tests
+│   ├── minimal.json        # Required inputs only
+│   ├── with-title.json     # With custom title
+│   ├── with-overwrite.json # With overwrite enabled
+│   └── full.json          # All inputs provided
+└── discord-notify/         # Discord Notify workflow tests
+    ├── minimal-message.json    # Basic message type
+    ├── minimal-embed.json      # Basic embed type
+    ├── embed-with-color.json   # Embed with custom color
+    ├── embed-with-fields.json  # Embed with structured fields
+    ├── custom-identity.json    # Custom username/avatar
+    ├── full-embed.json        # All embed options
+    ├── input-webhook.json     # Webhook via inputs (local testing)
+    └── no-webhook.json        # Graceful failure test
+```
+
+## Step Summary Workflow Testing 📝
+
+### Using JSON Event Files
+
+#### Minimal Test (Required Only)
+```powershell
+act workflow_dispatch -W .github/workflows/step-summary.yml -e tests/step-summary/minimal.json
+```
+
+#### With Custom Title
+```powershell
+act workflow_dispatch -W .github/workflows/step-summary.yml -e tests/step-summary/with-title.json
+```
+
+#### With Overwrite Enabled
+```powershell
+act workflow_dispatch -W .github/workflows/step-summary.yml -e tests/step-summary/with-overwrite.json
+```
+
+#### Full Feature Test (All Inputs)
+```powershell
+act workflow_dispatch -W .github/workflows/step-summary.yml -e tests/step-summary/full.json
+```
+
+### Direct Command-Line Inputs
+
+For quick testing without JSON files:
+
+#### Basic Test
+```powershell
+act workflow_dispatch -W .github/workflows/step-summary.yml --job set-summary `
+  --input markdown="# Quick Test`n`nThis is a direct command-line test."
+```
+
+#### With Title and Overwrite
+```powershell
+act workflow_dispatch -W .github/workflows/step-summary.yml --job set-summary `
+  --input markdown="## CLI Test`n`n✅ All systems operational" `
+  --input title="Command Line Test" `
+  --input overwrite=true
+```
+
+## Discord Notify Workflow Testing 💬
+
+### Using JSON Event Files
+
+#### Minimal Message Type
+```powershell
+act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/minimal-message.json
+```
+
+#### Minimal Embed Type
+```powershell
+act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/minimal-embed.json
+```
+
+#### Embed with Custom Color
+```powershell
+act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/embed-with-color.json
+```
+
+#### Embed with Structured Fields
+```powershell
+act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/embed-with-fields.json
+```
+
+#### Custom Identity (Username/Avatar)
+```powershell
+act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/custom-identity.json
+```
+
+#### Full Embed Features
+```powershell
+act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/full-embed.json
+```
+
+#### Input Webhook (Local Testing)
+```powershell
+# Using webhook_url via inputs instead of secrets (acceptable for local testing)
+act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/input-webhook.json
+```
+> **Note**: While using `webhook_url` via inputs is supported for local testing, using secrets is the preferred and more secure approach for production workflows.
+
+#### Graceful Failure (No Webhook)
+```powershell
+# Remove webhook from secrets temporarily or use empty secrets
+act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/no-webhook.json --secret-file /dev/null
+```
+
+### Direct Command-Line Inputs
+
+For quick testing without JSON files:
+
+#### Simple Message
+```powershell
+act workflow_call -W .github/workflows/discord-notify.yml `
+  --input message_type="message" `
+  --input content="Quick test from command line!"
+```
+
+#### Basic Embed
+```powershell
+act workflow_call -W .github/workflows/discord-notify.yml `
+  --input message_type="embed" `
+  --input title="CLI Test" `
+  --input description="Testing from command line"
+```
+
+#### Colored Embed with Fields
+```powershell
+act workflow_call -W .github/workflows/discord-notify.yml `
+  --input message_type="embed" `
+  --input title="Build Status" `
+  --input description="Build completed successfully" `
+  --input color="3066993" `
+  --input fields='[{"name":"Status","value":"✅ Success","inline":true}]'
+```
+
+## Secrets Management 🔐
+
+### Recommended: Using `.secrets` File
+1. Copy `.secrets.template` to `.secrets`
+2. Add your Discord webhook URL:
+   ```
+   webhook_url=https://discord.com/api/webhooks/your/webhook/url
+   ```
+
+### Alternative: Command-Line Secrets
+```powershell
+act workflow_call -W .github/workflows/discord-notify.yml `
+  -s webhook_url="https://discord.com/api/webhooks/your/webhook/url" `
+  -e tests/discord-notify/minimal-embed.json
+```
+
+### Environment Variables
+```powershell
+$env:webhook_url="https://discord.com/api/webhooks/your/webhook/url"
+act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/minimal-embed.json
+```
+
+## Advanced Testing Scenarios 🚀
+
+### Running Specific Jobs Only
+```powershell
+# Run only the 'send-notification' job in discord-notify workflow
+act workflow_call -W .github/workflows/discord-notify.yml --job send-notification -e tests/discord-notify/minimal-embed.json
+```
+
+### Verbose Output for Debugging
+```powershell
+act workflow_dispatch -W .github/workflows/step-summary.yml -e tests/step-summary/full.json --verbose
+```
+
+### Dry-Run Mode (Validation Only)
+```powershell
+act workflow_dispatch -W .github/workflows/step-summary.yml -e tests/step-summary/minimal.json --dryrun
+```
+
+### Testing with Different Runner Images
+```powershell
+# Use a specific Ubuntu version
+act workflow_dispatch -W .github/workflows/step-summary.yml -e tests/step-summary/minimal.json -P ubuntu-latest=ubuntu:20.04
+```
+
+### Offline Mode (Cached Actions Only)
+```powershell
+act workflow_dispatch -W .github/workflows/step-summary.yml -e tests/step-summary/minimal.json --action-offline-mode
+```
+
+## Tips and Best Practices 💡
+
+### Pre-Flight Checks
+```powershell
+# Verify workflow syntax
+act --list
+
+# Check available workflows and jobs
+act -l
+```
+
+### Debugging Docker Issues
+```powershell
+# Check Docker logs if workflow fails
+docker logs $(docker ps -l -q)
+
+# Clean up stopped containers
+docker container prune
+```
+
+### Testing Without Secrets
+```powershell
+# For validation-only runs (Discord workflow will skip notification)
+act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/minimal-embed.json --secret-file /dev/null
+```
+
+### JSON Validation
+```powershell
+# Validate JSON syntax before running
+Get-Content tests/step-summary/full.json | ConvertFrom-Json
+```
+
+## Common Issues 🔧
+
+### Webhook URL Not Working
+- 🔍 **Problem**: Discord notifications not appearing
+- ✅ **Solution**: Test with webhook.site or similar mock services:
+  ```powershell
+  # Get a test webhook URL from https://webhook.site
+  act workflow_call -W .github/workflows/discord-notify.yml `
+    -s webhook_url="https://webhook.site/your-unique-id" `
+    -e tests/discord-notify/minimal-message.json
+  ```
+
+### JSON Parsing Errors
+- 🔍 **Problem**: `invalid character` errors
+- ✅ **Solution**: Validate JSON syntax and escape special characters:
+  ```powershell
+  # Test JSON syntax
+  Get-Content tests/discord-notify/full-embed.json | ConvertFrom-Json
+  ```
+
+### Step Summary Not Visible
+- 🔍 **Problem**: Can't see step summary output
+- ✅ **Solution**: Step summaries are logged, not displayed. Check workflow logs for the summary content.
+
+### Docker Container Issues
+- 🔍 **Problem**: Container startup failures
+- ✅ **Solution**: 
+  ```powershell
+  # Update act runner images
+  act --pull
+
+  # Clean Docker cache
+  docker system prune
+  ```
+
+## Quick Reference 📚
+
+| Test Scenario | Command | Tests |
+|--------------|---------|--------|
+| **Step Summary - Minimal** | `act workflow_dispatch -W .github/workflows/step-summary.yml -e tests/step-summary/minimal.json` | Required input only, default values |
+| **Step Summary - With Title** | `act workflow_dispatch -W .github/workflows/step-summary.yml -e tests/step-summary/with-title.json` | Custom title functionality |
+| **Step Summary - Overwrite** | `act workflow_dispatch -W .github/workflows/step-summary.yml -e tests/step-summary/with-overwrite.json` | Summary replacement vs. append |
+| **Step Summary - Full** | `act workflow_dispatch -W .github/workflows/step-summary.yml -e tests/step-summary/full.json` | All input parameters |
+| **Discord - Message** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/minimal-message.json` | Basic message type |
+| **Discord - Embed** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/minimal-embed.json` | Basic embed type |
+| **Discord - Colored** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/embed-with-color.json` | Color customization |
+| **Discord - Fields** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/embed-with-fields.json` | Structured data display |
+| **Discord - Identity** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/custom-identity.json` | Custom username/avatar |
+| **Discord - Full** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/full-embed.json` | All embed features |
+| **Discord - Input Webhook** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/input-webhook.json` | Webhook via inputs (local testing) |
+| **Discord - No Webhook** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/no-webhook.json --secret-file /dev/null` | Graceful failure handling |
+
+## Version Management Workflow Testing 🔄
+
+> Testing `bump-version.yml` and `release.yml` workflows with git state management
+
+The `bump-version.yml` and `release.yml` workflows require specific git state to function properly. We provide a comprehensive helper script to set up the correct git state for each test scenario.
+
+### Git State Setup Helper
+
+Use the `setup-test-git-state.ps1` script to prepare your repository for testing:
+
+```powershell
+# Setup git state for a specific test scenario
+.\setup-test-git-state.ps1 -Scenario <ScenarioName>
+
+# Run your test
+act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/<test-file>.json
+
+# Clean up when done
+.\setup-test-git-state.ps1 -Scenario Reset
+```
+
+### Available Scenarios
+
+**Bump Version Test Scenarios:**
+- `FirstRelease` - Clean state for first release testing
+- `PatchBump` - Setup v0.1.0 tag for patch bump testing
+- `MinorBump` - Setup v0.1.0 tag for minor bump testing  
+- `MajorBumpV0ToV1` - Setup v0.2.1 tag for v1 promotion testing
+- `MajorBumpV1ToV2` - Setup v1.2.0 tag for v2 release testing
+- `ReleaseBranchPatch` - Setup release/v1 branch with v1.2.0 tag
+- `ReleaseBranchMinor` - Setup release/v1 branch with v1.2.1 tag
+- `DuplicateTag` - Setup duplicate tags for error testing
+- `InvalidBranch` - Create feature/test-branch for error testing
+- `FirstReleaseError` - Setup release/v1 branch with no tags
+- `MajorVersionMismatch` - Setup conflicting version states
+
+**Release Test Scenarios:**
+- `ValidReleaseV0` - Clean state for v0.1.0 release testing
+- `ValidReleaseV1` - Setup v0.2.1 tag for v1.0.0 release testing
+- `ValidReleaseV1Patch` - Setup v1.2.2 tag for v1.2.3 release testing
+- `DuplicateReleaseTag` - Setup v1.0.0 tag for error testing
+
+**Cleanup:**
+- `Reset` - Remove all test tags and branches
+
+### Testing Workflow Examples
+
+#### Example 1: First Release Testing
+
+```powershell
+# Setup clean state
+.\setup-test-git-state.ps1 -Scenario FirstRelease
+
+# Test first release
+act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/first-release-main.json
+
+# Should calculate version v0.1.0 and trigger release workflow
+# Check the output for version calculation and job triggers
+
+# Cleanup
+.\setup-test-git-state.ps1 -Scenario Reset
+```
+
+#### Example 2: Patch Bump Testing
+
+```powershell
+# Setup with v0.1.0 tag
+.\setup-test-git-state.ps1 -Scenario PatchBump
+
+# Test patch bump
+act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/patch-bump-main.json
+
+# Should calculate version v0.1.1 and trigger release workflow
+# Verify no release branch is created for patch bumps
+
+# Cleanup
+.\setup-test-git-state.ps1 -Scenario Reset
+```
+
+#### Example 3: Major Bump with Release Branch Creation
+
+```powershell
+# Setup for v1 to v2 major bump
+.\setup-test-git-state.ps1 -Scenario MajorBumpV1ToV2
+
+# Test major bump
+act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/major-bump-v1-to-v2.json
+
+# Should:
+# 1. Calculate version v2.0.0
+# 2. Create release/v1 branch from v1.2.0 tag
+# 3. Trigger release workflow
+
+# Verify release branch creation:
+git branch --list release/v1
+
+# Cleanup
+.\setup-test-git-state.ps1 -Scenario Reset
+```
+
+#### Example 4: Release Branch Testing
+
+```powershell
+# Setup release branch with v1.2.0 tag
+.\setup-test-git-state.ps1 -Scenario ReleaseBranchPatch
+
+# Test patch bump on release branch
+act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/patch-bump-release-branch.json
+
+# Should calculate version v1.2.1 for release branch
+# No new release branch should be created
+
+# Cleanup
+.\setup-test-git-state.ps1 -Scenario Reset
+```
+
+#### Example 5: Error Scenario Testing
+
+```powershell
+# Setup duplicate tag state
+.\setup-test-git-state.ps1 -Scenario DuplicateTag
+
+# Test error handling
+act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/error-duplicate-tag.json
+
+# Should fail with appropriate error message about duplicate tags
+# Verify error handling and output messages
+
+# Cleanup
+.\setup-test-git-state.ps1 -Scenario Reset
+```
+
+#### Example 6: Release Workflow Testing
+
+```powershell
+# Setup for v1.0.0 release
+.\setup-test-git-state.ps1 -Scenario ValidReleaseV1
+
+# Test release creation
+act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v1.0.0.json
+
+# Should create v1.0.0 tag and GitHub release
+# Verify tag creation and release notes
+
+# Cleanup
+.\setup-test-git-state.ps1 -Scenario Reset
+```
+
+### Safety Notes
+
+⚠️ **IMPORTANT**: The `setup-test-git-state.ps1` script creates and deletes git tags and branches. Only use it in:
+- Test repositories
+- Local clones of your repository
+- Never on production or shared repositories
+
+The script includes safety checks and will warn you if it doesn't detect the expected repository structure.
+
+### Debugging Test Failures
+
+If a test fails, check the following:
+
+1. **Git State**: Verify the correct git state was set up:
+   ```powershell
+   git tag -l        # Check existing tags
+   git branch -a     # Check existing branches
+   git log --oneline -5  # Check recent commits
+   ```
+
+2. **Test Fixture**: Verify the JSON test fixture matches your scenario
+3. **Workflow Syntax**: Use `act --list` to verify workflow syntax
+4. **Dependencies**: Ensure all required GitHub Actions are available locally
+
+### Comprehensive Test Suite
+
+To run all bump-version tests:
+
+```powershell
+# Array of all bump-version test scenarios
+$bumpTests = @(
+    @{Scenario="FirstRelease"; Test="first-release-main.json"},
+    @{Scenario="PatchBump"; Test="patch-bump-main.json"},
+    @{Scenario="MinorBump"; Test="minor-bump-main.json"},
+    @{Scenario="MajorBumpV0ToV1"; Test="major-bump-v0-to-v1.json"},
+    @{Scenario="MajorBumpV1ToV2"; Test="major-bump-v1-to-v2.json"},
+    @{Scenario="ReleaseBranchPatch"; Test="patch-bump-release-branch.json"},
+    @{Scenario="ReleaseBranchMinor"; Test="minor-bump-release-branch.json"}
+)
+
+# Run each test
+foreach ($test in $bumpTests) {
+    Write-Output "Testing: $($test.Test)"
+    .\setup-test-git-state.ps1 -Scenario $test.Scenario
+    act workflow_dispatch -W .github/workflows/bump-version.yml -e "tests/bump-version/$($test.Test)"
+    .\setup-test-git-state.ps1 -Scenario Reset
+    Write-Output "Completed: $($test.Test)`n"
+}
+```
+
+To run all release tests:
+
+```powershell
+# Array of all release test scenarios  
+$releaseTests = @(
+    @{Scenario="ValidReleaseV0"; Test="valid-release-v0.1.0.json"},
+    @{Scenario="ValidReleaseV1"; Test="valid-release-v1.0.0.json"},
+    @{Scenario="ValidReleaseV1Patch"; Test="valid-release-v1.2.3.json"}
+)
+
+# Run each test
+foreach ($test in $releaseTests) {
+    Write-Output "Testing: $($test.Test)"
+    .\setup-test-git-state.ps1 -Scenario $test.Scenario
+    act workflow_dispatch -W .github/workflows/release.yml -e "tests/release/$($test.Test)"
+    .\setup-test-git-state.ps1 -Scenario Reset
+    Write-Output "Completed: $($test.Test)`n"
+}
+```
+
+### Version Management Test Reference
+
+| Test Scenario | Setup Command | Test Command | Expected Outcome |
+|--------------|---------------|--------------|------------------|
+| **First Release** | `.\setup-test-git-state.ps1 -Scenario FirstRelease` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/first-release-main.json` | Calculate v0.1.0, trigger release |
+| **Patch Bump** | `.\setup-test-git-state.ps1 -Scenario PatchBump` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/patch-bump-main.json` | Calculate v0.1.1, trigger release |
+| **Minor Bump** | `.\setup-test-git-state.ps1 -Scenario MinorBump` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/minor-bump-main.json` | Calculate v0.2.0, trigger release |
+| **Major Bump v0→v1** | `.\setup-test-git-state.ps1 -Scenario MajorBumpV0ToV1` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/major-bump-v0-to-v1.json` | Calculate v1.0.0, trigger release |
+| **Major Bump v1→v2** | `.\setup-test-git-state.ps1 -Scenario MajorBumpV1ToV2` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/major-bump-v1-to-v2.json` | Calculate v2.0.0, create release/v1 branch |
+| **Release Branch Patch** | `.\setup-test-git-state.ps1 -Scenario ReleaseBranchPatch` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/patch-bump-release-branch.json` | Calculate v1.2.1 on release branch |
+| **Release Branch Minor** | `.\setup-test-git-state.ps1 -Scenario ReleaseBranchMinor` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/minor-bump-release-branch.json` | Calculate v1.3.0 on release branch |
+| **Release v0.1.0** | `.\setup-test-git-state.ps1 -Scenario ValidReleaseV0` | `act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v0.1.0.json` | Create v0.1.0 tag and release |
+| **Release v1.0.0** | `.\setup-test-git-state.ps1 -Scenario ValidReleaseV1` | `act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v1.0.0.json` | Create v1.0.0 tag and release |
+| **Release v1.2.3** | `.\setup-test-git-state.ps1 -Scenario ValidReleaseV1Patch` | `act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v1.2.3.json` | Create v1.2.3 tag and release |
+| **Integration Tests** | See [INTEGRATION_TESTING.md](./INTEGRATION_TESTING.md) | Complete release cycles, multi-workflow orchestration |
+
+## Integration Testing 🧪
+
+For end-to-end testing of complete release cycles and multi-workflow scenarios, see the comprehensive integration testing guide:
+
+📖 **[INTEGRATION_TESTING.md](./INTEGRATION_TESTING.md)**
+
+Integration tests validate:
+- ✅ Complete release cycles (v0.1.1 → v1.0.0)
+- ✅ Multi-workflow orchestration (bump-version → release)
+- ✅ Rollback and error recovery scenarios
+- ✅ Backward compatibility for v0 users
+- ✅ Release branch creation and maintenance
+- ✅ Major tag stability and updates
+
+**Quick Start:**
+```powershell
+# Run all integration tests
+.\run-integration-tests.ps1
+
+# Run specific scenario
+.\run-integration-tests.ps1 -Scenario CompleteReleaseCycle
+
+# Run with verbose output
+.\run-integration-tests.ps1 -Verbose
+```
+
+**When to use integration tests vs. unit tests:**
+- **Unit tests** (this document): Test individual workflows in isolation with specific inputs
+- **Integration tests** (INTEGRATION_TESTING.md): Test complete workflows end-to-end with state transitions
+
+For most development and debugging, start with unit tests. Use integration tests before releases and after major changes to validate the complete system.
+
+---
+
+🎯 **Happy Testing!** These test fixtures and commands provide comprehensive coverage of all workflows. Start with the minimal tests and work your way up to the full feature tests to verify all functionality. For multi-workflow scenarios and complete release cycles, see the integration testing guide.

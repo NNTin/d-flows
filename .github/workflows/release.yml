@@ -18,12 +18,25 @@ concurrency:
 jobs:
   create-release:
     runs-on: ubuntu-latest
+    outputs:
+      MAJOR_VERSION: ${{ steps.extract-major-version.outputs.MAJOR_VERSION }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          fetch-tags: true
+          fetch-tags: false  # Disabled to prevent remote tag fetching during act tests
+
+      - name: Setup git for act
+        if: ${{ env.ACT }}
+        shell: bash
+        run: |
+          # When running under act, the repository is already mounted at the correct location
+          # No need to checkout - preserve existing git state for testing
+          echo "Running under act - repository already mounted"
+          echo "Current branch: $(git branch --show-current)"
+          echo "Existing tags: $(git tag -l | wc -l) tags"
+          echo "Git state preserved for testing"
 
       - name: Validate version format
         shell: bash
@@ -45,16 +58,20 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GIT_COMMITTER_NAME: "github-actions[bot]"
+          GIT_COMMITTER_EMAIL: "github-actions[bot]@users.noreply.github.com"
+          GIT_AUTHOR_NAME: "github-actions[bot]"
+          GIT_AUTHOR_EMAIL: "github-actions[bot]@users.noreply.github.com"
         run: |
-          gh release create "v${{ inputs.version }}" --generate-notes --title "Release v${{ inputs.version }}" --target "${{ github.sha }}"
-
-      - name: Configure Git for bot user
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [[ -n "$ACT" ]]; then        
+            VERSION="v${{ inputs.version }}"
+            git tag -a "$VERSION" -f -m "Release $VERSION"
+          else
+            gh release create "v${{ inputs.version }}" --generate-notes --title "Release v${{ inputs.version }}" --target "${{ github.sha }}"
+          fi
 
       - name: Extract major version
+        id: extract-major-version
         shell: bash
         run: |
           MAJOR_VERSION=$(echo "${{ inputs.version }}" | cut -d. -f1)
@@ -65,16 +82,31 @@ jobs:
           fi
           
           echo "MAJOR_VERSION=$MAJOR_VERSION" >> "$GITHUB_ENV"
+          echo "MAJOR_VERSION=$MAJOR_VERSION" >> "$GITHUB_OUTPUT"
+          
+          # Print distinctive markers for act (ACT_TESTING_MODE)
+          # Output to stdout and step summary to ensure visibility
+          if [[ -n "$ACT" ]]; then
+            echo "OUTPUT: MAJOR_VERSION=$MAJOR_VERSION"
+            # Also write to step summary for act compatibility
+            echo "OUTPUT: MAJOR_VERSION=$MAJOR_VERSION" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Create annotated major tag
         shell: bash
+        env:
+          GIT_COMMITTER_NAME: "github-actions[bot]"
+          GIT_COMMITTER_EMAIL: "github-actions[bot]@users.noreply.github.com"
+          GIT_AUTHOR_NAME: "github-actions[bot]"
+          GIT_AUTHOR_EMAIL: "github-actions[bot]@users.noreply.github.com"
         run: |
           git tag -a "v$MAJOR_VERSION" -f -m "Update v$MAJOR_VERSION -> v${{ inputs.version }}"
 
-      - name: Push major tag with force
+      - name: Push major tag
+        if: ${{ !env.ACT }} # only run if NOT running under act
         shell: bash
         run: |
-          git push origin "v$MAJOR_VERSION" --force
+          git push origin "v$MAJOR_VERSION"
 
       - name: Update step summary with major tag information
         shell: bash

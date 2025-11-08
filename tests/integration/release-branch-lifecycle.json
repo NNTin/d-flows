@@ -1,0 +1,89 @@
+{
+  "name": "Release Branch Lifecycle",
+  "description": "Tests the automatic release branch creation feature and validates the ability to maintain multiple major versions simultaneously. This validates automatic release branch creation during major bump, branch created from correct commit, patches on release branch only affect that major version, and main branch continues independent development.",
+  "steps": [
+    {
+      "name": "Setup v1.2.0 on main",
+      "action": "setup-git-state",
+      "scenario": "MajorBumpV1ToV2",
+      "expectedState": {
+        "tags": ["v1.2.0"],
+        "branches": ["main"],
+        "currentBranch": "main"
+      }
+    },
+    {
+      "name": "Major bump: v1.2.0 → v2.0.0",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/major-bump-v1-to-v2.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "2.0.0",
+        "CURRENT_MAJOR": "1",
+        "RELEASE_BRANCH_CREATED": "true"
+      }
+    },
+    {
+      "name": "Validate release branch creation",
+      "action": "validate-state",
+      "checks": [
+        {"type": "branch-exists", "branch": "release/v1"},
+        {"type": "tag-exists", "tag": "v2.0.0"},
+        {"type": "tag-exists", "tag": "v2"},
+        {"type": "major-tag-coexistence", "tags": ["v1", "v2"]}
+      ]
+    },
+    {
+      "name": "Execute release workflow for v2.0.0",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v2.0.0.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "2"
+      }
+    },
+    {
+      "name": "Patch on release/v1 branch: v1.2.0 → v1.2.1",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/patch-bump-release-branch.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "1.2.1"
+      }
+    },
+    {
+      "name": "Validate release branch patch",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v1.2.1"},
+        {"type": "tag-points-to", "tag": "v1", "target": "v1.2.1"},
+        {"type": "current-branch", "branch": "release/v1"}
+      ]
+    },
+    {
+      "name": "Minor on main: v2.0.0 → v2.1.0",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/minor-bump-main.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "2.1.0"
+      }
+    },
+    {
+      "name": "Validate independent major version branches",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v2.1.0"},
+        {"type": "tag-exists", "tag": "v1.2.1"},
+        {"type": "tag-points-to", "tag": "v1", "target": "v1.2.1"},
+        {"type": "tag-points-to", "tag": "v2", "target": "v2.1.0"},
+        {"type": "no-cross-contamination", "v1": "v1.2.1", "v2": "v2.1.0"}
+      ]
+    }
+  ],
+  "cleanup": {
+    "action": "reset-git-state"
+  },
+  "expectedDuration": "45-90 seconds",
+  "tags": ["integration", "release-branch", "major-versions", "branch-management"]
+}

@@ -1,15 +1,12 @@
 name: Discord Notification
 
 # This workflow sends Discord notifications via webhook.
+# Webhook URL must be provided as a secret for security.
 # Webhook failures are non-fatal and will not cause the calling workflow to fail.
 
 on:
   workflow_call:
     inputs:
-      webhook_url:
-        type: string
-        required: false
-        description: "Discord webhook URL (use secrets.webhook_url instead)"
       message_type:
         type: string
         required: false
@@ -45,8 +42,8 @@ on:
         description: "Custom avatar URL for webhook (defaults to GitHub actor avatar)"
     secrets:
       webhook_url:
-        required: false
-        description: "Discord webhook URL (preferred over input)"
+        required: true
+        description: "Discord webhook URL (required for security)"
 
 permissions:
   contents: read
@@ -58,7 +55,7 @@ jobs:
       - name: Send Discord Notification
         shell: bash
         env:
-          WEBHOOK_URL: ${{ secrets.webhook_url || inputs.webhook_url }}
+          WEBHOOK_URL: ${{ secrets.webhook_url }}
           MESSAGE_TYPE: ${{ inputs.message_type }}
           TITLE: ${{ inputs.title }}
           DESCRIPTION: ${{ inputs.description }}
@@ -71,9 +68,18 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_WORKFLOW: ${{ github.workflow }}
         run: |
+          # Validate webhook URL is provided via secret only
           if [[ -z "$WEBHOOK_URL" ]]; then
-            echo "⚠️ No webhook URL provided (input or secret), skipping notification."
-            exit 0
+            echo "❌ Error: webhook_url secret is required for Discord notifications"
+            echo "Please configure the DISCORD_WEBHOOK_URL secret in repository settings"
+            exit 1
+          fi
+          
+          # Validate webhook URL format to prevent accidental secret leakage
+          if [[ ! "$WEBHOOK_URL" =~ ^https://discord(app)?\.com/api/webhooks/[0-9]+/[A-Za-z0-9_-]+$ ]]; then
+            echo "❌ Error: Invalid Discord webhook URL format"
+            echo "Expected format: https://discord.com/api/webhooks/{id}/{token}"
+            exit 1
           fi
           # Generate ISO 8601 timestamp
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -108,8 +114,6 @@ jobs:
           
           # Extract clean username from GitHub actor for avatar URLs
           CLEAN_USERNAME=$(extract_username "$GITHUB_ACTOR")
-          echo "Debug: GITHUB_ACTOR=$GITHUB_ACTOR"
-          echo "Debug: CLEAN_USERNAME=$CLEAN_USERNAME"
           
           # Set default values - handle both unset variables AND empty strings
           if [[ -z "$USERNAME" || "$USERNAME" =~ ^[[:space:]]*$ ]]; then
@@ -146,7 +150,6 @@ jobs:
           else
             # Embed payload (default) using jq
             ACTOR_ICON_URL="https://github.com/$CLEAN_USERNAME.png"
-            echo "Debug: ACTOR_ICON_URL=$ACTOR_ICON_URL"
             FOOTER_TEXT="$GITHUB_REPOSITORY • $GITHUB_WORKFLOW"
             
             # Start with base embed object
@@ -186,24 +189,11 @@ jobs:
             
             # Add fields if provided and valid JSON array
             if [[ -n "$FIELDS" ]]; then
-              echo "Debug: Raw FIELDS value:"
-              echo "$FIELDS"
-              echo "Debug: FIELDS length: ${#FIELDS}"
-              
               # Validate JSON and check if it's an array
               if command -v jq >/dev/null 2>&1 && echo "$FIELDS" | jq . >/dev/null 2>&1 && echo "$FIELDS" | jq -e 'type=="array"' >/dev/null 2>&1; then
-                echo "Debug: Fields JSON validation passed"
-                echo "Debug: Parsed fields array:"
-                echo "$FIELDS" | jq .
-                
                 EMBED_BASE=$(echo "$EMBED_BASE" | jq --argjson fields "$FIELDS" '. + {fields: $fields}')
-                
-                echo "Debug: Final EMBED_BASE after adding fields:"
-                echo "$EMBED_BASE" | jq .
               else
                 echo "Warning: Fields input is not a valid JSON array, skipping fields"
-                echo "Debug: jq validation output:"
-                echo "$FIELDS" | jq . 2>&1 || true
               fi
             fi
             
@@ -217,9 +207,6 @@ jobs:
                 avatar_url: $avatar_url,
                 embeds: [$embed]
               }')
-              
-            echo "Debug: Final payload:"
-            echo "$PAYLOAD" | jq .
           fi
           
           # Send the webhook using curl
@@ -234,8 +221,6 @@ jobs:
             echo "✅ Discord notification sent successfully (HTTP $HTTP_STATUS)"
           else
             echo "⚠️ Failed to send Discord notification (HTTP $HTTP_STATUS)"
-            echo "Payload that was sent:"
-            echo "$PAYLOAD"
             echo "Note: Webhook failures are non-fatal and do not fail the workflow"
             exit 0
           fi

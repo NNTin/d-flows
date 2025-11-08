@@ -1,0 +1,12 @@
+{
+  "_comment": "Test fixture for a valid v2.0.0 release (second major version). Tests creating a major version 2 release after a major version bump from v1 to v2. Git state required: No existing tag v2.0.0, existing v1.x.x tags (v1.2.3 or similar), main branch checked out. Expected outcome: Workflow should validate version format, create GitHub release with tag v2.0.0, create/update major tag v2 pointing to v2.0.0, generate release notes. Used in the release branch lifecycle test scenario. Setup: Run 'setup-test-git-state.ps1 -Scenario ValidReleaseV2' before testing.",
+  "pull_request": null,
+  "inputs": {
+    "version": "2.0.0"
+  },
+  "github": {
+    "actor": "test-user",
+    "repository": "test-org/test-repo",
+    "workflow": "Release Workflow"
+  }
+}

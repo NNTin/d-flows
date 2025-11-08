@@ -6,3 +6,6 @@ actionlint
 .secrets
 .artifacts/
 pr-event.json
+/.chunkhound.json
+/.chunkhound/db
+/.vscode/mcp.json

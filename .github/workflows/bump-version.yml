@@ -8,9 +8,9 @@ on:
         required: true
         type: choice
         options:
-          - major
-          - minor
           - patch
+          - minor
+          - major
       target_branch:
         description: 'Branch to bump version on (main for latest major, release/vX for older majors, or type custom branch name)'
         required: true
@@ -28,13 +28,56 @@ concurrency:
 jobs:
   calculate-and-release:
     runs-on: ubuntu-latest
+    outputs:
+      RELEASE_BRANCH_CREATED: ${{ steps.create-release-branch.outputs.RELEASE_BRANCH_CREATED }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.target_branch }}
           fetch-depth: 0
-          fetch-tags: true
+          fetch-tags: false  # Disabled to prevent remote tag fetching during act tests
+          token: ${{ secrets.GITHUB_TOKEN != '' && secrets.GITHUB_TOKEN || env.GITHUB_TOKEN != '' && env.GITHUB_TOKEN || env.TOKEN_FALLBACK }}
+
+      - name: Setup test tags when running under act
+        if: ${{ env.ACT }}
+        shell: bash
+        run: |
+          # When running under act, restore test tags from metadata file
+          echo "Running under act - restoring test tags"
+          
+          echo "📋 Git tags BEFORE cleanup:"
+          git tag -l || echo "No tags"
+          
+          # Delete all existing tags to ensure clean state
+          echo "🧹 Cleaning all existing tags..."
+          git tag -l | xargs -r git tag -d 2>/dev/null || true
+          
+          echo "📋 Git tags AFTER cleanup:"
+          git tag -l || echo "No tags"
+          
+          TAG_FILE="${TEST_STATE_PATH:-/tmp/test-state}/test-tags.txt"
+          if [[ -f "$TAG_FILE" ]]; then
+            echo "📋 Found test tags file: $TAG_FILE"
+            echo "📋 Contents of test-tags.txt:"
+            cat "$TAG_FILE"
+            echo "---"
+            
+            while IFS=' ' read -r tag_name commit_sha; do
+              if [[ -n "$tag_name" ]] && [[ -n "$commit_sha" ]]; then
+                commit_sha=$(echo "$commit_sha" | tr -d '\r')
+                echo "Creating test tag: $tag_name at $commit_sha"
+                git tag "$tag_name" "$commit_sha" 2>/dev/null || echo "Tag $tag_name already exists"
+              fi
+            done < "$TAG_FILE"
+            echo "✅ Test tags restored from file"
+          else
+            echo "⚠️ No test tags file found at $TAG_FILE"
+            echo "✅ Clean state - no tags (correct for first release)"
+          fi
+          
+          echo "📋 Git tags FINAL:"
+          git tag -l || echo "No tags"
 
       - name: Validate branch selection
         shell: bash
@@ -46,15 +89,19 @@ jobs:
           
           echo "🔍 Validating branch selection: $TARGET_BRANCH" >> "$GITHUB_STEP_SUMMARY"
           
-          # Check if branch exists
-          if ! git ls-remote --heads origin "$TARGET_BRANCH" | grep -q "refs/heads/$TARGET_BRANCH$"; then
+          # Check if branch exists locally (already fetched by checkout action)
+          # Note: We can't use git ls-remote because it may not have network access
+          # The checkout action has already fetched all branches, so we check locally
+          if git show-ref --verify "refs/remotes/origin/$TARGET_BRANCH" > /dev/null 2>&1; then
+            echo "✅ Branch '$TARGET_BRANCH' exists" >> "$GITHUB_STEP_SUMMARY"
+          else
             echo "❌ Error: Branch '$TARGET_BRANCH' does not exist in the repository" >&2
             echo "❌ **Error:** Branch '$TARGET_BRANCH' does not exist in the repository" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
           
           # Detect highest major version from existing tags
-          HIGHEST_MAJOR=$(git tag -l "v*.*.*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sed 's/^v//' | cut -d. -f1 | sort -n | tail -n1)
+          HIGHEST_MAJOR=$(git tag -l "v*.*.*" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | sed 's/^v//' | cut -d. -f1 | sort -n | tail -n1 || echo "")
           HIGHEST_MAJOR=${HIGHEST_MAJOR:-0}
           
           # Validate branch logic
@@ -206,6 +253,20 @@ jobs:
           echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_ENV"
           echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_OUTPUT"
           
+          # Print distinctive markers for act (ACT_TESTING_MODE)
+          # Output to stdout and step summary to ensure visibility
+          if [[ -n "$ACT" ]]; then
+            echo "OUTPUT: NEW_VERSION=$NEW_VERSION"
+            echo "OUTPUT: FIRST_RELEASE=$FIRST_RELEASE"
+            echo "OUTPUT: CURRENT_MAJOR=$CURRENT_MAJOR"
+            # Also write to step summary for act compatibility
+            {
+              echo "OUTPUT: NEW_VERSION=$NEW_VERSION"
+              echo "OUTPUT: FIRST_RELEASE=$FIRST_RELEASE"
+              echo "OUTPUT: CURRENT_MAJOR=$CURRENT_MAJOR"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          
           # Enforce main-branch semantics (bypass for first releases)
           if [[ "$TARGET_BRANCH" == "main" && "$FIRST_RELEASE" != "true" ]]; then
             # Determine highest major reachable from HEAD (main branch checked out)
@@ -300,7 +361,69 @@ jobs:
           
           EOF
 
+      - name: Create release branch for previous major version
+        id: create-release-branch
+        if: ${{ inputs.bump_type == 'major' && inputs.target_branch == 'main' && env.FIRST_RELEASE == 'false' }}
+        shell: bash
+        continue-on-error: false
+        run: |
+          set -e
+          set -o pipefail
+          
+          # Add section header to step summary
+          echo "## 🌿 Release Branch Creation" >> "$GITHUB_STEP_SUMMARY"
+          
+          # Calculate previous major version
+          PREVIOUS_MAJOR=$CURRENT_MAJOR
+          
+          # Find last tag of previous major
+          LAST_TAG=$(git tag -l "v${PREVIOUS_MAJOR}.*.*" | grep -E "^v${PREVIOUS_MAJOR}\.[0-9]+\.[0-9]+$" | sort -V | tail -n1 || echo "")
+          
+          # Validate tag exists
+          if [[ -z "$LAST_TAG" ]]; then
+            echo "❌ Error: No tags found for major version v${PREVIOUS_MAJOR}" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          
+          # Get commit SHA
+          COMMIT_SHA=$(git rev-list -n 1 "$LAST_TAG")
+          SHORT_SHA=${COMMIT_SHA:0:7}
+          
+          # Check if branch already exists
+          if git ls-remote --heads origin "release/v${PREVIOUS_MAJOR}" | grep -q "refs/heads/release/v${PREVIOUS_MAJOR}$"; then
+            echo "⚠️ Release branch release/v${PREVIOUS_MAJOR} already exists, skipping creation" >> "$GITHUB_STEP_SUMMARY"
+            echo "RELEASE_BRANCH_CREATED=false" >> "$GITHUB_OUTPUT"
+            
+            # Print ACT marker for test validation
+            if [[ -n "$ACT" ]]; then
+              echo "OUTPUT: RELEASE_BRANCH_CREATED=false"
+              echo "OUTPUT: RELEASE_BRANCH_CREATED=false" >> "$GITHUB_STEP_SUMMARY"
+            fi
+            
+            exit 0
+          fi
+          
+          # Create local branch
+          git branch "release/v${PREVIOUS_MAJOR}" "$COMMIT_SHA"
+          
+          # don't push when running under act
+          if [[ -z "$ACT" ]]; then
+            # Push to remote
+            git push origin "release/v${PREVIOUS_MAJOR}"
+          fi
+
+          # Log success
+          echo "✅ Created release branch \`release/v${PREVIOUS_MAJOR}\` from tag ${LAST_TAG} at commit ${SHORT_SHA}" >> "$GITHUB_STEP_SUMMARY"
+          echo "RELEASE_BRANCH_CREATED=true" >> "$GITHUB_OUTPUT"
+          
+          # Print ACT marker for test validation
+          if [[ -n "$ACT" ]]; then
+            echo "OUTPUT: RELEASE_BRANCH_CREATED=true"
+            echo "OUTPUT: RELEASE_BRANCH_CREATED=true" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Trigger release workflow
+        if: ${{ !env.ACT }} # only run if NOT running under act
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
