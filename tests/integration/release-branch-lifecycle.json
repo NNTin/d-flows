@@ -28,8 +28,6 @@
       "action": "validate-state",
       "checks": [
         {"type": "branch-exists", "branch": "release/v1"},
-        {"type": "tag-exists", "tag": "v2.0.0"},
-        {"type": "tag-exists", "tag": "v2"},
         {"type": "major-tag-coexistence", "tags": ["v1", "v2"]}
       ]
     },
@@ -43,12 +41,31 @@
       }
     },
     {
+      "name": "Validate release branch creation",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v2.0.0"},
+        {"type": "tag-exists", "tag": "v2"},
+        {"type": "tag-points-to", "tag": "v2", "target": "v2.0.0"},
+        {"type": "current-branch", "branch": "main"}
+      ]
+    },
+    {
       "name": "Patch on release/v1 branch: v1.2.0 → v1.2.1",
       "action": "run-workflow",
       "workflow": "bump-version.yml",
       "fixture": "tests/bump-version/patch-bump-release-branch.json",
       "expectedOutputs": {
         "NEW_VERSION": "1.2.1"
+      }
+    },
+    {
+      "name": "Execute release workflow for v1.2.1 on release/v1",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v1.2.1-branch.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "1"
       }
     },
     {

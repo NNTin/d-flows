@@ -476,6 +476,7 @@ jobs:
           # Trigger the release workflow
           if gh workflow run release.yml \
             --field version="$NEW_VERSION" \
+            --field target_branch="$TARGET_BRANCH" \
             --ref "$TARGET_BRANCH"; then
             echo "✅ Release workflow triggered successfully" >> "$GITHUB_STEP_SUMMARY"
           else
