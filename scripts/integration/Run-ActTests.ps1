@@ -2216,12 +2216,6 @@ function Invoke-TestStep {
 function Invoke-TestCleanup {
     param([Parameter(Mandatory = $true)][object]$Cleanup)
 
-    # TODO: skip for now
-    return @{
-        Success = $true
-        Message = "Cleanup skipped"
-    }
-    
     $action = $Cleanup.action
     
     Write-Debug "$($Emojis.Cleanup) Executing cleanup: $action"
@@ -2229,7 +2223,7 @@ function Invoke-TestCleanup {
     try {
         if ($action -eq "reset-git-state") {
             # Call Clear-GitState from Setup-TestScenario.ps1
-            $result = Clear-GitState -DeleteTags $true
+            $result = Clear-GitState -DeleteTags $true -DeleteBranches $true
             
             Write-Debug "$($Emojis.Debug) Cleanup completed"
             
