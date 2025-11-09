@@ -1,0 +1,12 @@
+{
+  "_comment": "Test fixture for a valid v0.2.2 minor release (v0 minor bump). Tests the release workflow's ability to create a minor minor patch release during the v0 development phase. Git state required: No existing tag v0.2.1, existing tag v0.2.1, main branch checked out. Expected outcome: Workflow should validate version format, create GitHub release with tag v0.2.2, update major tag v0 to point to v0.2.2, generate release notes. Used in the rollback-failed-release test scenario to validate manual release triggering when the automatic release trigger fails.",
+  "pull_request": null,
+  "inputs": {
+    "version": "0.2.2"
+  },
+  "github": {
+    "actor": "test-user",
+    "repository": "test-org/test-repo",
+    "workflow": "Release Workflow"
+  }
+}

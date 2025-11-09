@@ -23,13 +23,45 @@
     },
     {
       "name": "Create v0.2.0 release",
-      "action": "execute-command",
-      "command": "git tag -a v0.2.0 -m 'Release v0.2.0'; git tag -f v0 v0.2.0"
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v0.2.0.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "0"
+      }
     },
     {
       "name": "Create v0.2.1 release",
-      "action": "execute-command",
-      "command": "git tag -a v0.2.1 -m 'Release v0.2.1'; git tag -f v0 v0.2.1"
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v0.2.1.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "0"
+      }
+    },
+    {
+      "name": "Create v0.2.2 release",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v0.2.2.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "0"
+      }
+    },
+    {
+      "name": "Validate tags and branches",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v0.1.0"},
+        {"type": "tag-exists", "tag": "v0.2.0"},
+        {"type": "tag-exists", "tag": "v0.2.1"},
+        {"type": "tag-exists", "tag": "v0.2.2"},
+        {"type": "tag-exists", "tag": "v0"},
+        {"type": "tag-points-to", "tag": "v0", "target": "v0.2.1"}
+        {"type": "branch-exists", "branch": "release/v0"},
+        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.1"}
+        {"type": "workflow-success", "workflow": "release.yml"}
+      ]
     },
     {
       "name": "Create v1.0.0 release",
@@ -39,22 +71,6 @@
       "expectedOutputs": {
         "MAJOR_VERSION": "1"
       }
-    },
-    {
-      "name": "Validate release/v0 branch created",
-      "action": "validate-state",
-      "checks": [
-        {"type": "branch-exists", "branch": "release/v0"},
-        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.1"}
-      ]
-    },
-    {
-      "name": "Validate v0 major tag exists",
-      "action": "validate-state",
-      "checks": [
-        {"type": "tag-exists", "tag": "v0"},
-        {"type": "tag-points-to", "tag": "v0", "target": "v0.2.1"}
-      ]
     },
     {
       "name": "Validate v1 major tag exists",
@@ -71,6 +87,7 @@
         {"type": "tag-accessible", "tag": "v0.1.0"},
         {"type": "tag-accessible", "tag": "v0.2.0"},
         {"type": "tag-accessible", "tag": "v0.2.1"},
+        {"type": "tag-accessible", "tag": "v0.2.2"},
         {"type": "tag-accessible", "tag": "v1.0.0"}
       ]
     },
