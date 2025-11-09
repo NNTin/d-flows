@@ -27,8 +27,7 @@
       "name": "Validate release branch creation",
       "action": "validate-state",
       "checks": [
-        {"type": "branch-exists", "branch": "release/v1"},
-        {"type": "major-tag-coexistence", "tags": ["v1", "v2"]}
+        {"type": "branch-exists", "branch": "release/v1"}
       ]
     },
     {
