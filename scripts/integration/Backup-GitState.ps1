@@ -576,6 +576,10 @@ function Restore-GitBranches {
         [bool]$RestoreCurrentBranch = $true,
         [bool]$Force = $false
     )
+    # TODO: (may be relevant once release branches exist)
+    # Modify `Restore-GitBranches` function in `Backup-GitState.ps1` to delete local branches that exist in the repository but are NOT in the backup
+    # Add logic after restoring branches (around line 660) to compare current branches with backed-up branches
+    # Delete extra branches (except `main` and current branch) to ensure complete state restoration
 
     Write-DebugMessage -Type "INFO" -Message "Starting git branches restore from $BackupPath"
     
