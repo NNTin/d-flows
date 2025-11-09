@@ -2384,7 +2384,7 @@ function Invoke-IntegrationTest {
         if (-not $SkipBackup -and $backupName) {
             Write-Debug "$($Emojis.Restore) Restoring git state from backup: $backupName"
             try {
-                Restore-GitState -BackupName $backupName -Force $true -DeleteExistingTags $true
+                $null = Restore-GitState -BackupName $backupName -Force $true -DeleteExistingTags $true
                 Write-Debug "$($Emojis.Debug) Git state restored"
             } catch {
                 Write-DebugMessage -Type "ERROR" -Message "Failed to restore git state: $_"
