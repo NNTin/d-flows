@@ -89,7 +89,7 @@ jobs:
           echo "📋 Git branches AFTER cleanup:"
           git branch -a || echo "No branches"
           
-          BRANCH_FILE="${{ env.TEST_STATE_PATH }}test-branches.txt"
+          BRANCH_FILE="${TEST_STATE_PATH:-/tmp/test-state}/test-branches.txt"
           
           if [[ -f "$BRANCH_FILE" ]]; then
             echo "📋 Found test branches file: $BRANCH_FILE"

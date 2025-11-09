@@ -821,12 +821,12 @@ function Test-DockerRunning {
     Volume Mounting:
     - Test state directory ($TestStateDirectory) is mounted to /tmp/test-state in container
     - Cross-platform path conversion handles Windows paths (C:\...) for Docker Desktop
-    - TEST_STATE_PATH environment variable provides container path to workflows
+    - TEST_STATE_PATH environment variable provides container path to workflows (always ends with '/')
     - Mount is read-write, allowing workflows to create/modify test state files
 
     Container Access:
     - Workflows can access mounted directory via /tmp/test-state path
-    - TEST_STATE_PATH environment variable set to /tmp/test-state for convenience
+    - TEST_STATE_PATH environment variable normalized to /tmp/test-state/ for convenience
     - Example: bash script can read $TEST_STATE_PATH/test-tags.txt
 #>
 function Invoke-ActWorkflow {
@@ -868,13 +868,20 @@ function Invoke-ActWorkflow {
     $actArgs += "--env"
     $actArgs += "TOKEN_FALLBACK=${env:GITHUB_TOKEN}"
     
+    $containerTestStatePath = "/tmp/test-state"
+    $testStateEnvPath = if ($containerTestStatePath.EndsWith("/")) {
+        $containerTestStatePath
+    } else {
+        "$containerTestStatePath/"
+    }
+
     # Set ACT environment variable for workflows
     $actArgs += "--env"
     $actArgs += "ACT=true"
 
     # Set TEST_STATE_PATH environment variable to provide mounted path to workflows
     $actArgs += "--env"
-    $actArgs += "TEST_STATE_PATH=/tmp/test-state"
+    $actArgs += "TEST_STATE_PATH=$testStateEnvPath"
 
     # Bind current directory, this will write to git repository
     $actArgs += "--bind"
@@ -882,10 +889,10 @@ function Invoke-ActWorkflow {
     # Mount test state directory into container for test tag access
     try {
         $dockerTestStatePath = ConvertTo-DockerMountPath -Path $TestStateDirectory
-        Write-Debug "$($Emojis.Debug) Mounting volume: $TestStateDirectory -> /tmp/test-state"
+        Write-Debug "$($Emojis.Debug) Mounting volume: $TestStateDirectory -> $containerTestStatePath"
         Write-Debug "$($Emojis.Debug) Docker path: $dockerTestStatePath"
         
-        $mountOption = "--mount type=bind,src=$dockerTestStatePath,dst=/tmp/test-state"
+        $mountOption = "--mount type=bind,src=$dockerTestStatePath,dst=$containerTestStatePath"
         $actArgs += "--container-options"
         $actArgs += $mountOption
     } catch {

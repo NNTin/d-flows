@@ -36,7 +36,7 @@ Within each test state directory:
 When running tests with `act` (local GitHub Actions runner):
 
 - The temporary directory is mounted to `/tmp/test-state` inside containers via `--container-options`
-- The `TEST_STATE_PATH` environment variable is set to `/tmp/test-state` for workflow access
+- The `TEST_STATE_PATH` environment variable is normalized to `/tmp/test-state/` for workflow access
 - This allows workflows running in containers to access test fixtures from the host filesystem
 - Path conversion automatically handles Windows/Linux differences for Docker Desktop
 
