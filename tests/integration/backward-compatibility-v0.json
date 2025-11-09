@@ -57,9 +57,9 @@
         {"type": "tag-exists", "tag": "v0.2.1"},
         {"type": "tag-exists", "tag": "v0.2.2"},
         {"type": "tag-exists", "tag": "v0"},
-        {"type": "tag-points-to", "tag": "v0", "target": "v0.2.1"}
+        {"type": "tag-points-to", "tag": "v0", "target": "v0.2.1"},
         {"type": "branch-exists", "branch": "release/v0"},
-        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.1"}
+        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.1"},
         {"type": "workflow-success", "workflow": "release.yml"}
       ]
     },
