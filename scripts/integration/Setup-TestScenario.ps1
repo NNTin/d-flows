@@ -128,6 +128,7 @@ function Get-TestStateBasePath {
 
 $TestStateDirectory = Get-TestStateBasePath
 $TestTagsFile = "test-tags.txt"
+$TestBranchesFile = "test-branches.txt"
 $DebugPreference = "Continue"
 
 # Color constants (matching style from Backup-GitState.ps1)
@@ -1005,12 +1006,18 @@ function Set-TestScenario {
 
         # Generate test-tags.txt
         $testTagsPath = $null
+        $testBranchesPath = $null
         if ($GenerateTestTagsFile) {
             if ($OutputPath) {
                 $testTagsPath = Export-TestTagsFile -Tags $tagsCreated -OutputPath $OutputPath
+                # Construct branches file path from tags path
+                $branchesOutputPath = $OutputPath -replace 'test-tags\.txt$', 'test-branches.txt'
+                $testBranchesPath = Export-TestBranchesFile -Branches $branchesCreated -OutputPath $branchesOutputPath
             } else {
                 $testTagsPath = Export-TestTagsFile -Tags $tagsCreated
+                $testBranchesPath = Export-TestBranchesFile -Branches $branchesCreated
             }
+            Write-Debug "$($Emojis.Branch) Test branches file exported to: $testBranchesPath"
         }
 
         Write-DebugMessage -Type "SUCCESS" -Message "Scenario applied successfully: $ScenarioName"
@@ -1021,6 +1028,7 @@ function Set-TestScenario {
             BranchesCreated   = $branchesCreated
             CurrentBranch     = $scenario.CurrentBranch
             TestTagsFile      = $testTagsPath
+            TestBranchesFile  = $testBranchesPath
             CommitMap         = $commitMap
             Success           = $true
         }
@@ -1110,6 +1118,112 @@ function Export-TestTagsFile {
         return $OutputPath
     } catch {
         Write-DebugMessage -Type "ERROR" -Message "Failed to export test tags file: $_"
+        throw $_
+    }
+}
+
+<#
+.SYNOPSIS
+    Export git branches to test-branches.txt file.
+
+.DESCRIPTION
+    Exports git branch names and their commit SHAs to a test-branches.txt file in the test state directory.
+    This file is used by workflows to restore branches to their original state during testing.
+    
+    Format: 'branch_name commit_sha' (one per line)
+    
+    If no branches are specified, all branches in the repository are exported.
+    The function handles branch name cleanup (removes asterisks from current branch marker).
+
+.PARAMETER OutputPath
+    Custom output path for the test-branches.txt file.
+    Example: "C:\temp\test-state\test-branches.txt"
+    If not provided, defaults to <temp>/d-flows-test-state-<guid>/test-branches.txt
+
+.PARAMETER Branches
+    Array of branch names to export.
+    Example: @("main", "release/v1", "develop")
+    If not provided or empty, all branches in the repository are exported.
+
+.EXAMPLE
+    Export-TestBranchesFile -Branches @("main", "release/v1")
+
+.EXAMPLE
+    Export-TestBranchesFile -Branches @("main", "release/v1") -OutputPath "C:\temp\test-branches.txt"
+
+.EXAMPLE
+    # Export all branches (no branches specified)
+    Export-TestBranchesFile
+
+.NOTES
+    Format: 'branch_name commit_sha' (one per line). Compatible with workflow branch restoration logic.
+#>
+function Export-TestBranchesFile {
+    param(
+        [string]$OutputPath,
+        [string[]]$Branches
+    )
+
+    try {
+        # Default output path if not provided
+        if (-not $OutputPath) {
+            $testStateDir = New-TestStateDirectory
+            $OutputPath = Join-Path $testStateDir $TestBranchesFile
+        }
+
+        Write-DebugMessage -Type "INFO" -Message "Generating test-branches.txt file"
+        Write-Debug "$($Emojis.Debug) Output path: $OutputPath"
+
+        # If no branches specified, get all branches
+        if (-not $Branches -or $Branches.Count -eq 0) {
+            $gitBranches = @(git branch -l)
+            # Clean up branch names: remove asterisks and trim whitespace
+            $Branches = @()
+            foreach ($branch in $gitBranches) {
+                $cleanBranch = $branch.TrimStart('*').Trim()
+                # Skip detached HEAD or empty entries
+                if ($cleanBranch -and $cleanBranch -notmatch '^\(HEAD') {
+                    $Branches += $cleanBranch
+                }
+            }
+            Write-Debug "$($Emojis.Debug) No branches specified, using all repository branches: $($Branches.Count) branches"
+        }
+
+        # Build file content
+        $fileContent = @()
+
+        foreach ($branch in $Branches) {
+            try {
+                $sha = git rev-parse $branch 2>$null
+                
+                if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($sha)) {
+                    $fileContent += "$branch $sha"
+                    Write-Debug "$($Emojis.Branch) Exporting branch: $branch -> $sha"
+                } else {
+                    Write-DebugMessage -Type "WARNING" -Message "Failed to get SHA for branch: $branch"
+                }
+            } catch {
+                Write-DebugMessage -Type "WARNING" -Message "Error exporting branch '$branch': $_"
+                continue
+            }
+        }
+
+        # Ensure output directory exists
+        $outputDir = Split-Path $OutputPath -Parent
+        if (-not (Test-Path $outputDir)) {
+            New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+            Write-Debug "$($Emojis.Debug) Created output directory: $outputDir"
+        }
+
+        # Write to file
+        $fileContent | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
+        
+        Write-DebugMessage -Type "SUCCESS" -Message "Test-branches.txt generated with $($fileContent.Count) branches"
+        Write-Debug "$($Emojis.Debug) File path: $OutputPath"
+
+        return $OutputPath
+    } catch {
+        Write-DebugMessage -Type "ERROR" -Message "Failed to export test branches file: $_"
         throw $_
     }
 }

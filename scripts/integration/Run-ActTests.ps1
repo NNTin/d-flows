@@ -1918,6 +1918,27 @@ function Invoke-RunWorkflow {
         
         Write-Debug "$($Emojis.Debug) Workflow execution result: $success"
         
+        # Update test state files after workflow execution
+        Write-Debug "$($Emojis.Debug) Updating test state files after workflow execution"
+        
+        # Export current tags to test-tags.txt
+        try {
+            $tagsOutputPath = Export-TestTagsFile -OutputPath (Join-Path $TestStateDirectory "test-tags.txt")
+            Write-Debug "$($Emojis.Debug) Test tags file updated: $tagsOutputPath"
+        } catch {
+            Write-DebugMessage -Type "WARNING" -Message "Failed to update test-tags.txt: $_"
+        }
+        
+        # Export current branches to test-branches.txt
+        try {
+            $branchesOutputPath = Export-TestBranchesFile -OutputPath (Join-Path $TestStateDirectory "test-branches.txt")
+            Write-Debug "$($Emojis.Debug) Test branches file updated: $branchesOutputPath"
+        } catch {
+            Write-DebugMessage -Type "WARNING" -Message "Failed to update test-branches.txt: $_"
+        }
+        
+        Write-Debug "$($Emojis.Debug) Test state synchronization completed"
+        
         return @{
             Success             = $success
             Message             = $messages -join '; '
