@@ -2484,7 +2484,20 @@ function Write-TestSummary {
     $totalTests = $TestResults.Count
     $passedTests = @($TestResults | Where-Object { $_.Success }).Count
     $failedTests = $totalTests - $passedTests
-    $totalDuration = ($TestResults | Measure-Object -Property Duration -Sum).Sum
+    
+    # Convert Duration to seconds (or milliseconds) before summing
+    $totalDuration = ($TestResults | ForEach-Object {
+        # If Duration is a string, convert to TimeSpan first
+        if ($_ -and $_.Duration -is [string]) {
+            [TimeSpan]::Parse($_.Duration).TotalSeconds
+        } elseif ($_ -and $_.Duration -is [TimeSpan]) {
+            $_.Duration.TotalSeconds
+        } else {
+            0
+        }
+    } | Measure-Object -Sum).Sum
+
+
     $avgDuration = if ($totalTests -gt 0) { $totalDuration.TotalSeconds / $totalTests } else { 0 }
     
     # Display header
@@ -2572,7 +2585,18 @@ function Export-TestReport {
     $totalTests = $TestResults.Count
     $passedTests = @($TestResults | Where-Object { $_.Success }).Count
     $failedTests = $totalTests - $passedTests
-    $totalDuration = ($TestResults | Measure-Object -Property Duration -Sum).Sum
+    # Convert Duration to seconds (or milliseconds) before summing
+    $totalDuration = ($TestResults | ForEach-Object {
+        # If Duration is a string, convert to TimeSpan first
+        if ($_ -and $_.Duration -is [string]) {
+            [TimeSpan]::Parse($_.Duration).TotalSeconds
+        } elseif ($_ -and $_.Duration -is [TimeSpan]) {
+            $_.Duration.TotalSeconds
+        } else {
+            0
+        }
+    } | Measure-Object -Sum).Sum
+
     
     # Create report object
     $report = @{
