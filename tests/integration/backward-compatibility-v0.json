@@ -57,8 +57,23 @@
         {"type": "tag-exists", "tag": "v0.2.1"},
         {"type": "tag-exists", "tag": "v0.2.2"},
         {"type": "tag-exists", "tag": "v0"},
-        {"type": "tag-points-to", "tag": "v0", "target": "v0.2.1"},
+        {"type": "tag-points-to", "tag": "v0", "target": "v0.2.2"},
         {"type": "workflow-success", "workflow": "release.yml"}
+      ]
+    },
+    {
+      "name": "Execute major bump-version workflow",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/major-bump-v0-to-v1.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "1.0.0",
+        "FIRST_RELEASE": "false",
+        "CURRENT_MAJOR": "0"
+      },
+      "expectedStepSummary": [
+        "🔼 major bump: 0.2.2 → 1.0.0",
+        "✅ Version validation passed"
       ]
     },
     {
@@ -75,7 +90,7 @@
       "action": "validate-state",
       "checks": [
         {"type": "branch-exists", "branch": "release/v0"},
-        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.1"},
+        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.2"},
         {"type": "tag-exists", "tag": "v1"},
         {"type": "tag-points-to", "tag": "v1", "target": "v1.0.0"}
       ]
@@ -103,7 +118,7 @@
       "name": "Validate backward compatibility - v0 users unaffected",
       "action": "validate-state",
       "checks": [
-        {"type": "tag-points-to", "tag": "v0", "target": "v0.2.1"},
+        {"type": "tag-points-to", "tag": "v0", "target": "v0.2.2"},
         {"type": "tag-points-to", "tag": "v1", "target": "v1.0.0"}
       ]
     }
