@@ -5,7 +5,7 @@
     {
       "name": "Setup complete release history",
       "action": "setup-git-state",
-      "scenario": "ValidReleaseV0",
+      "scenario": "FirstRelease",
       "expectedState": {
         "tags": [],
         "branches": ["main"],
