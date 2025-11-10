@@ -44,10 +44,16 @@
     Backup Format:
     - Tags: Plain text file "tags-<name>.txt" with format "tag_name commit_sha" (one per line)
     - Branches: JSON file "branches-<name>.json" with structure containing currentBranch and branches array
+    - Commits: Bundle file "commits-<name>.bundle" with all commit objects referenced by tags and branches
     - Manifest: JSON file "manifest-<name>.json" with backup metadata
 
     Storage Location: System temp directory (Windows: %TEMP%, Linux: /tmp) in subdirectory d-flows-test-state-<guid>/backup/
     Each script execution generates a unique GUID for isolation. The temp directory is managed by the calling script (e.g., Run-ActTests.ps1).
+
+    Restoration Order:
+    - Commits are restored first (unbundled) to ensure all commit objects exist
+    - Tags are restored second (now referencing valid commit SHAs)
+    - Branches are restored last
 
     Edge Cases Handled:
     - Empty repositories (no tags/branches)
@@ -424,9 +430,146 @@ function Backup-GitBranches {
     }
 }
 
+<#
+.SYNOPSIS
+    Backup git commits to a bundle file.
+
+.DESCRIPTION
+    Creates a git bundle containing all commits referenced by tags and branches.
+    This ensures commit objects are preserved during backup/restore operations.
+
+.PARAMETER BackupPath
+    Optional path where bundle should be saved.
+    Defaults to commits-<timestamp>.bundle in backup directory.
+
+.EXAMPLE
+    Backup-GitCommits -BackupPath "C:\temp\commits-backup.bundle"
+
+.NOTES
+    The bundle includes all refs (tags and branches) and their complete commit history.
+    Empty repositories (no refs) will skip bundle creation gracefully.
+#>
+function Backup-GitCommits {
+    param([string]$BackupPath)
+
+    Write-Debug "$($Emojis.Backup) Starting git commits backup"
+    
+    try {
+        # Generate backup path if not provided
+        if (-not $BackupPath) {
+            $backupDir = New-BackupDirectory
+            $timestamp = Get-BackupTimestamp
+            $BackupPath = Join-Path $backupDir "commits-$timestamp.bundle"
+        }
+
+        # Collect all refs (tags and branches) to bundle
+        $tags = @(git tag -l 2>$null)
+        $branches = @(git branch -l 2>$null | ForEach-Object { $_.TrimStart('*').Trim() })
+        
+        # Filter out detached HEAD state
+        $branches = $branches | Where-Object { $_ -notmatch '^\(HEAD' -and $_ }
+        
+        $allRefs = @()
+        $allRefs += $tags
+        $allRefs += $branches
+        
+        # Handle empty repository (no refs to bundle)
+        if ($allRefs.Count -eq 0) {
+            Write-DebugMessage -Type "WARNING" -Message "No refs found to bundle (empty repository or no tags/branches)"
+            # Create an empty file to maintain backup structure
+            "" | Out-File -FilePath $BackupPath -Encoding UTF8 -Force
+            return $BackupPath
+        }
+
+        Write-Debug "$($Emojis.Debug) Bundling $($allRefs.Count) refs ($($tags.Count) tags, $($branches.Count) branches)"
+
+        # Create git bundle with all refs
+        $bundleArgs = @('bundle', 'create', $BackupPath, '--all')
+        
+        & git @bundleArgs 2>&1 | Out-Null
+        
+        if ($LASTEXITCODE -ne 0) {
+            throw "Git bundle create failed with exit code: $LASTEXITCODE"
+        }
+
+        Write-DebugMessage -Type "INFO" -Message "Backed up commits to bundle: $BackupPath"
+        return $BackupPath
+    } catch {
+        Write-DebugMessage -Type "ERROR" -Message "Failed to backup git commits: $_"
+        throw $_
+    }
+}
+
 # ============================================================================
 # Core Restore Functions
 # ============================================================================
+
+<#
+.SYNOPSIS
+    Restore git commits from a bundle file.
+
+.DESCRIPTION
+    Unbundles commits from a git bundle file, restoring commit objects to the repository.
+    This must be done before restoring tags to ensure all commit SHAs exist.
+
+.PARAMETER BackupPath
+    Required path to the bundle file to restore from.
+
+.EXAMPLE
+    Restore-GitCommits -BackupPath "C:\temp\commits-backup.bundle"
+
+.NOTES
+    Bundle verification is performed but failures are logged as warnings rather than errors
+    to maintain backward compatibility with repositories that may have partial history.
+    Missing bundle files are handled gracefully for backward compatibility with old backups.
+#>
+function Restore-GitCommits {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$BackupPath
+    )
+
+    Write-Debug "$($Emojis.Restore) Starting git commits restore from bundle"
+    
+    try {
+        # Validate bundle file exists
+        if (-not (Test-Path $BackupPath)) {
+            Write-DebugMessage -Type "WARNING" -Message "Bundle file not found: $BackupPath (skipping for backward compatibility)"
+            return 0
+        }
+
+        # Check if file is empty (created for empty repositories)
+        $fileInfo = Get-Item $BackupPath
+        if ($fileInfo.Length -eq 0) {
+            Write-DebugMessage -Type "INFO" -Message "Bundle file is empty (no commits to restore)"
+            return 0
+        }
+
+        # Verify bundle is valid (optional, log warning if fails)
+        Write-Debug "$($Emojis.Debug) Verifying bundle integrity"
+        $verifyResult = git bundle verify $BackupPath 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-DebugMessage -Type "WARNING" -Message "Bundle verification failed, attempting unbundle anyway: $verifyResult"
+        }
+
+        # Unbundle commits to restore commit objects
+        Write-Debug "$($Emojis.Debug) Unbundling commits from: $BackupPath"
+        $unbundleOutput = git bundle unbundle $BackupPath 2>&1
+        
+        if ($LASTEXITCODE -ne 0) {
+            throw "Git bundle unbundle failed with exit code: $LASTEXITCODE. Output: $unbundleOutput"
+        }
+
+        # Count refs from unbundle output
+        $refCount = ($unbundleOutput | Where-Object { $_ -match '^\s*[a-f0-9]{40}\s' }).Count
+        
+        Write-DebugMessage -Type "SUCCESS" -Message "Restored commits from bundle: $refCount refs unbundled"
+        return $refCount
+    } catch {
+        Write-DebugMessage -Type "ERROR" -Message "Failed to restore git commits: $_"
+        throw $_
+    }
+}
 
 <#
 .SYNOPSIS
@@ -731,9 +874,10 @@ function Restore-GitBranches {
     Write-Host "Backup stored at: $($backup.BackupDirectory)"
 
 .NOTES
-    Creates three files:
+    Creates four files:
     - tags-<name>.txt: Plain text file with tag/SHA pairs
     - branches-<name>.json: JSON file with branch information
+    - commits-<name>.bundle: Git bundle with all commit objects
     - manifest-<name>.json: Metadata about the backup
 #>
 function Backup-GitState {
@@ -760,6 +904,9 @@ function Backup-GitState {
         # Backup branches
         $branchesBackupPath = Backup-GitBranches -BackupPath (Join-Path $backupDir "branches-$BackupName.json") -IncludeRemote $IncludeRemoteBranches
 
+        # Backup commits
+        $commitsBackupPath = Backup-GitCommits -BackupPath (Join-Path $backupDir "commits-$BackupName.bundle")
+
         $repoRoot = Get-RepositoryRoot
 
         # Create manifest file
@@ -769,6 +916,7 @@ function Backup-GitState {
             backupName       = $BackupName
             tagsFile         = "tags-$BackupName.txt"
             branchesFile     = "branches-$BackupName.json"
+            commitsFile      = "commits-$BackupName.bundle"
             repositoryPath   = $repoRoot
             includeRemote    = $IncludeRemoteBranches
         } | ConvertTo-Json -Depth 3
@@ -783,6 +931,7 @@ function Backup-GitState {
             BackupDirectory = $backupDir
             TagsFile        = $tagsBackupPath
             BranchesFile    = $branchesBackupPath
+            CommitsFile     = $commitsBackupPath
             ManifestFile    = $manifestPath
         }
     } catch {
@@ -816,7 +965,8 @@ function Backup-GitState {
 
 .NOTES
     Locates all backup files using the manifest file
-    Returns statistics about restored tags and branches
+    Restores commits first (if present) to ensure commit objects exist before tags are created
+    Returns statistics about restored commits, tags and branches
 #>
 function Restore-GitState {
     param(
@@ -845,7 +995,16 @@ function Restore-GitState {
         $tagsPath = Join-Path $backupDir $manifest.tagsFile
         $branchesPath = Join-Path $backupDir $manifest.branchesFile
 
-        # Restore tags
+        # Restore commits first (if present) to ensure commit objects exist
+        $commitsRestored = 0
+        if ($manifest.PSObject.Properties.Name -contains 'commitsFile') {
+            $commitsPath = Join-Path $backupDir $manifest.commitsFile
+            $commitsRestored = Restore-GitCommits -BackupPath $commitsPath
+        } else {
+            Write-Debug "$($Emojis.Debug) No commits file in manifest (backward compatibility with old backups)"
+        }
+
+        # Restore tags (now commit SHAs should exist)
         $tagsRestored = Restore-GitTags -BackupPath $tagsPath -Force $Force -DeleteExisting $DeleteExistingTags
         
         # Restore branches
@@ -855,6 +1014,7 @@ function Restore-GitState {
 
         return @{
             BackupName        = $BackupName
+            CommitsRestored   = $commitsRestored
             TagsRestored      = $tagsRestored
             BranchesRestored  = $branchesRestored
             RestoreTimestamp  = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
@@ -894,13 +1054,22 @@ function Get-AvailableBackups {
         foreach ($manifestFile in $manifestFiles) {
             try {
                 $manifest = Get-Content -Path $manifestFile.FullName -Encoding UTF8 | ConvertFrom-Json
-                $backups += @{
+                
+                # Build backup metadata object
+                $backupInfo = @{
                     BackupName    = $manifest.backupName
                     Timestamp     = $manifest.timestamp
                     TagsFile      = $manifest.tagsFile
                     BranchesFile  = $manifest.branchesFile
                     ManifestFile  = $manifestFile.Name
                 }
+                
+                # Add commitsFile if present (backward compatibility with old backups)
+                if ($manifest.PSObject.Properties.Name -contains 'commitsFile') {
+                    $backupInfo.CommitsFile = $manifest.commitsFile
+                }
+                
+                $backups += $backupInfo
             } catch {
                 Write-DebugMessage -Type "WARNING" -Message "Error reading manifest: $($manifestFile.Name)"
                 continue
