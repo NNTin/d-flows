@@ -13,6 +13,14 @@
     - Validating current git state against scenario requirements
     - Displaying scenario information with formatted output
     - Exporting test-tags.txt file for bump-version.yml workflow
+    - Exporting test-branches.txt file for workflow branch restoration
+    - Exporting test-commits.bundle with all commit objects for workflow access
+
+    Generated Files (when GenerateTestTagsFile is enabled):
+    - test-tags.txt: Tag names and commit SHAs for workflow restoration
+    - test-branches.txt: Branch names and commit SHAs for workflow restoration
+    - test-commits.bundle: Git bundle containing all commit objects referenced by tags/branches
+      (The workflow unbundles commits before restoring tags to ensure commit SHAs exist)
 
     Supported Scenarios:
     - FirstRelease: Initial release scenario - clean state with only main branch
@@ -890,7 +898,13 @@ function Clear-GitState {
     Set-TestScenario -ScenarioName "MajorBumpV0ToV1" -OutputPath "C:\temp\my-test-state\test-tags.txt"
 
 .NOTES
-    Integrates with bump-version.yml workflow which reads test-tags.txt from temp directory (lines 41-79).
+    Generates three files when GenerateTestTagsFile is true:
+    - test-tags.txt: Tag names and commit SHAs for workflow restoration
+    - test-branches.txt: Branch names and commit SHAs for workflow restoration
+    - test-commits.bundle: Git bundle with all commit objects referenced by tags/branches
+    
+    Integrates with bump-version.yml workflow which reads these files from TEST_STATE_PATH.
+    The workflow unbundles commits before restoring tags to ensure commit SHAs exist.
     Use Backup-GitState.ps1 to backup state before applying scenarios.
 #>
 function Set-TestScenario {
@@ -1007,17 +1021,23 @@ function Set-TestScenario {
         # Generate test-tags.txt
         $testTagsPath = $null
         $testBranchesPath = $null
+        $testCommitsPath = $null
         if ($GenerateTestTagsFile) {
             if ($OutputPath) {
                 $testTagsPath = Export-TestTagsFile -Tags $tagsCreated -OutputPath $OutputPath
                 # Construct branches file path from tags path
                 $branchesOutputPath = $OutputPath -replace 'test-tags\.txt$', 'test-branches.txt'
                 $testBranchesPath = Export-TestBranchesFile -Branches $branchesCreated -OutputPath $branchesOutputPath
+                # Construct commits bundle path from tags path
+                $commitsOutputPath = $OutputPath -replace 'test-tags\.txt$', 'test-commits.bundle'
+                $testCommitsPath = Export-TestCommitsBundle -Tags $tagsCreated -Branches $branchesCreated -OutputPath $commitsOutputPath
             } else {
                 $testTagsPath = Export-TestTagsFile -Tags $tagsCreated
                 $testBranchesPath = Export-TestBranchesFile -Branches $branchesCreated
+                $testCommitsPath = Export-TestCommitsBundle -Tags $tagsCreated -Branches $branchesCreated
             }
             Write-Debug "$($Emojis.Branch) Test branches file exported to: $testBranchesPath"
+            Write-Debug "$($Emojis.Backup) Test commits bundle exported to: $testCommitsPath"
         }
 
         Write-DebugMessage -Type "SUCCESS" -Message "Scenario applied successfully: $ScenarioName"
@@ -1029,6 +1049,7 @@ function Set-TestScenario {
             CurrentBranch     = $scenario.CurrentBranch
             TestTagsFile      = $testTagsPath
             TestBranchesFile  = $testBranchesPath
+            TestCommitsBundle = $testCommitsPath
             CommitMap         = $commitMap
             Success           = $true
         }
@@ -1224,6 +1245,131 @@ function Export-TestBranchesFile {
         return $OutputPath
     } catch {
         Write-DebugMessage -Type "ERROR" -Message "Failed to export test branches file: $_"
+        throw $_
+    }
+}
+
+<#
+.SYNOPSIS
+    Export test commits to a git bundle file.
+
+.DESCRIPTION
+    Creates a git bundle containing all commits referenced by test tags and branches.
+    This ensures commit objects are available in workflow containers for tag/branch restoration.
+    
+    The bundle is designed to be unbundled in the workflow before restoring tags, ensuring
+    all commit SHAs exist in the repository.
+
+.PARAMETER OutputPath
+    Optional path where the bundle file should be saved.
+    Defaults to test-commits.bundle in the test state directory.
+
+.PARAMETER Tags
+    Optional array of tag names to include in the bundle.
+    If not specified, all current tags will be bundled.
+
+.PARAMETER Branches
+    Optional array of branch names to include in the bundle.
+    If not specified, all current branches will be bundled.
+
+.EXAMPLE
+    Export-TestCommitsBundle
+    Exports all tags and branches to test-commits.bundle in the test state directory.
+
+.EXAMPLE
+    Export-TestCommitsBundle -OutputPath "C:\temp\commits.bundle"
+    Exports to a custom path.
+
+.EXAMPLE
+    Export-TestCommitsBundle -Tags @("v0.2.1", "v0.2.2") -Branches @("main", "release/v0")
+    Exports specific tags and branches.
+
+.NOTES
+    This function mirrors the pattern of Export-TestTagsFile and Export-TestBranchesFile.
+    The bundle format is compatible with bump-version.yml workflow restoration logic.
+    Empty repositories (no refs) will create an empty bundle file for consistency.
+    
+    The workflow unbundles commits before restoring tags using:
+    git bundle unbundle test-commits.bundle
+#>
+function Export-TestCommitsBundle {
+    param(
+        [string]$OutputPath,
+        [string[]]$Tags,
+        [string[]]$Branches
+    )
+
+    try {
+        # Default output path if not provided
+        if (-not $OutputPath) {
+            $testStateDir = New-TestStateDirectory
+            $OutputPath = Join-Path $testStateDir "test-commits.bundle"
+        }
+
+        Write-DebugMessage -Type "INFO" -Message "Generating test-commits.bundle file"
+        
+        # Collect all refs to bundle
+        $allRefs = @()
+        
+        # If no tags specified, get all tags
+        if (-not $Tags -or $Tags.Count -eq 0) {
+            $gitTags = @(git tag -l 2>$null)
+            if ($gitTags.Count -gt 0) {
+                $allRefs += $gitTags
+                Write-Debug "$($Emojis.Tag) Including $($gitTags.Count) tags in bundle"
+            }
+        } else {
+            $allRefs += $Tags
+            Write-Debug "$($Emojis.Tag) Including $($Tags.Count) specified tags in bundle"
+        }
+        
+        # If no branches specified, get all branches
+        if (-not $Branches -or $Branches.Count -eq 0) {
+            $gitBranches = @(git branch -l 2>$null)
+            # Clean up branch names: remove asterisks and trim whitespace
+            $cleanBranches = @()
+            foreach ($branch in $gitBranches) {
+                $cleanBranch = $branch.TrimStart('*').Trim()
+                # Skip detached HEAD or empty entries
+                if ($cleanBranch -and $cleanBranch -notmatch '^\(HEAD') {
+                    $cleanBranches += $cleanBranch
+                }
+            }
+            if ($cleanBranches.Count -gt 0) {
+                $allRefs += $cleanBranches
+                Write-Debug "$($Emojis.Branch) Including $($cleanBranches.Count) branches in bundle"
+            }
+        } else {
+            $allRefs += $Branches
+            Write-Debug "$($Emojis.Branch) Including $($Branches.Count) specified branches in bundle"
+        }
+        
+        # Handle empty repository (no refs to bundle)
+        if ($allRefs.Count -eq 0) {
+            Write-DebugMessage -Type "WARNING" -Message "No refs found to bundle (empty repository or no tags/branches)"
+            # Create an empty file to maintain backup structure
+            "" | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
+            Write-Debug "$($Emojis.Debug) Created empty bundle file: $OutputPath"
+            return $OutputPath
+        }
+
+        Write-Debug "$($Emojis.Debug) Bundling $($allRefs.Count) refs"
+
+        # Create git bundle with explicit ref list
+        $bundleArgs = @('bundle', 'create', $OutputPath) + $allRefs
+        
+        & git @bundleArgs 2>&1 | Out-Null
+        
+        if ($LASTEXITCODE -ne 0) {
+            throw "Git bundle create failed with exit code: $LASTEXITCODE"
+        }
+
+        Write-DebugMessage -Type "SUCCESS" -Message "Test-commits.bundle generated with $($allRefs.Count) refs"
+        Write-Debug "$($Emojis.Debug) File path: $OutputPath"
+
+        return $OutputPath
+    } catch {
+        Write-DebugMessage -Type "ERROR" -Message "Failed to export test commits bundle: $_"
         throw $_
     }
 }

@@ -483,8 +483,8 @@ function Backup-GitCommits {
 
         Write-Debug "$($Emojis.Debug) Bundling $($allRefs.Count) refs ($($tags.Count) tags, $($branches.Count) branches)"
 
-        # Create git bundle with all refs
-        $bundleArgs = @('bundle', 'create', $BackupPath, '--all')
+        # Create git bundle with explicit ref list
+        $bundleArgs = @('bundle', 'create', $BackupPath) + $allRefs
         
         & git @bundleArgs 2>&1 | Out-Null
         
@@ -492,7 +492,7 @@ function Backup-GitCommits {
             throw "Git bundle create failed with exit code: $LASTEXITCODE"
         }
 
-        Write-DebugMessage -Type "INFO" -Message "Backed up commits to bundle: $BackupPath"
+        Write-DebugMessage -Type "INFO" -Message "Backed up $($allRefs.Count) refs to bundle: $BackupPath"
         return $BackupPath
     } catch {
         Write-DebugMessage -Type "ERROR" -Message "Failed to backup git commits: $_"
