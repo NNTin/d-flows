@@ -7,6 +7,11 @@ on:
         type: string
         required: true
         description: Semantic version (e.g., "1.0.0", "2.1.3")
+      target_branch:
+        description: 'Branch to release version on (main default, release/vX for older majors, or type custom branch name)'
+        required: true
+        type: string
+        default: main
 
 permissions:
   contents: write
@@ -24,19 +29,89 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.target_branch }}
           fetch-depth: 0
           fetch-tags: false  # Disabled to prevent remote tag fetching during act tests
+          token: ${{ secrets.GITHUB_TOKEN != '' && secrets.GITHUB_TOKEN || env.GITHUB_TOKEN != '' && env.GITHUB_TOKEN || env.TOKEN_FALLBACK }}
 
-      - name: Setup git for act
+      - name: Setup test tags when running under act
         if: ${{ env.ACT }}
         shell: bash
         run: |
-          # When running under act, the repository is already mounted at the correct location
-          # No need to checkout - preserve existing git state for testing
-          echo "Running under act - repository already mounted"
-          echo "Current branch: $(git branch --show-current)"
-          echo "Existing tags: $(git tag -l | wc -l) tags"
-          echo "Git state preserved for testing"
+          # When running under act, restore test tags from metadata file
+          echo "Running under act - restoring test tags"
+          
+          echo "📋 Git tags BEFORE cleanup:"
+          git tag -l || echo "No tags"
+          
+          # Delete all existing tags to ensure clean state
+          echo "🧹 Cleaning all existing tags..."
+          git tag -l | xargs -r git tag -d 2>/dev/null || true
+          
+          echo "📋 Git tags AFTER cleanup:"
+          git tag -l || echo "No tags"
+          
+          TAG_FILE="${TEST_STATE_PATH:-/tmp/test-state}/test-tags.txt"
+          if [[ -f "$TAG_FILE" ]]; then
+            echo "📋 Found test tags file: $TAG_FILE"
+            echo "📋 Contents of test-tags.txt:"
+            cat "$TAG_FILE"
+            echo "---"
+            
+            while IFS=' ' read -r tag_name commit_sha; do
+              if [[ -n "$tag_name" ]] && [[ -n "$commit_sha" ]]; then
+                commit_sha=$(echo "$commit_sha" | tr -d '\r')
+                echo "Creating test tag: $tag_name at $commit_sha"
+                git tag "$tag_name" "$commit_sha" 2>/dev/null || echo "Tag $tag_name already exists"
+              fi
+            done < "$TAG_FILE"
+            echo "✅ Test tags restored from file"
+          else
+            echo "⚠️ No test tags file found at $TAG_FILE"
+            echo "✅ Clean state - no tags (correct for first release)"
+          fi
+          
+          echo "📋 Git tags FINAL:"
+          git tag -l || echo "No tags"
+
+      - name: Setup test branches when running under act
+        if: ${{ env.ACT }}
+        shell: bash
+        run: |
+          echo "🌳 Running under act - restoring test branches"
+          
+          echo "📋 Git branches BEFORE cleanup:"
+          git branch -a || echo "No branches"
+          
+          echo "🧹 Cleaning all existing local branches..."
+          git branch | grep -v "^\*" | xargs -r git branch -D 2>/dev/null || true
+          
+          echo "📋 Git branches AFTER cleanup:"
+          git branch -a || echo "No branches"
+          
+          BRANCH_FILE="${TEST_STATE_PATH:-/tmp/test-state}/test-branches.txt"
+          
+          if [[ -f "$BRANCH_FILE" ]]; then
+            echo "📋 Found test branches file: $BRANCH_FILE"
+            echo "📋 Contents of test-branches.txt:"
+            cat "$BRANCH_FILE"
+            echo "---"
+            
+            while IFS=' ' read -r branch_name commit_sha; do
+              if [[ -n "$branch_name" ]] && [[ -n "$commit_sha" ]]; then
+                commit_sha=$(echo "$commit_sha" | tr -d '\r')
+                echo "Creating test branch: $branch_name at $commit_sha"
+                git branch "$branch_name" "$commit_sha" 2>/dev/null || echo "Branch $branch_name already exists or failed to create"
+              fi
+            done < "$BRANCH_FILE"
+            echo "✅ Test branches restored from file"
+          else
+            echo "⚠️ No test branches file found at $BRANCH_FILE"
+            echo "✅ Clean state - no branches (correct for first release)"
+          fi
+          
+          echo "📋 Git branches FINAL:"
+          git branch -a || echo "No branches"
 
       - name: Validate version format
         shell: bash
@@ -67,7 +142,10 @@ jobs:
             VERSION="v${{ inputs.version }}"
             git tag -a "$VERSION" -f -m "Release $VERSION"
           else
-            gh release create "v${{ inputs.version }}" --generate-notes --title "Release v${{ inputs.version }}" --target "${{ github.sha }}"
+            gh release create "v${{ inputs.version }}" \
+              --generate-notes \
+              --title "Release v${{ inputs.version }}" \
+              --target "${{ inputs.target_branch }}"
           fi
 
       - name: Extract major version

@@ -821,12 +821,12 @@ function Test-DockerRunning {
     Volume Mounting:
     - Test state directory ($TestStateDirectory) is mounted to /tmp/test-state in container
     - Cross-platform path conversion handles Windows paths (C:\...) for Docker Desktop
-    - TEST_STATE_PATH environment variable provides container path to workflows
+    - TEST_STATE_PATH environment variable provides container path to workflows (always ends with '/')
     - Mount is read-write, allowing workflows to create/modify test state files
 
     Container Access:
     - Workflows can access mounted directory via /tmp/test-state path
-    - TEST_STATE_PATH environment variable set to /tmp/test-state for convenience
+    - TEST_STATE_PATH environment variable normalized to /tmp/test-state/ for convenience
     - Example: bash script can read $TEST_STATE_PATH/test-tags.txt
 #>
 function Invoke-ActWorkflow {
@@ -868,13 +868,20 @@ function Invoke-ActWorkflow {
     $actArgs += "--env"
     $actArgs += "TOKEN_FALLBACK=${env:GITHUB_TOKEN}"
     
+    $containerTestStatePath = "/tmp/test-state"
+    $testStateEnvPath = if ($containerTestStatePath.EndsWith("/")) {
+        $containerTestStatePath
+    } else {
+        "$containerTestStatePath/"
+    }
+
     # Set ACT environment variable for workflows
     $actArgs += "--env"
     $actArgs += "ACT=true"
 
     # Set TEST_STATE_PATH environment variable to provide mounted path to workflows
     $actArgs += "--env"
-    $actArgs += "TEST_STATE_PATH=/tmp/test-state"
+    $actArgs += "TEST_STATE_PATH=$testStateEnvPath"
 
     # Bind current directory, this will write to git repository
     $actArgs += "--bind"
@@ -882,10 +889,10 @@ function Invoke-ActWorkflow {
     # Mount test state directory into container for test tag access
     try {
         $dockerTestStatePath = ConvertTo-DockerMountPath -Path $TestStateDirectory
-        Write-Debug "$($Emojis.Debug) Mounting volume: $TestStateDirectory -> /tmp/test-state"
+        Write-Debug "$($Emojis.Debug) Mounting volume: $TestStateDirectory -> $containerTestStatePath"
         Write-Debug "$($Emojis.Debug) Docker path: $dockerTestStatePath"
         
-        $mountOption = "--mount type=bind,src=$dockerTestStatePath,dst=/tmp/test-state"
+        $mountOption = "--mount type=bind,src=$dockerTestStatePath,dst=$containerTestStatePath"
         $actArgs += "--container-options"
         $actArgs += $mountOption
     } catch {
@@ -1918,6 +1925,27 @@ function Invoke-RunWorkflow {
         
         Write-Debug "$($Emojis.Debug) Workflow execution result: $success"
         
+        # Update test state files after workflow execution
+        Write-Debug "$($Emojis.Debug) Updating test state files after workflow execution"
+        
+        # Export current tags to test-tags.txt
+        try {
+            $tagsOutputPath = Export-TestTagsFile -OutputPath (Join-Path $TestStateDirectory "test-tags.txt")
+            Write-Debug "$($Emojis.Debug) Test tags file updated: $tagsOutputPath"
+        } catch {
+            Write-DebugMessage -Type "WARNING" -Message "Failed to update test-tags.txt: $_"
+        }
+        
+        # Export current branches to test-branches.txt
+        try {
+            $branchesOutputPath = Export-TestBranchesFile -OutputPath (Join-Path $TestStateDirectory "test-branches.txt")
+            Write-Debug "$($Emojis.Debug) Test branches file updated: $branchesOutputPath"
+        } catch {
+            Write-DebugMessage -Type "WARNING" -Message "Failed to update test-branches.txt: $_"
+        }
+        
+        Write-Debug "$($Emojis.Debug) Test state synchronization completed"
+        
         return @{
             Success             = $success
             Message             = $messages -join '; '
@@ -2195,12 +2223,6 @@ function Invoke-TestStep {
 function Invoke-TestCleanup {
     param([Parameter(Mandatory = $true)][object]$Cleanup)
 
-    # TODO: skip for now
-    return @{
-        Success = $true
-        Message = "Cleanup skipped"
-    }
-    
     $action = $Cleanup.action
     
     Write-Debug "$($Emojis.Cleanup) Executing cleanup: $action"
@@ -2208,7 +2230,7 @@ function Invoke-TestCleanup {
     try {
         if ($action -eq "reset-git-state") {
             # Call Clear-GitState from Setup-TestScenario.ps1
-            $result = Clear-GitState -DeleteTags $true
+            $result = Clear-GitState -DeleteTags $true -DeleteBranches $true
             
             Write-Debug "$($Emojis.Debug) Cleanup completed"
             
@@ -2363,7 +2385,9 @@ function Invoke-IntegrationTest {
         if (-not $SkipBackup -and $backupName) {
             Write-Debug "$($Emojis.Restore) Restoring git state from backup: $backupName"
             try {
-                Restore-GitState -BackupName $backupName -Force $true -DeleteExistingTags $true
+                # TODO: writing to $null to suppress output, fixes the issue with unwanted output in test results
+                # However doing so duration calculation is affected since Restore-GitState outputs time taken
+                $null = Restore-GitState -BackupName $backupName -Force $true -DeleteExistingTags $true
                 Write-Debug "$($Emojis.Debug) Git state restored"
             } catch {
                 Write-DebugMessage -Type "ERROR" -Message "Failed to restore git state: $_"
@@ -2463,7 +2487,20 @@ function Write-TestSummary {
     $totalTests = $TestResults.Count
     $passedTests = @($TestResults | Where-Object { $_.Success }).Count
     $failedTests = $totalTests - $passedTests
-    $totalDuration = ($TestResults | Measure-Object -Property Duration -Sum).Sum
+    
+    # Convert Duration to seconds (or milliseconds) before summing
+    $totalDuration = ($TestResults | ForEach-Object {
+        # If Duration is a string, convert to TimeSpan first
+        if ($_ -and $_.Duration -is [string]) {
+            [TimeSpan]::Parse($_.Duration).TotalSeconds
+        } elseif ($_ -and $_.Duration -is [TimeSpan]) {
+            $_.Duration.TotalSeconds
+        } else {
+            0
+        }
+    } | Measure-Object -Sum).Sum
+
+
     $avgDuration = if ($totalTests -gt 0) { $totalDuration.TotalSeconds / $totalTests } else { 0 }
     
     # Display header
@@ -2551,7 +2588,18 @@ function Export-TestReport {
     $totalTests = $TestResults.Count
     $passedTests = @($TestResults | Where-Object { $_.Success }).Count
     $failedTests = $totalTests - $passedTests
-    $totalDuration = ($TestResults | Measure-Object -Property Duration -Sum).Sum
+    # Convert Duration to seconds (or milliseconds) before summing
+    $totalDuration = ($TestResults | ForEach-Object {
+        # If Duration is a string, convert to TimeSpan first
+        if ($_ -and $_.Duration -is [string]) {
+            [TimeSpan]::Parse($_.Duration).TotalSeconds
+        } elseif ($_ -and $_.Duration -is [TimeSpan]) {
+            $_.Duration.TotalSeconds
+        } else {
+            0
+        }
+    } | Measure-Object -Sum).Sum
+
     
     # Create report object
     $report = @{
