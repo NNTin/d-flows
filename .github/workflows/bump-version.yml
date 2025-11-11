@@ -183,12 +183,8 @@ jobs:
             # Detach HEAD first to avoid worktree conflict
             git checkout --detach
 
-            # Now safe to force-update the branch
-            git branch -f "$TARGET_BRANCH" "$commit_sha"
-
-            # Checkout and reset
+            # Checkout the branch (already created in the loop above)
             git checkout "$TARGET_BRANCH" --force
-            git reset --hard "$commit_sha"
             
             NEW_HEAD=$(git rev-parse HEAD)
             echo "✅ HEAD now at: $NEW_HEAD"
