@@ -174,26 +174,57 @@ jobs:
             echo "⚠️ No test branches file found at $BRANCH_FILE"
             echo "✅ Clean state - no branches (correct for first release)"
           fi
-
+          
           # Checkout the target branch to position HEAD at the test commit
           TARGET_BRANCH="${{ inputs.target_branch }}"
-          
+          TARGET_COMMIT_SHA=""  # Initialize variable to store target branch's commit
+
           echo "🔍 Current HEAD position:"
           CURRENT_HEAD=$(git rev-parse HEAD)
           echo "  Commit: $CURRENT_HEAD"
-          
-          # Verify the target branch exists
-          if git show-ref --verify "refs/heads/$TARGET_BRANCH" > /dev/null 2>&1; then
-            echo "🔄 Checking out test branch: $TARGET_BRANCH"
-            # Detach HEAD first to avoid worktree conflict
-            git checkout --detach
 
-            # Checkout the branch (already created in the loop above)
-            git checkout "$TARGET_BRANCH" --force
-            
-            NEW_HEAD=$(git rev-parse HEAD)
-            echo "✅ HEAD now at: $NEW_HEAD"
-            echo "🔄 Branch checkout successful"
+          # Read the branches file to find the target branch's commit SHA
+          if [[ -f "$BRANCH_FILE" ]]; then
+            while IFS=' ' read -r branch_name commit_sha; do
+              if [[ -n "$branch_name" ]] && [[ -n "$commit_sha" ]]; then
+                commit_sha=$(echo "$commit_sha" | tr -d '\r')
+                
+                # Capture the commit SHA for the target branch
+                if [[ "$branch_name" == "$TARGET_BRANCH" ]]; then
+                  TARGET_COMMIT_SHA="$commit_sha"
+                  echo "📍 Found target branch '$TARGET_BRANCH' should point to: $TARGET_COMMIT_SHA"
+                fi
+              fi
+            done < "$BRANCH_FILE"
+          fi
+
+          # Verify the target branch exists and we have its commit SHA
+          if git show-ref --verify "refs/heads/$TARGET_BRANCH" > /dev/null 2>&1; then
+            if [[ -n "$TARGET_COMMIT_SHA" ]]; then
+              echo "🔄 Repositioning branch '$TARGET_BRANCH' to test commit: $TARGET_COMMIT_SHA"
+              
+              # Detach HEAD first to avoid worktree conflict
+              git checkout --detach
+              
+              # Force-update the branch to point to the test commit
+              git branch -f "$TARGET_BRANCH" "$TARGET_COMMIT_SHA"
+              
+              # Checkout the updated branch
+              git checkout "$TARGET_BRANCH"
+              
+              NEW_HEAD=$(git rev-parse HEAD)
+              echo "✅ HEAD now at: $NEW_HEAD"
+              
+              # Verify we're at the correct commit
+              if [[ "$NEW_HEAD" == "$TARGET_COMMIT_SHA" ]]; then
+                echo "✅ Branch checkout successful - at test commit"
+              else
+                echo "⚠️ Warning: HEAD ($NEW_HEAD) doesn't match expected commit ($TARGET_COMMIT_SHA)"
+              fi
+            else
+              echo "⚠️ Target branch $TARGET_BRANCH exists but commit SHA not found in test-branches.txt"
+              echo "   Skipping checkout"
+            fi
           else
             echo "⚠️ Target branch $TARGET_BRANCH not found in test branches"
             echo "   (This is expected for scenarios without the target branch)"
