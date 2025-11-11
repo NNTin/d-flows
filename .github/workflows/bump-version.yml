@@ -157,11 +157,21 @@ jobs:
             cat "$BRANCH_FILE"
             echo "---"
             
+            # Get current branch before loop
+            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
             while IFS=' ' read -r branch_name commit_sha; do
               if [[ -n "$branch_name" ]] && [[ -n "$commit_sha" ]]; then
                 commit_sha=$(echo "$commit_sha" | tr -d '\r')
+                
+                # Skip the currently checked out branch (will handle it separately)
+                if [[ "$branch_name" == "$CURRENT_BRANCH" ]]; then
+                  echo "Skipping currently checked out branch: $branch_name (will update after detaching)"
+                  continue
+                fi
+                
                 echo "Creating test branch: $branch_name at $commit_sha"
-                git branch "$branch_name" "$commit_sha" 2>/dev/null || echo "Branch $branch_name already exists or failed to create"
+                git branch -f "$branch_name" "$commit_sha" 2>/dev/null || echo "Failed to create branch $branch_name"
               fi
             done < "$BRANCH_FILE"
             echo "✅ Test branches restored from file"
