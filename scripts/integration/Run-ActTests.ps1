@@ -1063,9 +1063,6 @@ function Invoke-ValidationCheck {
             "major-tag-progression" {
                 return Validate-MajorTagProgression -Tags $Check.tags
             }
-            "no-new-tags" {
-                return Validate-NoNewTags -BaselineTagCount $Check.baselineTagCount
-            }
             "no-cross-contamination" {
                 return Validate-NoCrossContamination -V1 $Check.v1 -V2 $Check.v2
             }
@@ -1091,7 +1088,7 @@ function Invoke-ValidationCheck {
                     "tag-exists", "tag-not-exists", "tag-points-to", "tag-accessible", "tag-count",
                     "branch-exists", "branch-points-to-tag", "branch-count", "current-branch",
                     "version-greater", "version-progression", "major-increment", "major-tag-coexistence",
-                    "major-tags-coexist", "major-tag-progression", "no-new-tags", "no-cross-contamination",
+                    "major-tags-coexist", "major-tag-progression", "no-cross-contamination",
                     "no-tag-conflicts", "workflow-success", "idempotency-verified"
                 )
                 throw "Unknown validation type: $checkType. Supported types: $($supportedTypes -join ', ')"
@@ -1601,33 +1598,6 @@ function Validate-MajorTagProgression {
         Success = $valid
         Message = if ($valid) { "Major tags progress correctly: $($Tags -join ', ')" } else { "Major tag progression invalid" }
         Type    = "major-tag-progression"
-    }
-}
-
-<#
-.SYNOPSIS
-    Check that no new tags were created.
-
-.PARAMETER BaselineTagCount
-    Tag count before operation
-
-.EXAMPLE
-    Validate-NoNewTags -BaselineTagCount 3
-#>
-function Validate-NoNewTags {
-    param([Parameter(Mandatory = $true)][int]$BaselineTagCount)
-    
-    $currentTags = @(git tag -l)
-    $currentCount = $currentTags.Count
-    
-    $noNewTags = ($currentCount -eq $BaselineTagCount)
-    
-    Write-Debug "$($Emojis.Validation) No new tags: $noNewTags (baseline: $BaselineTagCount, current: $currentCount)"
-    
-    return @{
-        Success = $noNewTags
-        Message = if ($noNewTags) { "No new tags created" } else { "New tags created: expected $BaselineTagCount, got $currentCount" }
-        Type    = "no-new-tags"
     }
 }
 

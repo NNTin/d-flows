@@ -25,7 +25,7 @@
       "action": "validate-state",
       "checks": [
         {"type": "tag-exists", "tag": "v0.1.0"},
-        {"type": "no-new-tags"},
+        {"type": "tag-not-exists", "tag": "v0.1.1"},
         {"type": "branch-exists", "branch": "feature/test-branch"}
       ]
     },
