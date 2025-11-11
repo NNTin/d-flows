@@ -164,7 +164,7 @@ jobs:
             echo "⚠️ No test branches file found at $BRANCH_FILE"
             echo "✅ Clean state - no branches (correct for first release)"
           fi
-          
+
           # Checkout the target branch to position HEAD at the test commit
           TARGET_BRANCH="${{ inputs.target_branch }}"
           
@@ -175,7 +175,9 @@ jobs:
           # Verify the target branch exists
           if git show-ref --verify "refs/heads/$TARGET_BRANCH" > /dev/null 2>&1; then
             echo "🔄 Checking out test branch: $TARGET_BRANCH"
+            git branch -f "$TARGET_BRANCH" "$commit_sha"
             git checkout "$TARGET_BRANCH" --force
+            git reset --hard "$commit_sha"
             
             NEW_HEAD=$(git rev-parse HEAD)
             echo "✅ HEAD now at: $NEW_HEAD"

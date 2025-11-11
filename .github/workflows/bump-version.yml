@@ -180,7 +180,10 @@ jobs:
           # Verify the target branch exists
           if git show-ref --verify "refs/heads/$TARGET_BRANCH" > /dev/null 2>&1; then
             echo "🔄 Checking out test branch: $TARGET_BRANCH"
+            # Force reset the branch to the test commit
+            git branch -f "$TARGET_BRANCH" "$commit_sha"
             git checkout "$TARGET_BRANCH" --force
+            git reset --hard "$commit_sha"
             
             NEW_HEAD=$(git rev-parse HEAD)
             echo "✅ HEAD now at: $NEW_HEAD"
