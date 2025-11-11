@@ -44,6 +44,11 @@
       ]
     },
     {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v0.2.2'"
+    },
+    {
       "name": "Execute release workflow",
       "action": "run-workflow",
       "workflow": "release.yml",
@@ -60,6 +65,11 @@
         {"type": "tag-points-to", "tag": "v0", "target": "v0.2.2"},
         {"type": "workflow-success", "workflow": "release.yml"}
       ]
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v1.0.0'"
     },
     {
       "name": "Execute major bump-version workflow",

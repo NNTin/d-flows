@@ -1944,6 +1944,14 @@ function Invoke-RunWorkflow {
             Write-DebugMessage -Type "WARNING" -Message "Failed to update test-branches.txt: $_"
         }
         
+        # Export commit bundle to test-commits.bundle
+        try {
+            $bundleOutputPath = Export-TestCommitsBundle -OutputPath (Join-Path $TestStateDirectory "test-commits.bundle")
+            Write-Debug "$($Emojis.Debug) Test commits bundle updated: $bundleOutputPath"
+        } catch {
+            Write-DebugMessage -Type "WARNING" -Message "Failed to update test-commits.bundle: $_"
+        }
+        
         Write-Debug "$($Emojis.Debug) Test state synchronization completed"
         
         return @{
@@ -2076,6 +2084,35 @@ function Invoke-ExecuteCommand {
         $success = ($exitCode -eq 0)
         
         Write-Debug "$($Emojis.Debug) Command completed with exit code: $exitCode"
+
+        # Update test state files after command execution
+        Write-Debug "$($Emojis.Debug) Updating test state files after command execution"
+
+        # Export current tags to test-tags.txt
+        try {
+            $tagsOutputPath = Export-TestTagsFile -OutputPath (Join-Path $TestStateDirectory "test-tags.txt")
+            Write-Debug "$($Emojis.Debug) Test tags file updated: $tagsOutputPath"
+        } catch {
+            Write-DebugMessage -Type "WARNING" -Message "Failed to update test-tags.txt: $_"
+        }
+        
+        # Export current branches to test-branches.txt
+        try {
+            $branchesOutputPath = Export-TestBranchesFile -OutputPath (Join-Path $TestStateDirectory "test-branches.txt")
+            Write-Debug "$($Emojis.Debug) Test branches file updated: $branchesOutputPath"
+        } catch {
+            Write-DebugMessage -Type "WARNING" -Message "Failed to update test-branches.txt: $_"
+        }
+        
+        # Export commit bundle to test-commits.bundle
+        try {
+            $bundleOutputPath = Export-TestCommitsBundle -OutputPath (Join-Path $TestStateDirectory "test-commits.bundle")
+            Write-Debug "$($Emojis.Debug) Test commits bundle updated: $bundleOutputPath"
+        } catch {
+            Write-DebugMessage -Type "WARNING" -Message "Failed to update test-commits.bundle: $_"
+        }
+        
+        Write-Debug "$($Emojis.Debug) Test state synchronization completed"
         
         return @{
             Success  = $success

@@ -13,6 +13,11 @@
       }
     },
     {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v0.1.0'"
+    },
+    {
       "name": "Create v0.1.0 release",
       "action": "run-workflow",
       "workflow": "release.yml",
@@ -20,6 +25,11 @@
       "expectedOutputs": {
         "MAJOR_VERSION": "0"
       }
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v0.2.0'"
     },
     {
       "name": "Create v0.2.0 release",
@@ -31,6 +41,11 @@
       }
     },
     {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v0.2.1'"
+    },
+    {
       "name": "Create v0.2.1 release",
       "action": "run-workflow",
       "workflow": "release.yml",
@@ -38,6 +53,11 @@
       "expectedOutputs": {
         "MAJOR_VERSION": "0"
       }
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v0.2.2'"
     },
     {
       "name": "Create v0.2.2 release",
@@ -60,6 +80,11 @@
         {"type": "tag-points-to", "tag": "v0", "target": "v0.2.2"},
         {"type": "workflow-success", "workflow": "release.yml"}
       ]
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v1.0.0'"
     },
     {
       "name": "Execute major bump-version workflow",
