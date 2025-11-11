@@ -165,6 +165,26 @@ jobs:
             echo "✅ Clean state - no branches (correct for first release)"
           fi
           
+          # Checkout the target branch to position HEAD at the test commit
+          TARGET_BRANCH="${{ inputs.target_branch }}"
+          
+          echo "🔍 Current HEAD position:"
+          CURRENT_HEAD=$(git rev-parse HEAD)
+          echo "  Commit: $CURRENT_HEAD"
+          
+          # Verify the target branch exists
+          if git show-ref --verify "refs/heads/$TARGET_BRANCH" > /dev/null 2>&1; then
+            echo "🔄 Checking out test branch: $TARGET_BRANCH"
+            git checkout "$TARGET_BRANCH" --force
+            
+            NEW_HEAD=$(git rev-parse HEAD)
+            echo "✅ HEAD now at: $NEW_HEAD"
+            echo "🔄 Branch checkout successful"
+          else
+            echo "⚠️ Target branch $TARGET_BRANCH not found in test branches"
+            echo "   (This is expected for scenarios without the target branch)"
+          fi
+          
           echo "📋 Git branches FINAL:"
           git branch -a || echo "No branches"
 
