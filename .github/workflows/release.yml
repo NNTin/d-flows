@@ -175,7 +175,13 @@ jobs:
           # Verify the target branch exists
           if git show-ref --verify "refs/heads/$TARGET_BRANCH" > /dev/null 2>&1; then
             echo "🔄 Checking out test branch: $TARGET_BRANCH"
+            # Detach HEAD first to avoid worktree conflict
+            git checkout --detach
+
+            # Now safe to force-update the branch
             git branch -f "$TARGET_BRANCH" "$commit_sha"
+
+            # Checkout and reset
             git checkout "$TARGET_BRANCH" --force
             git reset --hard "$commit_sha"
             
