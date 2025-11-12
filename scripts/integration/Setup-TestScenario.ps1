@@ -738,6 +738,7 @@ function Set-GitBranch {
 
 .NOTES
     Use with caution - this modifies git state. Always backup state first using Backup-GitState.ps1
+    Returns DeletedTagNames array containing the names of all tags that were deleted
 #>
 function Clear-GitState {
     param(
@@ -748,9 +749,12 @@ function Clear-GitState {
     try {
         Write-DebugMessage -Type "WARNING" -Message "Cleaning git state - DeleteTags: $DeleteTags, DeleteBranches: $DeleteBranches"
 
+        $deletedTagNames = @()
         if ($DeleteTags) {
             $existingTags = @(git tag -l)
             if ($existingTags.Count -gt 0) {
+                $deletedTagNames = $existingTags
+                Write-Debug "$($Emojis.Debug) Will delete $($existingTags.Count) production tags"
                 foreach ($tag in $existingTags) {
                     git tag -d $tag 2>&1 | Out-Null
                     Write-Debug "$($Emojis.Debug) Deleted tag: $tag"
@@ -785,6 +789,7 @@ function Clear-GitState {
 
         return @{
             TagsDeleted      = if ($DeleteTags) { @(git tag -l).Count } else { 0 }
+            DeletedTagNames  = $deletedTagNames
             BranchesDeleted  = if ($DeleteBranches) { $deletedCount } else { 0 }
         }
     } catch {
@@ -835,6 +840,8 @@ function Clear-GitState {
     - test-branches.txt: Branch names and commit SHAs for workflow restoration
     - test-commits.bundle: Git bundle with all commit objects referenced by tags/branches
     
+    Returns ProductionTagsDeleted array containing the names of production tags that were deleted when CleanState=$true
+    
     Integrates with bump-version.yml workflow which reads these files from TEST_STATE_PATH.
     The workflow unbundles commits before restoring tags to ensure commit SHAs exist.
     Use Backup-GitState.ps1 to backup state before applying scenarios.
@@ -857,9 +864,14 @@ function Set-TestScenario {
         $scenario = Get-ScenarioDefinition -ScenarioName $ScenarioName
         Write-Debug "$($Emojis.Scenario) Scenario description: $($scenario.Description)"
 
-        # Clean state if requested
+        # Clean state if requested and capture production tags deleted
+        $productionTagsDeleted = @()
         if ($CleanState) {
-            Clear-GitState -DeleteTags $true
+            $cleanStateResult = Clear-GitState -DeleteTags $true
+            if ($cleanStateResult.PSObject.Properties.Name -contains 'DeletedTagNames') {
+                $productionTagsDeleted = @($cleanStateResult.DeletedTagNames)
+                Write-Debug "$($Emojis.Debug) Captured $($productionTagsDeleted.Count) production tags deleted during clean state"
+            }
         }
 
         $repoRoot = Get-RepositoryRoot
@@ -975,15 +987,16 @@ function Set-TestScenario {
         Write-DebugMessage -Type "SUCCESS" -Message "Scenario applied successfully: $ScenarioName"
 
         return @{
-            ScenarioName      = $ScenarioName
-            TagsCreated       = $tagsCreated
-            BranchesCreated   = $branchesCreated
-            CurrentBranch     = $scenario.CurrentBranch
-            TestTagsFile      = $testTagsPath
-            TestBranchesFile  = $testBranchesPath
-            TestCommitsBundle = $testCommitsPath
-            CommitMap         = $commitMap
-            Success           = $true
+            ScenarioName          = $ScenarioName
+            TagsCreated           = $tagsCreated
+            ProductionTagsDeleted = $productionTagsDeleted
+            BranchesCreated       = $branchesCreated
+            CurrentBranch         = $scenario.CurrentBranch
+            TestTagsFile          = $testTagsPath
+            TestBranchesFile      = $testBranchesPath
+            TestCommitsBundle     = $testCommitsPath
+            CommitMap             = $commitMap
+            Success               = $true
         }
     } catch {
         Write-DebugMessage -Type "ERROR" -Message "Failed to apply scenario: $_"

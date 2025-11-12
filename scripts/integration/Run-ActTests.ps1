@@ -1817,14 +1817,23 @@ function Invoke-SetupGitState {
 .PARAMETER Step
     Step object from fixture
 
+.PARAMETER TestContext
+    Test execution context providing access to production tags for filtering during test state re-export
+
 .EXAMPLE
-    $result = Invoke-RunWorkflow -Step $step
+    $result = Invoke-RunWorkflow -Step $step -TestContext $testContext
 
 .NOTES
     Returns hashtable with: Success, Message, ActResult, OutputsMatched, ErrorMessageFound
 #>
 function Invoke-RunWorkflow {
-    param([Parameter(Mandatory = $true)][object]$Step)
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Step,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$TestContext
+    )
     
     $workflow = $Step.workflow
     $fixture = $Step.fixture
@@ -1898,9 +1907,19 @@ function Invoke-RunWorkflow {
         # Update test state files after workflow execution
         Write-Debug "$($Emojis.Debug) Updating test state files after workflow execution"
         
-        # Export current tags to test-tags.txt
+        # Calculate test-only tags (exclude production tags)
+        $productionTags = if ($TestContext -and $TestContext.ProductionTags) { $TestContext.ProductionTags } else { @() }
+        $allCurrentTags = @(git tag -l)
+        $testTags = @($allCurrentTags | Where-Object { $_ -notin $productionTags })
+        Write-Debug "$($Emojis.Debug) Filtering tags: $($allCurrentTags.Count) total, $($productionTags.Count) production, $($testTags.Count) test tags to export"
+        
+        # Get all current branches
+        $allCurrentBranches = @(git branch -l | ForEach-Object { $_.TrimStart('*').Trim() } | Where-Object { $_ -and $_ -notmatch '^\(HEAD' })
+        Write-Debug "$($Emojis.Debug) Found $($allCurrentBranches.Count) branches to export"
+        
+        # Export current tags to test-tags.txt (only test tags)
         try {
-            $tagsOutputPath = Export-TestTagsFile -OutputPath (Join-Path $TestStateDirectory "test-tags.txt")
+            $tagsOutputPath = Export-TestTagsFile -Tags $testTags -OutputPath (Join-Path $TestStateDirectory "test-tags.txt")
             Write-Debug "$($Emojis.Debug) Test tags file updated: $tagsOutputPath"
         } catch {
             Write-DebugMessage -Type "WARNING" -Message "Failed to update test-tags.txt: $_"
@@ -1908,15 +1927,15 @@ function Invoke-RunWorkflow {
         
         # Export current branches to test-branches.txt
         try {
-            $branchesOutputPath = Export-TestBranchesFile -OutputPath (Join-Path $TestStateDirectory "test-branches.txt")
+            $branchesOutputPath = Export-TestBranchesFile -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory "test-branches.txt")
             Write-Debug "$($Emojis.Debug) Test branches file updated: $branchesOutputPath"
         } catch {
             Write-DebugMessage -Type "WARNING" -Message "Failed to update test-branches.txt: $_"
         }
         
-        # Export commit bundle to test-commits.bundle
+        # Export commit bundle to test-commits.bundle (only commits referenced by test tags and branches)
         try {
-            $bundleOutputPath = Export-TestCommitsBundle -OutputPath (Join-Path $TestStateDirectory "test-commits.bundle")
+            $bundleOutputPath = Export-TestCommitsBundle -Tags $testTags -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory "test-commits.bundle")
             Write-Debug "$($Emojis.Debug) Test commits bundle updated: $bundleOutputPath"
         } catch {
             Write-DebugMessage -Type "WARNING" -Message "Failed to update test-commits.bundle: $_"
@@ -2034,14 +2053,23 @@ function Invoke-ValidateState {
 .PARAMETER Step
     Step object from fixture
 
+.PARAMETER TestContext
+    Test execution context providing access to production tags for filtering during test state re-export
+
 .EXAMPLE
-    $result = Invoke-ExecuteCommand -Step $step
+    $result = Invoke-ExecuteCommand -Step $step -TestContext $testContext
 
 .NOTES
     Returns hashtable with: Success, Message, Output, ExitCode
 #>
 function Invoke-ExecuteCommand {
-    param([Parameter(Mandatory = $true)][object]$Step)
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Step,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$TestContext
+    )
     
     $command = $Step.command
     
@@ -2058,9 +2086,19 @@ function Invoke-ExecuteCommand {
         # Update test state files after command execution
         Write-Debug "$($Emojis.Debug) Updating test state files after command execution"
 
-        # Export current tags to test-tags.txt
+        # Calculate test-only tags (exclude production tags)
+        $productionTags = if ($TestContext -and $TestContext.ProductionTags) { $TestContext.ProductionTags } else { @() }
+        $allCurrentTags = @(git tag -l)
+        $testTags = @($allCurrentTags | Where-Object { $_ -notin $productionTags })
+        Write-Debug "$($Emojis.Debug) Filtering tags: $($allCurrentTags.Count) total, $($productionTags.Count) production, $($testTags.Count) test tags to export"
+        
+        # Get all current branches
+        $allCurrentBranches = @(git branch -l | ForEach-Object { $_.TrimStart('*').Trim() } | Where-Object { $_ -and $_ -notmatch '^\(HEAD' })
+        Write-Debug "$($Emojis.Debug) Found $($allCurrentBranches.Count) branches to export"
+
+        # Export current tags to test-tags.txt (only test tags)
         try {
-            $tagsOutputPath = Export-TestTagsFile -OutputPath (Join-Path $TestStateDirectory "test-tags.txt")
+            $tagsOutputPath = Export-TestTagsFile -Tags $testTags -OutputPath (Join-Path $TestStateDirectory "test-tags.txt")
             Write-Debug "$($Emojis.Debug) Test tags file updated: $tagsOutputPath"
         } catch {
             Write-DebugMessage -Type "WARNING" -Message "Failed to update test-tags.txt: $_"
@@ -2068,15 +2106,15 @@ function Invoke-ExecuteCommand {
         
         # Export current branches to test-branches.txt
         try {
-            $branchesOutputPath = Export-TestBranchesFile -OutputPath (Join-Path $TestStateDirectory "test-branches.txt")
+            $branchesOutputPath = Export-TestBranchesFile -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory "test-branches.txt")
             Write-Debug "$($Emojis.Debug) Test branches file updated: $branchesOutputPath"
         } catch {
             Write-DebugMessage -Type "WARNING" -Message "Failed to update test-branches.txt: $_"
         }
         
-        # Export commit bundle to test-commits.bundle
+        # Export commit bundle to test-commits.bundle (only commits referenced by test tags and branches)
         try {
-            $bundleOutputPath = Export-TestCommitsBundle -OutputPath (Join-Path $TestStateDirectory "test-commits.bundle")
+            $bundleOutputPath = Export-TestCommitsBundle -Tags $testTags -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory "test-commits.bundle")
             Write-Debug "$($Emojis.Debug) Test commits bundle updated: $bundleOutputPath"
         } catch {
             Write-DebugMessage -Type "WARNING" -Message "Failed to update test-commits.bundle: $_"
@@ -2181,13 +2219,13 @@ function Invoke-TestStep {
                 Invoke-SetupGitState -Step $Step
             }
             "run-workflow" {
-                Invoke-RunWorkflow -Step $Step
+                Invoke-RunWorkflow -Step $Step -TestContext $TestContext
             }
             "validate-state" {
                 Invoke-ValidateState -Step $Step -TestContext $TestContext
             }
             "execute-command" {
-                Invoke-ExecuteCommand -Step $Step
+                Invoke-ExecuteCommand -Step $Step -TestContext $TestContext
             }
             "comment" {
                 Invoke-Comment -Step $Step
@@ -2316,8 +2354,8 @@ function Invoke-IntegrationTest {
         Write-Debug "$($Emojis.Debug) Test configuration: SkipBackup=$SkipBackup, SkipCleanup=$SkipCleanup"
         
         # Initialize test execution context for sharing state between steps
-        $testContext = @{ LastActResult = $null }
-        Write-Debug "$($Emojis.Debug) Initialized test execution context"
+        $testContext = @{ LastActResult = $null; ProductionTags = @() }
+        Write-Debug "$($Emojis.Debug) Initialized test execution context (tracking production tags)"
         
         # Backup git state
         # Integration with Backup-GitState.ps1: Call Backup-GitState before each test
@@ -2341,6 +2379,12 @@ function Invoke-IntegrationTest {
             if ($stepResult.ActResult) {
                 $testContext.LastActResult = $stepResult.ActResult
                 Write-Debug "$($Emojis.Debug) Stored ActResult in test context for step $stepIndex"
+            }
+            
+            # Store production tags if this was a setup-git-state step
+            if ($step.action -eq 'setup-git-state' -and $stepResult.State -and $stepResult.State.ProductionTagsDeleted) {
+                $testContext.ProductionTags = $stepResult.State.ProductionTagsDeleted
+                Write-Debug "$($Emojis.Debug) Captured $($testContext.ProductionTags.Count) production tags from setup-git-state step"
             }
             
             if (-not $stepResult.Success) {
