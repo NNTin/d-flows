@@ -132,6 +132,11 @@
       "command": "git commit --allow-empty -m 'Trigger release v1.2.0'"
     },
     {
+      "name": "Skipping test execution in next step, can't delete release/v1 branch if checked out",
+      "action": "execute-command",
+      "command": "git checkout main"
+    },
+    {
       "name": "Future TODO: bump-version bumps valid branch release/v1 but fails",
       "action": "comment",
       "text": "The test fails in the next run because it attempts to do a checkout on release/v1. We cannot control the checkout behavior in the test environment. We do have a restoration mechanism but this is after the checkout and it already fails at checkout. When the branch exists in the future the test should pass.",
