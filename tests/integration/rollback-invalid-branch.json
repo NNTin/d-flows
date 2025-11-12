@@ -51,7 +51,7 @@
       }
     },
     {
-      "name": "Manually trigger release workflow with version 0.1.1",
+      "name": "Execute v0.1.1 release workflow",
       "action": "run-workflow",
       "workflow": "release.yml",
       "fixture": "tests/release/valid-release-v0.1.1.json",

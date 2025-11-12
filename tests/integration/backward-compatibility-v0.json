@@ -18,7 +18,7 @@
       "command": "git commit --allow-empty -m 'Trigger release v0.1.0'"
     },
     {
-      "name": "Create v0.1.0 release",
+      "name": "Execute v0.1.0 release workflow",
       "action": "run-workflow",
       "workflow": "release.yml",
       "fixture": "tests/release/valid-release-v0.1.0.json",
@@ -32,7 +32,7 @@
       "command": "git commit --allow-empty -m 'Trigger release v0.2.0'"
     },
     {
-      "name": "Create v0.2.0 release",
+      "name": "Execute v0.2.0 release workflow",
       "action": "run-workflow",
       "workflow": "release.yml",
       "fixture": "tests/release/valid-release-v0.2.0.json",
@@ -46,7 +46,7 @@
       "command": "git commit --allow-empty -m 'Trigger release v0.2.1'"
     },
     {
-      "name": "Create v0.2.1 release",
+      "name": "Execute v0.2.1 release workflow",
       "action": "run-workflow",
       "workflow": "release.yml",
       "fixture": "tests/release/valid-release-v0.2.1.json",
@@ -60,7 +60,7 @@
       "command": "git commit --allow-empty -m 'Trigger release v0.2.2'"
     },
     {
-      "name": "Create v0.2.2 release",
+      "name": "Execute v0.2.2 release workflow",
       "action": "run-workflow",
       "workflow": "release.yml",
       "fixture": "tests/release/valid-release-v0.2.2.json",
@@ -102,7 +102,7 @@
       ]
     },
     {
-      "name": "Create v1.0.0 release",
+      "name": "Execute v1.0.0 release workflow",
       "action": "run-workflow",
       "workflow": "release.yml",
       "fixture": "tests/release/valid-release-v1.0.0.json",

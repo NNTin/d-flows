@@ -49,7 +49,7 @@
       "command": "git commit --allow-empty -m 'Trigger release v0.2.2'"
     },
     {
-      "name": "Execute release workflow",
+      "name": "Execute v0.2.2 release workflow",
       "action": "run-workflow",
       "workflow": "release.yml",
       "fixture": "tests/release/valid-release-v0.2.2.json",
@@ -95,7 +95,7 @@
       ]
     },
     {
-      "name": "Execute release workflow",
+      "name": "Execute v1.0.0 release workflow",
       "action": "run-workflow",
       "workflow": "release.yml",
       "fixture": "tests/release/valid-release-v1.0.0.json",
