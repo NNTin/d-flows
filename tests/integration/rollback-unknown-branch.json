@@ -1,6 +1,6 @@
 {
   "name": "Unknown Branch Format Error",
-  "description": "Checking out a branch, that does not exist on the remote, should trigger an error about unknown branch format. This test validates that workflows handle unknown branch format errors gracefully, provide clear error messages explaining valid formats (main, release/vX), have no side effects from unknown branch attempts",
+  "description": "Focus: accidental release branch with unknown name is handled gracefully",
   "steps": [
     {
       "name": "Setup complete release history",

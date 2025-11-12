@@ -1,6 +1,6 @@
 {
   "name": "v0 Backward Compatibility",
-  "description": "Tests that releasing v1.0.0 doesn't break existing users who reference v0 in their workflows, and that a release/v0 branch is created for continued v0 maintenance. This validates critical requirement that releasing v1.0.0 doesn't break v0 users, ensures smooth transition with maintenance support, and allows users to upgrade at their own pace.",
+  "description": "Focus: v0 points to latest v0.x.y release after v1.0.0 release, ensuring backward compatibility for v0 users.",
   "steps": [
     {
       "name": "Setup complete release history",

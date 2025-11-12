@@ -1,0 +1,167 @@
+{
+  "name": "Release Cycle: main from v0.2.1 to v2.0.0",
+  "description": "Focus: Releasing on main (= latest) should always be possible",
+  "steps": [
+    {
+      "name": "Setup initial state",
+      "action": "setup-git-state",
+      "scenario": "MajorBumpV0ToV1",
+      "expectedState": {
+        "tags": ["v0.2.1"],
+        "branches": ["main"],
+        "currentBranch": "main"
+      }
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v0.2.2'"
+    },
+    {
+      "name": "Execute patch bump-version workflow",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/patch-bump-main.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "0.2.2",
+        "FIRST_RELEASE": "false",
+        "CURRENT_MAJOR": "0"
+      },
+      "expectedStepSummary": [
+        "🔼 patch bump: 0.2.1 → 0.2.2",
+        "✅ Version validation passed"
+      ]
+    },
+    {
+      "name": "Execute v0.2.2 release workflow",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v0.2.2.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "0"
+      }
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v1.0.0'"
+    },
+    {
+      "name": "Execute major bump-version workflow",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/major-bump-main.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "1.0.0",
+        "FIRST_RELEASE": "false",
+        "CURRENT_MAJOR": "0"
+      },
+      "expectedStepSummary": [
+        "🔼 major bump: 0.2.2 → 1.0.0",
+        "✅ Version validation passed"
+      ]
+    },
+    {
+      "name": "Validate version calculation",
+      "action": "validate-state",
+      "checks": [
+        {"type": "version-greater", "current": "0.2.2", "new": "1.0.0"},
+        {"type": "major-increment", "from": 0, "to": 1}
+      ]
+    },
+    {
+      "name": "Execute v1.0.0 release workflow",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v1.0.0.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "1"
+      }
+    },
+    {
+      "name": "Validate release ",
+      "action": "validate-state",
+      "checks": [
+        {"type": "branch-exists", "branch": "release/v0"},
+        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.2"},
+        {"type": "tag-exists", "tag": "v0.2.1"},
+        {"type": "tag-exists", "tag": "v0.2.2"},
+        {"type": "tag-exists", "tag": "v1.0.0"},
+        {"type": "tag-exists", "tag": "v1"},
+        {"type": "tag-points-to", "tag": "v1", "target": "v1.0.0"},
+        {"type": "tag-accessible", "tag": "v1.0.0"},
+        {"type": "major-tags-coexist", "tags": ["v0", "v1"]},
+        {"type": "workflow-success", "workflow": "release.yml"}
+      ]
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v1.1.0'"
+    },
+    {
+      "name": "Execute v1.1.0 release workflow",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v1.1.0.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "1"
+      }
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v2.0.0'"
+    },
+    {
+      "name": "Execute major bump-version workflow",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/major-bump-main.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "2.0.0",
+        "FIRST_RELEASE": "false",
+        "CURRENT_MAJOR": "1"
+      },
+      "expectedStepSummary": [
+        "🔼 major bump: 1.1.0 → 2.0.0",
+        "✅ Version validation passed"
+      ]
+    },
+    {
+      "name": "Execute v2.0.0 release workflow",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v2.0.0.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "2"
+      }
+    },
+    {
+      "name": "Validate release ",
+      "action": "validate-state",
+      "checks": [
+        {"type": "branch-exists", "branch": "release/v0"},
+        {"type": "branch-points-to-tag", "branch": "release/v0", "tag": "v0.2.2"},
+        {"type": "branch-exists", "branch": "release/v1"},
+        {"type": "branch-points-to-tag", "branch": "release/v1", "tag": "v1.1.0"},
+        {"type": "tag-exists", "tag": "v0.2.1"},
+        {"type": "tag-exists", "tag": "v0.2.2"},
+        {"type": "tag-exists", "tag": "v1.0.0"},
+        {"type": "tag-exists", "tag": "v1.1.0"},
+        {"type": "tag-exists", "tag": "v1"},
+        {"type": "tag-points-to", "tag": "v1", "target": "v1.1.0"},
+        {"type": "tag-exists", "tag": "v2.0.0"},
+        {"type": "tag-exists", "tag": "v2"},
+        {"type": "tag-points-to", "tag": "v2", "target": "v2.0.0"},
+        {"type": "major-tags-coexist", "tags": ["v0", "v1"]},
+        {"type": "workflow-success", "workflow": "release.yml"}
+      ]
+    }
+  ],
+  "cleanup": {
+    "action": "reset-git-state"
+  },
+  "expectedDuration": "30-60 seconds",
+  "tags": ["integration", "major-version", "v0-to-v1", "release-cycle"]
+}

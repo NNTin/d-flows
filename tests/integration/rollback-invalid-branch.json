@@ -1,6 +1,6 @@
 {
   "name": "Invalid Branch Format Error Recovery",
-  "description": "Tests recovery from invalid branch format errors. This validates that workflows validate branch format before processing, provide clear error messages explaining valid formats (main, release/vX), have no side effects from invalid branch attempts, and can recover by switching to valid branch.",
+  "description": "Focus: accidental release branch with invalid name is handled gracefully",
   "steps": [
     {
       "name": "Setup complete release history",

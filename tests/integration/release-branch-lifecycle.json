@@ -1,6 +1,6 @@
 {
   "name": "Release Branch Lifecycle",
-  "description": "Tests the automatic release branch creation feature and validates the ability to maintain multiple major versions simultaneously. This validates automatic release branch creation during major bump, branch created from correct commit, patches on release branch only affect that major version, and main branch continues independent development.",
+  "description": "Focus: Releasing older major versions after newer major versions have been released.",
   "steps": [
     {
       "name": "Setup complete release history",
