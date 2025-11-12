@@ -122,14 +122,9 @@
       ]
     },
     {
-      "name": "In order to create a new branch, we need to be attached to something",
-      "action": "execute-command",
-      "command": "git checkout main"
-    },
-    {
       "name": "Checking out release/v1 branch",
       "action": "execute-command",
-      "command": "git checkout -b release/v1"
+      "command": "git checkout release/v1"
     },
     {
       "name": "Creating empty commit before release",
