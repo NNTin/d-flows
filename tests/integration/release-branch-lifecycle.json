@@ -3,11 +3,11 @@
   "description": "Tests the automatic release branch creation feature and validates the ability to maintain multiple major versions simultaneously. This validates automatic release branch creation during major bump, branch created from correct commit, patches on release branch only affect that major version, and main branch continues independent development.",
   "steps": [
     {
-      "name": "Setup initial state",
+      "name": "Setup complete release history",
       "action": "setup-git-state",
-      "scenario": "MajorBumpV0ToV1",
+      "scenario": "FirstRelease",
       "expectedState": {
-        "tags": ["v0.2.0"],
+        "tags": [],
         "branches": ["main"],
         "currentBranch": "main"
       }
