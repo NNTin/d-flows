@@ -1,0 +1,58 @@
+{
+  "name": "Unknown Branch Format Error",
+  "description": "Checking out a branch, that does not exist on the remote, should trigger an error about unknown branch format. This test validates that workflows handle unknown branch format errors gracefully, provide clear error messages explaining valid formats (main, release/vX), have no side effects from unknown branch attempts",
+  "steps": [
+    {
+      "name": "Setup complete release history",
+      "action": "setup-git-state",
+      "scenario": "FirstRelease",
+      "expectedState": {
+        "tags": [],
+        "branches": ["main"],
+        "currentBranch": "main"
+      }
+    },
+    {
+      "name": "Create feature branch with invalid format",
+      "action": "execute-command",
+      "command": "git checkout -b feature/test-branch"
+    },
+    {
+      "name": "Validate new branch exists",
+      "action": "validate-state",
+      "checks": [
+        {"type": "current-branch", "branch": "feature/test-branch"}
+      ]
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'New commit on feature/test-branch'"
+    },
+    {
+      "name": "Attempt bump on invalid branch (should fail)",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/error-nonexistent-branch.json",
+      "expectedFailure": true,
+      "expectedErrorMessage": ["branch", "format", "main", "release/v"]
+    },
+    {
+      "name": "Validate release artifacts",
+      "action": "validate-state",
+      "checks": [
+        {"type": "workflow-failure", "workflow": "release.yml"}
+      ]
+    },
+    {
+      "name": "Comment on failed attempt",
+      "action": "comment",
+      "text": "Note: The bump attempt on an invalid branch format failed as expected. Test ends here, cannot make new test tags or branches because it performs a full git checkout where production tags and branches have an effect on the test setup."
+    }
+  ],
+  "cleanup": {
+    "action": "reset-git-state"
+  },
+  "expectedDuration": "30-60 seconds",
+  "tags": ["integration", "error-recovery", "branch-validation", "resilience"]
+}

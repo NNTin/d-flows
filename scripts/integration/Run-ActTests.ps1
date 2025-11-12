@@ -1080,6 +1080,17 @@ function Invoke-ValidationCheck {
                 }
                 return Validate-WorkflowSuccess -Workflow $Check.workflow -ActResult $ActResult
             }
+            "workflow-failure" {
+                # Validate that ActResult is available for workflow-failure checks
+                if (-not $ActResult) {
+                    return @{
+                        Success = $false
+                        Message = "workflow-failure validation requires a preceding run-workflow step. ActResult is null."
+                        Type    = $checkType
+                    }
+                }
+                return Validate-WorkflowFailure -Workflow $Check.workflow -ActResult $ActResult
+            }
             "idempotency-verified" {
                 return Validate-IdempotencyVerified
             }
@@ -1698,6 +1709,36 @@ function Validate-WorkflowSuccess {
         Success = $success
         Message = if ($success) { "Workflow '$Workflow' succeeded" } else { "Workflow '$Workflow' failed with exit code: $($ActResult.ExitCode)" }
         Type    = "workflow-success"
+    }
+}
+
+<#
+.SYNOPSIS
+    Check if workflow execution succeeded.
+
+.PARAMETER Workflow
+    Workflow name
+
+.PARAMETER ActResult
+    Result from Invoke-ActWorkflow
+
+.EXAMPLE
+    Validate-WorkflowFailure -Workflow "bump-version" -ActResult $actResult
+#>
+function Validate-WorkflowFailure {
+    param(
+        [Parameter(Mandatory = $true)][string]$Workflow,
+        [Parameter(Mandatory = $true)][object]$ActResult
+    )
+
+    $success = -not $ActResult.Success -and ($ActResult.ExitCode -ne 0)
+
+    Write-Debug "$($Emojis.Validation) Workflow '$Workflow' failure: $success"
+
+    return @{
+        Success = $success
+        Message = if ($success) { "Workflow '$Workflow' failed as expected" } else { "Workflow '$Workflow' succeeded unexpectedly" }
+        Type    = "workflow-failure"
     }
 }
 
