@@ -2086,6 +2086,73 @@ function Invoke-ValidateState {
 
 <#
 .SYNOPSIS
+    Executes an external command from a single string, capturing stdout, stderr, and exit code.
+
+.DESCRIPTION
+    Run-Command safely executes a command provided as a single string.
+    It handles quoted arguments correctly, merges stdout and stderr,
+    and returns both the full output and the exit code as a PSCustomObject.
+
+.PARAMETER Command
+    The command string to execute, including arguments.
+    Example: "git commit --allow-empty -m 'Trigger release v0.2.1'"
+
+.PARAMETER VerboseOutput
+    Switch. If specified, prints the command, exit code, and output to the host.
+
+.EXAMPLE
+    $result = Run-Command "git commit --allow-empty -m 'Trigger release v0.2.1'"
+    Write-Host "Exit code: $($result.ExitCode)"
+    Write-Host "Output:`n$($result.Output)"
+
+.EXAMPLE
+    Run-Command "docker build -t myimage ." -VerboseOutput
+
+.NOTES
+    - Avoids Invoke-Expression to improve safety.
+    - Properly splits the string into executable + arguments.
+    - Captures both stdout and stderr.
+#>
+function Run-Command {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [string]$Command,
+
+        [switch]$VerboseOutput
+    )
+
+    # Split command string into executable + args
+    $tokens = [System.Management.Automation.PSParser]::Tokenize($Command, [ref]$null)
+    if ($tokens.Count -eq 0) { throw "Command string is empty." }
+
+    $exe = $tokens[0].Content
+    $args = @()
+    if ($tokens.Count -gt 1) {
+        $args = $tokens[1..($tokens.Count - 1)] | ForEach-Object { $_.Content }
+    }
+
+    if ($VerboseOutput) {
+        Write-Host "🔹 Executing: $exe $($args -join ' ')"
+    }
+
+    # Execute command, capture stdout + stderr
+    $output = & $exe @args 2>&1 | Out-String
+    $exitCode = $LASTEXITCODE
+
+    if ($VerboseOutput) {
+        Write-Host "🔹 Exit code: $exitCode"
+        Write-Host "🔹 Output:`n$output"
+    }
+
+    return [PSCustomObject]@{
+        ExitCode = $exitCode
+        Output   = $output.Trim()
+    }
+}
+
+<#
+.SYNOPSIS
     Execute "execute-command" step.
 
 .DESCRIPTION
@@ -2117,9 +2184,11 @@ function Invoke-ExecuteCommand {
     Write-Debug "$($Emojis.Debug) Executing command: $command"
     
     try {
-        $output = Invoke-Expression $command 2>&1 | Out-String
-        $exitCode = $LASTEXITCODE
-        
+        $result = Run-Command $command
+
+        $output = $($result.Output)
+        $exitCode = $($result.ExitCode)
+
         $success = ($exitCode -eq 0)
         
         Write-Debug "$($Emojis.Debug) Command completed with exit code: $exitCode"
