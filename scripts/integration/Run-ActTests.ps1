@@ -2268,12 +2268,15 @@ function Invoke-Comment {
     param([Parameter(Mandatory = $true)][object]$Step)
     
     $text = $Step.text
+
+    $skip = if ($Step.skip) { $Step.skip } else { $false }
     
     Write-DebugMessage -Type "INFO" -Message $text
     
     return @{
         Success = $true
         Message = $text
+        Skip = $skip
     }
 }
 
@@ -2495,6 +2498,13 @@ function Invoke-IntegrationTest {
             if ($step.action -eq 'setup-git-state' -and $stepResult.State -and $stepResult.State.ProductionTagsDeleted) {
                 $testContext.ProductionTags = $stepResult.State.ProductionTagsDeleted
                 Write-Debug "$($Emojis.Debug) Captured $($testContext.ProductionTags.Count) production tags from setup-git-state step"
+            }
+
+            if ($step.Skip) {
+                # for tests we only have two states: success and failure
+                # future todo to have "skipped" state, for now treat as success but log as skipped
+                Write-DebugMessage -Type "WARNING" -Message "Step $stepIndex is skipping test execution"
+                break
             }
             
             if (-not $stepResult.Success) {
