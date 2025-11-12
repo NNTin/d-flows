@@ -3,14 +3,31 @@
   "description": "Tests recovery from invalid branch format errors. This validates that workflows validate branch format before processing, provide clear error messages explaining valid formats (main, release/vX), have no side effects from invalid branch attempts, and can recover by switching to valid branch.",
   "steps": [
     {
-      "name": "Setup invalid branch scenario",
+      "name": "Setup complete release history",
       "action": "setup-git-state",
-      "scenario": "InvalidBranch",
+      "scenario": "FirstRelease",
       "expectedState": {
-        "tags": ["v0.1.0"],
-        "branches": ["main", "feature/test-branch"],
-        "currentBranch": "feature/test-branch"
+        "tags": [],
+        "branches": ["main"],
+        "currentBranch": "main"
       }
+    },
+    {
+      "name": "Create feature branch with invalid format",
+      "action": "execute-command",
+      "command": "git checkout -b feature/test-branch"
+    },
+    {
+      "name": "Validate new branch exists",
+      "action": "validate-state",
+      "checks": [
+        {"type": "current-branch", "branch": "feature/test-branch"}
+      ]
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'New commit on feature/test-branch'"
     },
     {
       "name": "Attempt bump on invalid branch (should fail)",

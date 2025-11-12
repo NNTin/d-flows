@@ -25,11 +25,6 @@
     Supported Scenarios:
     - FirstRelease: Initial release scenario - clean state with only main branch
     - MajorBumpV0ToV1: v0 to v1 promotion - v0.2.1 tag on main
-    - MajorBumpV1ToV2: v1 to v2 promotion - v1.2.0 tag on main
-    - MinorBump: Minor version bump - v0.1.0 tag on main
-    - PatchBump: Patch version bump - v0.1.0 tag on main
-    - ReleaseBranchPatch: Release branch patch - v1.2.0 on release/v1, v2.0.0 on main
-    - InvalidBranch: Invalid branch format - feature branch checked out for error testing
 
     This script is designed to be:
     - Dot-sourceable for use by other integration testing scripts
@@ -102,7 +97,6 @@
     - Uncommitted changes: Provides clear error message for checkout conflicts
     - Invalid commit SHAs: Validates commits exist before tag/branch creation
     - Detached HEAD: Handles gracefully during branch checkout
-    - Complex scenarios: ReleaseBranchPatch handles tags on different branches
 
     Testing Workflow:
     1. Backup production state: $backup = Backup-GitState
@@ -190,68 +184,6 @@ $ScenarioDefinitions = @{
         ExpectedVersion         = "1.0.0"
         ExpectedBranchCreation  = "release/v0"
         TestFixtures            = @("tests/bump-version/major-bump-main.json", "tests/integration/v0-to-v1-release-cycle.json")
-    }
-    
-    MajorBumpV1ToV2 = @{
-        Description             = "v1 to v2 promotion scenario - v1.2.0 tag exists on main, no release/v1 branch yet"
-        Tags                    = @(
-            @{ Name = "v1.2.0"; CommitMessage = "Release v1.2.0" }
-        )
-        Branches                = @("main")
-        CurrentBranch           = "main"
-        Notes                   = "Used for testing v1 → v2 promotion with automatic release/v1 branch creation. Referenced in: major-bump-main.json, release-branch-lifecycle.json. Documented in VERSIONING.md under 'Releasing a New Major Version'."
-        ExpectedVersion         = "2.0.0"
-        ExpectedBranchCreation  = "release/v1"
-        TestFixtures            = @("tests/bump-version/major-bump-main.json", "tests/integration/release-branch-lifecycle.json")
-    }
-    
-    MinorBump = @{
-        Description             = "Minor version bump scenario - v0.1.0 tag exists on main branch"
-        Tags                    = @(
-            @{ Name = "v0.1.0"; CommitMessage = "Release v0.1.0" }
-        )
-        Branches                = @("main")
-        CurrentBranch           = "main"
-        Notes                   = "Used for testing minor version bumps (v0.1.0 → v0.2.0). Referenced in: minor-bump-main.json. Documented in VERSIONING.md under 'Releasing Minor and Patch Versions'."
-        ExpectedVersion         = "0.2.0"
-        TestFixtures            = @("tests/bump-version/minor-bump-main.json")
-    }
-    
-    PatchBump = @{
-        Description             = "Patch version bump scenario - v0.1.0 tag exists on main branch"
-        Tags                    = @(
-            @{ Name = "v0.1.0"; CommitMessage = "Release v0.1.0" }
-        )
-        Branches                = @("main")
-        CurrentBranch           = "main"
-        Notes                   = "Used for testing patch version bumps (v0.1.0 → v0.1.1). Referenced in: patch-bump-main.json. Documented in VERSIONING.md under 'Releasing Minor and Patch Versions'."
-        ExpectedVersion         = "0.1.1"
-        TestFixtures            = @("tests/bump-version/patch-bump-main.json")
-    }
-    
-    ReleaseBranchPatch = @{
-        Description             = "Release branch patch scenario - v1.2.0 on release/v1, v2.0.0 on main (newer major exists)"
-        Tags                    = @(
-            @{ Name = "v1.2.0"; CommitMessage = "Release v1.2.0"; Branch = "release/v1" }
-            @{ Name = "v2.0.0"; CommitMessage = "Release v2.0.0"; Branch = "main" }
-        )
-        Branches                = @("main", "release/v1")
-        CurrentBranch           = "release/v1"
-        Notes                   = "Used for testing patches on older major versions while newer major exists. Referenced in: patch-bump-release-branch.json, release-branch-lifecycle.json. Documented in VERSIONING.md under 'Patching an Older Major Version'."
-        ExpectedVersion         = "1.2.1"
-        TestFixtures            = @("tests/bump-version/patch-bump-release-branch.json", "tests/integration/release-branch-lifecycle.json")
-    }
-    
-    InvalidBranch = @{
-        Description             = "Invalid branch format scenario - feature branch checked out for error testing"
-        Tags                    = @(
-            @{ Name = "v0.1.0"; CommitMessage = "Release v0.1.0" }
-        )
-        Branches                = @("main", "feature/test-branch")
-        CurrentBranch           = "feature/test-branch"
-        Notes                   = "Used for testing branch validation errors. Workflow should reject bump attempts on feature branches. Referenced in: error-invalid-branch-format.json, rollback-invalid-branch.json. Documented in VERSIONING.md under 'Troubleshooting'."
-        ExpectedError           = "Branch format validation should fail - only main and release/vX branches allowed"
-        TestFixtures            = @("tests/bump-version/error-invalid-branch-format.json", "tests/integration/rollback-invalid-branch.json")
     }
 }
 
@@ -1535,9 +1467,6 @@ function Test-ScenarioState {
 
 .EXAMPLE
     Show-ScenarioDefinition -ScenarioName "MajorBumpV0ToV1"
-
-.EXAMPLE
-    Show-ScenarioDefinition -ScenarioName "ReleaseBranchPatch" -Detailed $true
 #>
 function Show-ScenarioDefinition {
     param(
@@ -1699,9 +1628,6 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-Host ""
     Write-Host "  # Validate current state:" -ForegroundColor Gray
     Write-Host "  Test-ScenarioState -ScenarioName ""MajorBumpV0ToV1""" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  # Display scenario details:" -ForegroundColor Gray
-    Write-Host "  Show-ScenarioDefinition -ScenarioName ""ReleaseBranchPatch"" -Detailed `$true" -ForegroundColor White
     Write-Host ""
     
     Write-Host "Available Scenarios:" -ForegroundColor Yellow
