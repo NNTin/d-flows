@@ -159,7 +159,7 @@ $ScenarioDefinitions = @{
         Tags             = @()  # No tags
         Branches         = @("main")
         CurrentBranch    = "main"
-        Notes            = "Used for testing initial v0.1.0 release (fminor-bump-main.json, multi-step-version-progression.json)"
+        Notes            = "Used for testing initial v0.1.0 release (minor-bump-main.json)"
     }
     
     MajorBumpV0ToV1 = @{

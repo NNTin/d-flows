@@ -168,9 +168,9 @@ $ScenarioDefinitions = @{
         Tags                    = @()
         Branches                = @("main")
         CurrentBranch           = "main"
-        Notes                   = "Used for testing initial v0.1.0 release. Referenced in: minor-bump-main.json, multi-step-version-progression.json. Documented in VERSIONING.md under 'Creating the First Release'."
+        Notes                   = "Used for testing initial v0.1.0 release. Referenced in: minor-bump-main.json. Documented in VERSIONING.md under 'Creating the First Release'."
         ExpectedVersion         = "0.1.0"
-        TestFixtures            = @("tests/bump-version/minor-bump-main.json", "tests/integration/multi-step-version-progression.json")
+        TestFixtures            = @("tests/bump-version/minor-bump-main.json")
     }
     
     MajorBumpV0ToV1 = @{
