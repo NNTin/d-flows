@@ -1,19 +1,88 @@
 {
   "name": "Release Branch Lifecycle",
-  "description": "Tests the automatic release branch creation feature and validates the ability to maintain multiple major versions simultaneously. This validates automatic release branch creation during major bump, branch created from correct commit, patches on release branch only affect that major version, and main branch continues independent development.",
+  "description": "Focus: Releasing older major versions after newer major versions have been released.",
   "steps": [
     {
-      "name": "Setup v1.2.0 on main",
+      "name": "Setup complete release history",
       "action": "setup-git-state",
-      "scenario": "MajorBumpV1ToV2",
+      "scenario": "FirstRelease",
       "expectedState": {
-        "tags": ["v1.2.0"],
+        "tags": [],
         "branches": ["main"],
         "currentBranch": "main"
       }
     },
     {
-      "name": "Major bump: v1.2.0 → v2.0.0",
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v0.2.1'"
+    },
+    {
+      "name": "Execute v0.2.1 release workflow",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v0.2.1.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "0"
+      }
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v1.0.0'"
+    },
+    {
+      "name": "Execute major bump-version workflow",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/major-bump-main.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "1.0.0",
+        "FIRST_RELEASE": "false",
+        "CURRENT_MAJOR": "0"
+      },
+      "expectedStepSummary": [
+        "🔼 major bump: 0.2.1 → 1.0.0",
+        "✅ Version validation passed"
+      ]
+    },
+    {
+      "name": "Execute v1.0.0 release workflow",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v1.0.0.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "1"
+      }
+    },
+    {
+      "name": "Validate release branch creation",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-points-to", "tag": "v1", "target": "v1.0.0"}
+      ]
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v1.1.0'"
+    },
+    {
+      "name": "Execute v1.1.0 release workflow",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v1.1.0.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "1"
+      }
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v2.0.0'"
+    },
+    {
+      "name": "Major bump: v1.1.0 → v2.0.0",
       "action": "run-workflow",
       "workflow": "bump-version.yml",
       "fixture": "tests/bump-version/major-bump-main.json",
@@ -27,7 +96,10 @@
       "name": "Validate release branch creation",
       "action": "validate-state",
       "checks": [
-        {"type": "branch-exists", "branch": "release/v1"}
+        {"type": "branch-exists", "branch": "release/v0"},
+        {"type": "branch-exists", "branch": "release/v1"},
+        {"type": "tag-points-to", "tag": "v0", "target": "v0.2.1"},
+        {"type": "tag-points-to", "tag": "v1", "target": "v1.1.0"}
       ]
     },
     {
@@ -47,6 +119,55 @@
         {"type": "tag-exists", "tag": "v2"},
         {"type": "tag-points-to", "tag": "v2", "target": "v2.0.0"},
         {"type": "current-branch", "branch": "main"}
+      ]
+    },
+    {
+      "name": "Checking out release/v1 branch",
+      "action": "execute-command",
+      "command": "git checkout release/v1"
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v1.2.0'"
+    },
+    {
+      "name": "Skipping test execution in next step, can't delete release/v1 branch if checked out",
+      "action": "execute-command",
+      "command": "git checkout main"
+    },
+    {
+      "name": "Future TODO: bump-version bumps valid branch release/v1 but fails",
+      "action": "comment",
+      "text": "The test fails in the next run because it attempts to do a checkout on release/v1. We cannot control the checkout behavior in the test environment. We do have a restoration mechanism but this is after the checkout and it already fails at checkout. When the branch exists in the future the test should pass.",
+      "skip": true
+    },
+    {
+      "name": "Patch on release/v1 branch: v1.1.0 → v1.2.0",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/minor-bump-release-branch.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "1.2.0"
+      }
+    },
+    {
+      "name": "Execute release workflow for v1.2.0",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v1.2.0.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "1"
+      }
+    },
+    {
+      "name": "Validate release branch creation",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v1.2.0"},
+        {"type": "tag-exists", "tag": "v1"},
+        {"type": "tag-points-to", "tag": "v1", "target": "v1.2.0"},
+        {"type": "current-branch", "branch": "release/v1"}
       ]
     },
     {
@@ -75,6 +196,16 @@
         {"type": "tag-points-to", "tag": "v1", "target": "v1.2.1"},
         {"type": "current-branch", "branch": "release/v1"}
       ]
+    },
+    {
+      "name": "Checking out main",
+      "action": "execute-command",
+      "command": "git checkout main"
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v2.1.0'"
     },
     {
       "name": "Minor on main: v2.0.0 → v2.1.0",

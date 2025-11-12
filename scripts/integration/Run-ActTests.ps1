@@ -1080,6 +1080,17 @@ function Invoke-ValidationCheck {
                 }
                 return Validate-WorkflowSuccess -Workflow $Check.workflow -ActResult $ActResult
             }
+            "workflow-failure" {
+                # Validate that ActResult is available for workflow-failure checks
+                if (-not $ActResult) {
+                    return @{
+                        Success = $false
+                        Message = "workflow-failure validation requires a preceding run-workflow step. ActResult is null."
+                        Type    = $checkType
+                    }
+                }
+                return Validate-WorkflowFailure -Workflow $Check.workflow -ActResult $ActResult
+            }
             "idempotency-verified" {
                 return Validate-IdempotencyVerified
             }
@@ -1703,6 +1714,36 @@ function Validate-WorkflowSuccess {
 
 <#
 .SYNOPSIS
+    Check if workflow execution succeeded.
+
+.PARAMETER Workflow
+    Workflow name
+
+.PARAMETER ActResult
+    Result from Invoke-ActWorkflow
+
+.EXAMPLE
+    Validate-WorkflowFailure -Workflow "bump-version" -ActResult $actResult
+#>
+function Validate-WorkflowFailure {
+    param(
+        [Parameter(Mandatory = $true)][string]$Workflow,
+        [Parameter(Mandatory = $true)][object]$ActResult
+    )
+
+    $success = -not $ActResult.Success -and ($ActResult.ExitCode -ne 0)
+
+    Write-Debug "$($Emojis.Validation) Workflow '$Workflow' failure: $success"
+
+    return @{
+        Success = $success
+        Message = if ($success) { "Workflow '$Workflow' failed as expected" } else { "Workflow '$Workflow' succeeded unexpectedly" }
+        Type    = "workflow-failure"
+    }
+}
+
+<#
+.SYNOPSIS
     Check that operation is idempotent.
 
 .EXAMPLE
@@ -1817,14 +1858,23 @@ function Invoke-SetupGitState {
 .PARAMETER Step
     Step object from fixture
 
+.PARAMETER TestContext
+    Test execution context providing access to production tags for filtering during test state re-export
+
 .EXAMPLE
-    $result = Invoke-RunWorkflow -Step $step
+    $result = Invoke-RunWorkflow -Step $step -TestContext $testContext
 
 .NOTES
     Returns hashtable with: Success, Message, ActResult, OutputsMatched, ErrorMessageFound
 #>
 function Invoke-RunWorkflow {
-    param([Parameter(Mandatory = $true)][object]$Step)
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Step,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$TestContext
+    )
     
     $workflow = $Step.workflow
     $fixture = $Step.fixture
@@ -1898,9 +1948,19 @@ function Invoke-RunWorkflow {
         # Update test state files after workflow execution
         Write-Debug "$($Emojis.Debug) Updating test state files after workflow execution"
         
-        # Export current tags to test-tags.txt
+        # Calculate test-only tags (exclude production tags)
+        $productionTags = if ($TestContext -and $TestContext.ProductionTags) { $TestContext.ProductionTags } else { @() }
+        $allCurrentTags = @(git tag -l)
+        $testTags = @($allCurrentTags | Where-Object { $_ -notin $productionTags })
+        Write-Debug "$($Emojis.Debug) Filtering tags: $($allCurrentTags.Count) total, $($productionTags.Count) production, $($testTags.Count) test tags to export"
+        
+        # Get all current branches
+        $allCurrentBranches = @(git branch -l | ForEach-Object { $_.TrimStart('*').Trim() } | Where-Object { $_ -and $_ -notmatch '^\(HEAD' })
+        Write-Debug "$($Emojis.Debug) Found $($allCurrentBranches.Count) branches to export"
+        
+        # Export current tags to test-tags.txt (only test tags)
         try {
-            $tagsOutputPath = Export-TestTagsFile -OutputPath (Join-Path $TestStateDirectory "test-tags.txt")
+            $tagsOutputPath = Export-TestTagsFile -Tags $testTags -OutputPath (Join-Path $TestStateDirectory "test-tags.txt")
             Write-Debug "$($Emojis.Debug) Test tags file updated: $tagsOutputPath"
         } catch {
             Write-DebugMessage -Type "WARNING" -Message "Failed to update test-tags.txt: $_"
@@ -1908,15 +1968,15 @@ function Invoke-RunWorkflow {
         
         # Export current branches to test-branches.txt
         try {
-            $branchesOutputPath = Export-TestBranchesFile -OutputPath (Join-Path $TestStateDirectory "test-branches.txt")
+            $branchesOutputPath = Export-TestBranchesFile -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory "test-branches.txt")
             Write-Debug "$($Emojis.Debug) Test branches file updated: $branchesOutputPath"
         } catch {
             Write-DebugMessage -Type "WARNING" -Message "Failed to update test-branches.txt: $_"
         }
         
-        # Export commit bundle to test-commits.bundle
+        # Export commit bundle to test-commits.bundle (only commits referenced by test tags and branches)
         try {
-            $bundleOutputPath = Export-TestCommitsBundle -OutputPath (Join-Path $TestStateDirectory "test-commits.bundle")
+            $bundleOutputPath = Export-TestCommitsBundle -Tags $testTags -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory "test-commits.bundle")
             Write-Debug "$($Emojis.Debug) Test commits bundle updated: $bundleOutputPath"
         } catch {
             Write-DebugMessage -Type "WARNING" -Message "Failed to update test-commits.bundle: $_"
@@ -2026,6 +2086,73 @@ function Invoke-ValidateState {
 
 <#
 .SYNOPSIS
+    Executes an external command from a single string, capturing stdout, stderr, and exit code.
+
+.DESCRIPTION
+    Run-Command safely executes a command provided as a single string.
+    It handles quoted arguments correctly, merges stdout and stderr,
+    and returns both the full output and the exit code as a PSCustomObject.
+
+.PARAMETER Command
+    The command string to execute, including arguments.
+    Example: "git commit --allow-empty -m 'Trigger release v0.2.1'"
+
+.PARAMETER VerboseOutput
+    Switch. If specified, prints the command, exit code, and output to the host.
+
+.EXAMPLE
+    $result = Run-Command "git commit --allow-empty -m 'Trigger release v0.2.1'"
+    Write-Host "Exit code: $($result.ExitCode)"
+    Write-Host "Output:`n$($result.Output)"
+
+.EXAMPLE
+    Run-Command "docker build -t myimage ." -VerboseOutput
+
+.NOTES
+    - Avoids Invoke-Expression to improve safety.
+    - Properly splits the string into executable + arguments.
+    - Captures both stdout and stderr.
+#>
+function Run-Command {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [string]$Command,
+
+        [switch]$VerboseOutput
+    )
+
+    # Split command string into executable + args
+    $tokens = [System.Management.Automation.PSParser]::Tokenize($Command, [ref]$null)
+    if ($tokens.Count -eq 0) { throw "Command string is empty." }
+
+    $exe = $tokens[0].Content
+    $args = @()
+    if ($tokens.Count -gt 1) {
+        $args = $tokens[1..($tokens.Count - 1)] | ForEach-Object { $_.Content }
+    }
+
+    if ($VerboseOutput) {
+        Write-Host "🔹 Executing: $exe $($args -join ' ')"
+    }
+
+    # Execute command, capture stdout + stderr
+    $output = & $exe @args 2>&1 | Out-String
+    $exitCode = $LASTEXITCODE
+
+    if ($VerboseOutput) {
+        Write-Host "🔹 Exit code: $exitCode"
+        Write-Host "🔹 Output:`n$output"
+    }
+
+    return [PSCustomObject]@{
+        ExitCode = $exitCode
+        Output   = $output.Trim()
+    }
+}
+
+<#
+.SYNOPSIS
     Execute "execute-command" step.
 
 .DESCRIPTION
@@ -2034,23 +2161,34 @@ function Invoke-ValidateState {
 .PARAMETER Step
     Step object from fixture
 
+.PARAMETER TestContext
+    Test execution context providing access to production tags for filtering during test state re-export
+
 .EXAMPLE
-    $result = Invoke-ExecuteCommand -Step $step
+    $result = Invoke-ExecuteCommand -Step $step -TestContext $testContext
 
 .NOTES
     Returns hashtable with: Success, Message, Output, ExitCode
 #>
 function Invoke-ExecuteCommand {
-    param([Parameter(Mandatory = $true)][object]$Step)
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Step,
+        
+        [Parameter(Mandatory = $false)]
+        [hashtable]$TestContext
+    )
     
     $command = $Step.command
     
     Write-Debug "$($Emojis.Debug) Executing command: $command"
     
     try {
-        $output = Invoke-Expression $command 2>&1 | Out-String
-        $exitCode = $LASTEXITCODE
-        
+        $result = Run-Command $command
+
+        $output = $($result.Output)
+        $exitCode = $($result.ExitCode)
+
         $success = ($exitCode -eq 0)
         
         Write-Debug "$($Emojis.Debug) Command completed with exit code: $exitCode"
@@ -2058,9 +2196,19 @@ function Invoke-ExecuteCommand {
         # Update test state files after command execution
         Write-Debug "$($Emojis.Debug) Updating test state files after command execution"
 
-        # Export current tags to test-tags.txt
+        # Calculate test-only tags (exclude production tags)
+        $productionTags = if ($TestContext -and $TestContext.ProductionTags) { $TestContext.ProductionTags } else { @() }
+        $allCurrentTags = @(git tag -l)
+        $testTags = @($allCurrentTags | Where-Object { $_ -notin $productionTags })
+        Write-Debug "$($Emojis.Debug) Filtering tags: $($allCurrentTags.Count) total, $($productionTags.Count) production, $($testTags.Count) test tags to export"
+        
+        # Get all current branches
+        $allCurrentBranches = @(git branch -l | ForEach-Object { $_.TrimStart('*').Trim() } | Where-Object { $_ -and $_ -notmatch '^\(HEAD' })
+        Write-Debug "$($Emojis.Debug) Found $($allCurrentBranches.Count) branches to export"
+
+        # Export current tags to test-tags.txt (only test tags)
         try {
-            $tagsOutputPath = Export-TestTagsFile -OutputPath (Join-Path $TestStateDirectory "test-tags.txt")
+            $tagsOutputPath = Export-TestTagsFile -Tags $testTags -OutputPath (Join-Path $TestStateDirectory "test-tags.txt")
             Write-Debug "$($Emojis.Debug) Test tags file updated: $tagsOutputPath"
         } catch {
             Write-DebugMessage -Type "WARNING" -Message "Failed to update test-tags.txt: $_"
@@ -2068,15 +2216,15 @@ function Invoke-ExecuteCommand {
         
         # Export current branches to test-branches.txt
         try {
-            $branchesOutputPath = Export-TestBranchesFile -OutputPath (Join-Path $TestStateDirectory "test-branches.txt")
+            $branchesOutputPath = Export-TestBranchesFile -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory "test-branches.txt")
             Write-Debug "$($Emojis.Debug) Test branches file updated: $branchesOutputPath"
         } catch {
             Write-DebugMessage -Type "WARNING" -Message "Failed to update test-branches.txt: $_"
         }
         
-        # Export commit bundle to test-commits.bundle
+        # Export commit bundle to test-commits.bundle (only commits referenced by test tags and branches)
         try {
-            $bundleOutputPath = Export-TestCommitsBundle -OutputPath (Join-Path $TestStateDirectory "test-commits.bundle")
+            $bundleOutputPath = Export-TestCommitsBundle -Tags $testTags -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory "test-commits.bundle")
             Write-Debug "$($Emojis.Debug) Test commits bundle updated: $bundleOutputPath"
         } catch {
             Write-DebugMessage -Type "WARNING" -Message "Failed to update test-commits.bundle: $_"
@@ -2120,12 +2268,15 @@ function Invoke-Comment {
     param([Parameter(Mandatory = $true)][object]$Step)
     
     $text = $Step.text
+
+    $skip = if ($Step.skip) { $Step.skip } else { $false }
     
     Write-DebugMessage -Type "INFO" -Message $text
     
     return @{
         Success = $true
         Message = $text
+        Skip = $skip
     }
 }
 
@@ -2181,13 +2332,13 @@ function Invoke-TestStep {
                 Invoke-SetupGitState -Step $Step
             }
             "run-workflow" {
-                Invoke-RunWorkflow -Step $Step
+                Invoke-RunWorkflow -Step $Step -TestContext $TestContext
             }
             "validate-state" {
                 Invoke-ValidateState -Step $Step -TestContext $TestContext
             }
             "execute-command" {
-                Invoke-ExecuteCommand -Step $Step
+                Invoke-ExecuteCommand -Step $Step -TestContext $TestContext
             }
             "comment" {
                 Invoke-Comment -Step $Step
@@ -2316,8 +2467,8 @@ function Invoke-IntegrationTest {
         Write-Debug "$($Emojis.Debug) Test configuration: SkipBackup=$SkipBackup, SkipCleanup=$SkipCleanup"
         
         # Initialize test execution context for sharing state between steps
-        $testContext = @{ LastActResult = $null }
-        Write-Debug "$($Emojis.Debug) Initialized test execution context"
+        $testContext = @{ LastActResult = $null; ProductionTags = @() }
+        Write-Debug "$($Emojis.Debug) Initialized test execution context (tracking production tags)"
         
         # Backup git state
         # Integration with Backup-GitState.ps1: Call Backup-GitState before each test
@@ -2341,6 +2492,19 @@ function Invoke-IntegrationTest {
             if ($stepResult.ActResult) {
                 $testContext.LastActResult = $stepResult.ActResult
                 Write-Debug "$($Emojis.Debug) Stored ActResult in test context for step $stepIndex"
+            }
+            
+            # Store production tags if this was a setup-git-state step
+            if ($step.action -eq 'setup-git-state' -and $stepResult.State -and $stepResult.State.ProductionTagsDeleted) {
+                $testContext.ProductionTags = $stepResult.State.ProductionTagsDeleted
+                Write-Debug "$($Emojis.Debug) Captured $($testContext.ProductionTags.Count) production tags from setup-git-state step"
+            }
+
+            if ($step.Skip) {
+                # for tests we only have two states: success and failure
+                # future todo to have "skipped" state, for now treat as success but log as skipped
+                Write-DebugMessage -Type "WARNING" -Message "Step $stepIndex is skipping test execution"
+                break
             }
             
             if (-not $stepResult.Success) {

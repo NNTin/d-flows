@@ -878,7 +878,7 @@ function Restore-GitBranches {
     - tags-<name>.txt: Plain text file with tag/SHA pairs
     - branches-<name>.json: JSON file with branch information
     - commits-<name>.bundle: Git bundle with all commit objects
-    - manifest-<name>.json: Metadata about the backup
+    - manifest-<name>.json: Metadata about the backup (now includes productionTags array listing all tags present at backup time)
 #>
 function Backup-GitState {
     param(
@@ -901,6 +901,18 @@ function Backup-GitState {
         # Backup tags
         $tagsBackupPath = Backup-GitTags -BackupPath (Join-Path $backupDir "tags-$BackupName.txt")
         
+        # Capture production tag names at backup time
+        $productionTagNames = @()
+        try {
+            $tagOutput = git tag -l 2>&1
+            if ($LASTEXITCODE -eq 0 -and $tagOutput) {
+                $productionTagNames = @($tagOutput | Where-Object { $_ -match '\S' })
+            }
+            Write-Debug "$($Emojis.Debug) Captured $($productionTagNames.Count) production tags"
+        } catch {
+            Write-Debug "$($Emojis.Debug) No tags found or error capturing production tags: $_"
+        }
+        
         # Backup branches
         $branchesBackupPath = Backup-GitBranches -BackupPath (Join-Path $backupDir "branches-$BackupName.json") -IncludeRemote $IncludeRemoteBranches
 
@@ -919,6 +931,7 @@ function Backup-GitState {
             commitsFile      = "commits-$BackupName.bundle"
             repositoryPath   = $repoRoot
             includeRemote    = $IncludeRemoteBranches
+            productionTags   = $productionTagNames
         } | ConvertTo-Json -Depth 3
 
         $manifest | Out-File -FilePath $manifestPath -Encoding UTF8 -Force
@@ -966,6 +979,8 @@ function Backup-GitState {
 .NOTES
     Locates all backup files using the manifest file
     Restores commits first (if present) to ensure commit objects exist before tags are created
+    Deletes all current tags before restoration when DeleteExistingTags is true
+    Maintains backward compatibility with old backups that don't have productionTags field
     Returns statistics about restored commits, tags and branches
 #>
 function Restore-GitState {
@@ -991,6 +1006,15 @@ function Restore-GitState {
         $manifest = Get-Content -Path $manifestPath -Encoding UTF8 | ConvertFrom-Json
         Write-Debug "$($Emojis.Debug) Loaded manifest from: $manifestPath"
 
+        # Extract production tags list from manifest (for backward compatibility)
+        $productionTagNames = @()
+        if ($manifest.PSObject.Properties.Name -contains 'productionTags') {
+            $productionTagNames = @($manifest.productionTags)
+            Write-Debug "$($Emojis.Debug) Found $($productionTagNames.Count) production tags in manifest"
+        } else {
+            Write-Debug "$($Emojis.Debug) No production tags field in manifest (backward compatibility with old backups)"
+        }
+
         # Construct paths to backup files
         $tagsPath = Join-Path $backupDir $manifest.tagsFile
         $branchesPath = Join-Path $backupDir $manifest.branchesFile
@@ -1004,8 +1028,36 @@ function Restore-GitState {
             Write-Debug "$($Emojis.Debug) No commits file in manifest (backward compatibility with old backups)"
         }
 
+        # Handle tag deletion before restoration
+        $deleteExistingForRestore = $DeleteExistingTags
+        if ($DeleteExistingTags) {
+            # Delete ALL current tags before restoration
+            try {
+                $currentTagsOutput = git tag -l 2>&1
+                if ($LASTEXITCODE -eq 0 -and $currentTagsOutput) {
+                    $currentTags = @($currentTagsOutput | Where-Object { $_ -match '\S' })
+                    
+                    # Delete all current tags
+                    foreach ($tag in $currentTags) {
+                        git tag -d $tag 2>&1 | Out-Null
+                        if ($LASTEXITCODE -eq 0) {
+                            Write-Debug "$($Emojis.Debug) Deleted tag: $tag"
+                        }
+                    }
+                    
+                    # We've handled deletion, don't delete again in Restore-GitTags
+                    $deleteExistingForRestore = $false
+                    Write-Debug "$($Emojis.Debug) Deleted $($currentTags.Count) tags before restoration"
+                }
+            } catch {
+                Write-Debug "$($Emojis.Debug) Error during tag deletion: $_"
+                # Fall back to original behavior
+                $deleteExistingForRestore = $DeleteExistingTags
+            }
+        }
+
         # Restore tags (now commit SHAs should exist)
-        $tagsRestored = Restore-GitTags -BackupPath $tagsPath -Force $Force -DeleteExisting $DeleteExistingTags
+        $tagsRestored = Restore-GitTags -BackupPath $tagsPath -Force $Force -DeleteExisting $deleteExistingForRestore
         
         # Restore branches
         $branchesRestored = Restore-GitBranches -BackupPath $branchesPath -RestoreCurrentBranch $true -Force $Force

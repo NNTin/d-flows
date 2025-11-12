@@ -25,11 +25,6 @@
     Supported Scenarios:
     - FirstRelease: Initial release scenario - clean state with only main branch
     - MajorBumpV0ToV1: v0 to v1 promotion - v0.2.1 tag on main
-    - MajorBumpV1ToV2: v1 to v2 promotion - v1.2.0 tag on main
-    - MinorBump: Minor version bump - v0.1.0 tag on main
-    - PatchBump: Patch version bump - v0.1.0 tag on main
-    - ReleaseBranchPatch: Release branch patch - v1.2.0 on release/v1, v2.0.0 on main
-    - InvalidBranch: Invalid branch format - feature branch checked out for error testing
 
     This script is designed to be:
     - Dot-sourceable for use by other integration testing scripts
@@ -102,7 +97,6 @@
     - Uncommitted changes: Provides clear error message for checkout conflicts
     - Invalid commit SHAs: Validates commits exist before tag/branch creation
     - Detached HEAD: Handles gracefully during branch checkout
-    - Complex scenarios: ReleaseBranchPatch handles tags on different branches
 
     Testing Workflow:
     1. Backup production state: $backup = Backup-GitState
@@ -174,9 +168,9 @@ $ScenarioDefinitions = @{
         Tags                    = @()
         Branches                = @("main")
         CurrentBranch           = "main"
-        Notes                   = "Used for testing initial v0.1.0 release. Referenced in: minor-bump-main.json, multi-step-version-progression.json. Documented in VERSIONING.md under 'Creating the First Release'."
+        Notes                   = "Used for testing initial v0.1.0 release. Referenced in: minor-bump-main.json. Documented in VERSIONING.md under 'Creating the First Release'."
         ExpectedVersion         = "0.1.0"
-        TestFixtures            = @("tests/bump-version/minor-bump-main.json", "tests/integration/multi-step-version-progression.json")
+        TestFixtures            = @("tests/bump-version/minor-bump-main.json")
     }
     
     MajorBumpV0ToV1 = @{
@@ -190,68 +184,6 @@ $ScenarioDefinitions = @{
         ExpectedVersion         = "1.0.0"
         ExpectedBranchCreation  = "release/v0"
         TestFixtures            = @("tests/bump-version/major-bump-main.json", "tests/integration/v0-to-v1-release-cycle.json")
-    }
-    
-    MajorBumpV1ToV2 = @{
-        Description             = "v1 to v2 promotion scenario - v1.2.0 tag exists on main, no release/v1 branch yet"
-        Tags                    = @(
-            @{ Name = "v1.2.0"; CommitMessage = "Release v1.2.0" }
-        )
-        Branches                = @("main")
-        CurrentBranch           = "main"
-        Notes                   = "Used for testing v1 → v2 promotion with automatic release/v1 branch creation. Referenced in: major-bump-main.json, release-branch-lifecycle.json. Documented in VERSIONING.md under 'Releasing a New Major Version'."
-        ExpectedVersion         = "2.0.0"
-        ExpectedBranchCreation  = "release/v1"
-        TestFixtures            = @("tests/bump-version/major-bump-main.json", "tests/integration/release-branch-lifecycle.json")
-    }
-    
-    MinorBump = @{
-        Description             = "Minor version bump scenario - v0.1.0 tag exists on main branch"
-        Tags                    = @(
-            @{ Name = "v0.1.0"; CommitMessage = "Release v0.1.0" }
-        )
-        Branches                = @("main")
-        CurrentBranch           = "main"
-        Notes                   = "Used for testing minor version bumps (v0.1.0 → v0.2.0). Referenced in: minor-bump-main.json. Documented in VERSIONING.md under 'Releasing Minor and Patch Versions'."
-        ExpectedVersion         = "0.2.0"
-        TestFixtures            = @("tests/bump-version/minor-bump-main.json")
-    }
-    
-    PatchBump = @{
-        Description             = "Patch version bump scenario - v0.1.0 tag exists on main branch"
-        Tags                    = @(
-            @{ Name = "v0.1.0"; CommitMessage = "Release v0.1.0" }
-        )
-        Branches                = @("main")
-        CurrentBranch           = "main"
-        Notes                   = "Used for testing patch version bumps (v0.1.0 → v0.1.1). Referenced in: patch-bump-main.json. Documented in VERSIONING.md under 'Releasing Minor and Patch Versions'."
-        ExpectedVersion         = "0.1.1"
-        TestFixtures            = @("tests/bump-version/patch-bump-main.json")
-    }
-    
-    ReleaseBranchPatch = @{
-        Description             = "Release branch patch scenario - v1.2.0 on release/v1, v2.0.0 on main (newer major exists)"
-        Tags                    = @(
-            @{ Name = "v1.2.0"; CommitMessage = "Release v1.2.0"; Branch = "release/v1" }
-            @{ Name = "v2.0.0"; CommitMessage = "Release v2.0.0"; Branch = "main" }
-        )
-        Branches                = @("main", "release/v1")
-        CurrentBranch           = "release/v1"
-        Notes                   = "Used for testing patches on older major versions while newer major exists. Referenced in: patch-bump-release-branch.json, release-branch-lifecycle.json. Documented in VERSIONING.md under 'Patching an Older Major Version'."
-        ExpectedVersion         = "1.2.1"
-        TestFixtures            = @("tests/bump-version/patch-bump-release-branch.json", "tests/integration/release-branch-lifecycle.json")
-    }
-    
-    InvalidBranch = @{
-        Description             = "Invalid branch format scenario - feature branch checked out for error testing"
-        Tags                    = @(
-            @{ Name = "v0.1.0"; CommitMessage = "Release v0.1.0" }
-        )
-        Branches                = @("main", "feature/test-branch")
-        CurrentBranch           = "feature/test-branch"
-        Notes                   = "Used for testing branch validation errors. Workflow should reject bump attempts on feature branches. Referenced in: error-invalid-branch-format.json, rollback-invalid-branch.json. Documented in VERSIONING.md under 'Troubleshooting'."
-        ExpectedError           = "Branch format validation should fail - only main and release/vX branches allowed"
-        TestFixtures            = @("tests/bump-version/error-invalid-branch-format.json", "tests/integration/rollback-invalid-branch.json")
     }
 }
 
@@ -806,6 +738,7 @@ function Set-GitBranch {
 
 .NOTES
     Use with caution - this modifies git state. Always backup state first using Backup-GitState.ps1
+    Returns DeletedTagNames array containing the names of all tags that were deleted
 #>
 function Clear-GitState {
     param(
@@ -816,9 +749,12 @@ function Clear-GitState {
     try {
         Write-DebugMessage -Type "WARNING" -Message "Cleaning git state - DeleteTags: $DeleteTags, DeleteBranches: $DeleteBranches"
 
+        $deletedTagNames = @()
         if ($DeleteTags) {
             $existingTags = @(git tag -l)
             if ($existingTags.Count -gt 0) {
+                $deletedTagNames = $existingTags
+                Write-Debug "$($Emojis.Debug) Will delete $($existingTags.Count) production tags"
                 foreach ($tag in $existingTags) {
                     git tag -d $tag 2>&1 | Out-Null
                     Write-Debug "$($Emojis.Debug) Deleted tag: $tag"
@@ -853,6 +789,7 @@ function Clear-GitState {
 
         return @{
             TagsDeleted      = if ($DeleteTags) { @(git tag -l).Count } else { 0 }
+            DeletedTagNames  = $deletedTagNames
             BranchesDeleted  = if ($DeleteBranches) { $deletedCount } else { 0 }
         }
     } catch {
@@ -903,6 +840,8 @@ function Clear-GitState {
     - test-branches.txt: Branch names and commit SHAs for workflow restoration
     - test-commits.bundle: Git bundle with all commit objects referenced by tags/branches
     
+    Returns ProductionTagsDeleted array containing the names of production tags that were deleted when CleanState=$true
+    
     Integrates with bump-version.yml workflow which reads these files from TEST_STATE_PATH.
     The workflow unbundles commits before restoring tags to ensure commit SHAs exist.
     Use Backup-GitState.ps1 to backup state before applying scenarios.
@@ -925,9 +864,14 @@ function Set-TestScenario {
         $scenario = Get-ScenarioDefinition -ScenarioName $ScenarioName
         Write-Debug "$($Emojis.Scenario) Scenario description: $($scenario.Description)"
 
-        # Clean state if requested
+        # Clean state if requested and capture production tags deleted
+        $productionTagsDeleted = @()
         if ($CleanState) {
-            Clear-GitState -DeleteTags $true
+            $cleanStateResult = Clear-GitState -DeleteTags $true
+            if ($cleanStateResult.PSObject.Properties.Name -contains 'DeletedTagNames') {
+                $productionTagsDeleted = @($cleanStateResult.DeletedTagNames)
+                Write-Debug "$($Emojis.Debug) Captured $($productionTagsDeleted.Count) production tags deleted during clean state"
+            }
         }
 
         $repoRoot = Get-RepositoryRoot
@@ -1043,15 +987,16 @@ function Set-TestScenario {
         Write-DebugMessage -Type "SUCCESS" -Message "Scenario applied successfully: $ScenarioName"
 
         return @{
-            ScenarioName      = $ScenarioName
-            TagsCreated       = $tagsCreated
-            BranchesCreated   = $branchesCreated
-            CurrentBranch     = $scenario.CurrentBranch
-            TestTagsFile      = $testTagsPath
-            TestBranchesFile  = $testBranchesPath
-            TestCommitsBundle = $testCommitsPath
-            CommitMap         = $commitMap
-            Success           = $true
+            ScenarioName          = $ScenarioName
+            TagsCreated           = $tagsCreated
+            ProductionTagsDeleted = $productionTagsDeleted
+            BranchesCreated       = $branchesCreated
+            CurrentBranch         = $scenario.CurrentBranch
+            TestTagsFile          = $testTagsPath
+            TestBranchesFile      = $testBranchesPath
+            TestCommitsBundle     = $testCommitsPath
+            CommitMap             = $commitMap
+            Success               = $true
         }
     } catch {
         Write-DebugMessage -Type "ERROR" -Message "Failed to apply scenario: $_"
@@ -1535,9 +1480,6 @@ function Test-ScenarioState {
 
 .EXAMPLE
     Show-ScenarioDefinition -ScenarioName "MajorBumpV0ToV1"
-
-.EXAMPLE
-    Show-ScenarioDefinition -ScenarioName "ReleaseBranchPatch" -Detailed $true
 #>
 function Show-ScenarioDefinition {
     param(
@@ -1699,9 +1641,6 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-Host ""
     Write-Host "  # Validate current state:" -ForegroundColor Gray
     Write-Host "  Test-ScenarioState -ScenarioName ""MajorBumpV0ToV1""" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  # Display scenario details:" -ForegroundColor Gray
-    Write-Host "  Show-ScenarioDefinition -ScenarioName ""ReleaseBranchPatch"" -Detailed `$true" -ForegroundColor White
     Write-Host ""
     
     Write-Host "Available Scenarios:" -ForegroundColor Yellow

@@ -1,6 +1,6 @@
 {
   "name": "Complete v0.1.1 to v1.0.0 Release Cycle",
-  "description": "Tests the complete release cycle from v0.2.1 to v1.0.0 including version bump, release creation, tag management, and automatic release/v0 branch creation. This tests the critical v0 → v1 promotion scenario as documented in VERSIONING.md under 'Promoting to v1.0.0', validating that v0 receives the same maintenance support as other major versions.",
+  "description": "Focus: Releasing on main (= latest) should always be possible, only looking from v0 to v1.",
   "steps": [
     {
       "name": "Setup initial state",

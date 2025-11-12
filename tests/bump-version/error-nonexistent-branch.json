@@ -3,7 +3,7 @@
   "pull_request": null,
   "inputs": {
     "bump_type": "patch",
-    "target_branch": "release/v999"
+    "target_branch": "feature/test-branch"
   },
   "github": {
     "actor": "test-user",

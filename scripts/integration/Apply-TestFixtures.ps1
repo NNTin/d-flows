@@ -19,10 +19,6 @@
     Scenarios include:
     - FirstRelease: Clean state for initial v0.1.0 release
     - MajorBumpV0ToV1: v0.2.1 tag for testing v0 → v1 promotion
-    - MajorBumpV1ToV2: v1.2.0 tag for testing v1 → v2 promotion
-    - MinorBump: v0.1.0 tag for testing minor version bumps
-    - ReleaseBranchPatch: v1.2.0 and v2.0.0 tags on different branches
-    - InvalidBranch: Feature branch with invalid naming for error testing
 
 .PARAMETER FixturePath
     Path to a test fixture JSON file. The script will parse this file, extract the scenario,
@@ -163,7 +159,7 @@ $ScenarioDefinitions = @{
         Tags             = @()  # No tags
         Branches         = @("main")
         CurrentBranch    = "main"
-        Notes            = "Used for testing initial v0.1.0 release (fminor-bump-main.json, multi-step-version-progression.json)"
+        Notes            = "Used for testing initial v0.1.0 release (minor-bump-main.json)"
     }
     
     MajorBumpV0ToV1 = @{
@@ -174,47 +170,6 @@ $ScenarioDefinitions = @{
         Branches         = @("main")
         CurrentBranch    = "main"
         Notes            = "Used for testing v0 → v1 promotion (major-bump-main.json, v0-to-v1-release-cycle.json)"
-    }
-    
-    MajorBumpV1ToV2 = @{
-        Description      = "v1 to v2 promotion scenario - v1.2.0 tag on main, no release/v1 yet"
-        Tags             = @(
-            @{ Name = "v1.2.0"; CommitMessage = "Release v1.2.0" }
-        )
-        Branches         = @("main")
-        CurrentBranch    = "main"
-        Notes            = "Used for testing v1 → v2 promotion (major-bump-main.json, release-branch-lifecycle.json)"
-    }
-    
-    MinorBump = @{
-        Description      = "Minor version bump scenario - v0.1.0 tag on main"
-        Tags             = @(
-            @{ Name = "v0.1.0"; CommitMessage = "Release v0.1.0" }
-        )
-        Branches         = @("main")
-        CurrentBranch    = "main"
-        Notes            = "Used for testing minor version bumps (minor-bump-main.json)"
-    }
-    
-    ReleaseBranchPatch = @{
-        Description      = "Release branch patch scenario - v1.2.0 on release/v1, v2.0.0 on main"
-        Tags             = @(
-            @{ Name = "v1.2.0"; CommitMessage = "Release v1.2.0" }
-            @{ Name = "v2.0.0"; CommitMessage = "Release v2.0.0" }
-        )
-        Branches         = @("main", "release/v1")
-        CurrentBranch    = "release/v1"
-        Notes            = "Used for testing patches on older major versions (patch-bump-release-branch.json)"
-    }
-    
-    InvalidBranch = @{
-        Description      = "Invalid branch format scenario - for error testing"
-        Tags             = @(
-            @{ Name = "v0.1.0"; CommitMessage = "Release v0.1.0" }
-        )
-        Branches         = @("main", "feature/test-branch")
-        CurrentBranch    = "feature/test-branch"
-        Notes            = "Used for testing branch validation errors (error-invalid-branch-format.json, rollback-invalid-branch.json)"
     }
 }
 

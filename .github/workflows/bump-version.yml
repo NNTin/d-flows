@@ -36,6 +36,9 @@ jobs:
         with:
           ref: ${{ inputs.target_branch }}
           fetch-depth: 0
+          # Note: fetch-tags: false should prevent tag fetching, but actions/checkout@v4
+          # may still fetch tags in some scenarios. Test isolation is ensured by filtering
+          # production tags during test state export in Run-ActTests.ps1.
           fetch-tags: false  # Disabled to prevent remote tag fetching during act tests
           token: ${{ secrets.GITHUB_TOKEN != '' && secrets.GITHUB_TOKEN || env.GITHUB_TOKEN != '' && env.GITHUB_TOKEN || env.TOKEN_FALLBACK }}
 

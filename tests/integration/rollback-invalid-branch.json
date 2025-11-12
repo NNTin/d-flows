@@ -1,16 +1,52 @@
 {
   "name": "Invalid Branch Format Error Recovery",
-  "description": "Tests recovery from invalid branch format errors. This validates that workflows validate branch format before processing, provide clear error messages explaining valid formats (main, release/vX), have no side effects from invalid branch attempts, and can recover by switching to valid branch.",
+  "description": "Focus: accidental release branch with invalid name is handled gracefully",
   "steps": [
     {
-      "name": "Setup invalid branch scenario",
+      "name": "Setup complete release history",
       "action": "setup-git-state",
-      "scenario": "InvalidBranch",
+      "scenario": "FirstRelease",
       "expectedState": {
-        "tags": ["v0.1.0"],
-        "branches": ["main", "feature/test-branch"],
-        "currentBranch": "feature/test-branch"
+        "tags": [],
+        "branches": ["main"],
+        "currentBranch": "main"
       }
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v0.1.0'"
+    },
+    {
+      "name": "Execute v0.1.0 release workflow",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v0.1.0.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "0"
+      }
+    },
+    {
+      "name": "Creating empty commit so not on same commit hash",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'different hash after release v0.1.0'"
+    },
+    {
+      "name": "Create feature branch with invalid format",
+      "action": "execute-command",
+      "command": "git checkout -b test/integration/rollback-invalid-branch"
+    },
+    {
+      "name": "Validate new branch exists",
+      "action": "validate-state",
+      "checks": [
+        {"type": "current-branch", "branch": "test/integration/rollback-invalid-branch"}
+      ]
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'New commit on test/integration/rollback-invalid-branch'"
     },
     {
       "name": "Attempt bump on invalid branch (should fail)",
@@ -21,12 +57,24 @@
       "expectedErrorMessage": ["branch", "format", "main", "release/v"]
     },
     {
+      "name": "Validate release artifacts",
+      "action": "validate-state",
+      "checks": [
+        {"type": "workflow-failure", "workflow": "release.yml"}
+      ]
+    },
+    {
+      "name": "Comment on failed attempt",
+      "action": "comment",
+      "text": "Note: This test is slightly different than rollback-unknown-branch since the branch test/integration/rollback-invalid-branch can be found on the remote, therefore we are proceeding."
+    },
+    {
       "name": "Validate no side effects from failed attempt",
       "action": "validate-state",
       "checks": [
         {"type": "tag-exists", "tag": "v0.1.0"},
         {"type": "tag-not-exists", "tag": "v0.1.1"},
-        {"type": "branch-exists", "branch": "feature/test-branch"}
+        {"type": "branch-exists", "branch": "test/integration/rollback-invalid-branch"}
       ]
     },
     {
