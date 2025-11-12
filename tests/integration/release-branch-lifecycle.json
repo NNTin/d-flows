@@ -7,9 +7,23 @@
       "action": "setup-git-state",
       "scenario": "MajorBumpV0ToV1",
       "expectedState": {
-        "tags": ["v0.2.1"],
+        "tags": ["v0.2.0"],
         "branches": ["main"],
         "currentBranch": "main"
+      }
+    },
+    {
+      "name": "Creating empty commit before release",
+      "action": "execute-command",
+      "command": "git commit --allow-empty -m 'Trigger release v0.2.1'"
+    },
+    {
+      "name": "Execute v0.2.1 release workflow",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v0.2.1.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "0"
       }
     },
     {
