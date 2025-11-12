@@ -75,7 +75,7 @@
       "name": "Execute major bump-version workflow",
       "action": "run-workflow",
       "workflow": "bump-version.yml",
-      "fixture": "tests/bump-version/major-bump-v0-to-v1.json",
+      "fixture": "tests/bump-version/major-bump-main.json",
       "expectedOutputs": {
         "NEW_VERSION": "1.0.0",
         "FIRST_RELEASE": "false",

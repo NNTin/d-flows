@@ -1,5 +1,5 @@
 {
-  "_comment": "Test fixture for a valid v0.2.1 patch release (v0 patch bump). Tests the release workflow's ability to create a patch release during the v0 development phase. Git state required: No existing tag v0.2.1, existing tag v0.2.1, main branch checked out. Expected outcome: Workflow should validate version format, create GitHub release with tag v0.2.1, update major tag v0 to point to v0.2.1, generate release notes. Used in the rollback-failed-release test scenario to validate manual release triggering when the automatic release trigger fails.",
+  "_comment": "Test fixture for a valid v0.2.1 patch release (v0 patch bump).",
   "pull_request": null,
   "inputs": {
     "version": "0.2.1"

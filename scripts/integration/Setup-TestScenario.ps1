@@ -107,7 +107,7 @@
     Testing Workflow:
     1. Backup production state: $backup = Backup-GitState
     2. Apply test scenario: Set-TestScenario -ScenarioName "MajorBumpV0ToV1"
-    3. Run act workflows: act -j bump-version --eventpath tests/bump-version/major-bump-v0-to-v1.json
+    3. Run act workflows: act -j bump-version --eventpath tests/bump-version/major-bump-main.json
     4. Validate results: Test-ScenarioState -ScenarioName "MajorBumpV0ToV1"
     5. Restore production state: Restore-GitState -BackupName $backup.BackupName
 #>
@@ -174,9 +174,9 @@ $ScenarioDefinitions = @{
         Tags                    = @()
         Branches                = @("main")
         CurrentBranch           = "main"
-        Notes                   = "Used for testing initial v0.1.0 release. Referenced in: first-release-main.json, multi-step-version-progression.json. Documented in VERSIONING.md under 'Creating the First Release'."
+        Notes                   = "Used for testing initial v0.1.0 release. Referenced in: minor-bump-main.json, multi-step-version-progression.json. Documented in VERSIONING.md under 'Creating the First Release'."
         ExpectedVersion         = "0.1.0"
-        TestFixtures            = @("tests/bump-version/first-release-main.json", "tests/integration/multi-step-version-progression.json")
+        TestFixtures            = @("tests/bump-version/minor-bump-main.json", "tests/integration/multi-step-version-progression.json")
     }
     
     MajorBumpV0ToV1 = @{
@@ -186,10 +186,10 @@ $ScenarioDefinitions = @{
         )
         Branches                = @("main")
         CurrentBranch           = "main"
-        Notes                   = "Used for testing v0 → v1 promotion with automatic release/v0 branch creation. Referenced in: major-bump-v0-to-v1.json, v0-to-v1-release-cycle.json. Documented in VERSIONING.md under 'Promoting to v1.0.0'."
+        Notes                   = "Used for testing v0 → v1 promotion with automatic release/v0 branch creation. Referenced in: major-bump-main.json, v0-to-v1-release-cycle.json. Documented in VERSIONING.md under 'Promoting to v1.0.0'."
         ExpectedVersion         = "1.0.0"
         ExpectedBranchCreation  = "release/v0"
-        TestFixtures            = @("tests/bump-version/major-bump-v0-to-v1.json", "tests/integration/v0-to-v1-release-cycle.json")
+        TestFixtures            = @("tests/bump-version/major-bump-main.json", "tests/integration/v0-to-v1-release-cycle.json")
     }
     
     MajorBumpV1ToV2 = @{
@@ -199,10 +199,10 @@ $ScenarioDefinitions = @{
         )
         Branches                = @("main")
         CurrentBranch           = "main"
-        Notes                   = "Used for testing v1 → v2 promotion with automatic release/v1 branch creation. Referenced in: major-bump-v1-to-v2.json, release-branch-lifecycle.json. Documented in VERSIONING.md under 'Releasing a New Major Version'."
+        Notes                   = "Used for testing v1 → v2 promotion with automatic release/v1 branch creation. Referenced in: major-bump-main.json, release-branch-lifecycle.json. Documented in VERSIONING.md under 'Releasing a New Major Version'."
         ExpectedVersion         = "2.0.0"
         ExpectedBranchCreation  = "release/v1"
-        TestFixtures            = @("tests/bump-version/major-bump-v1-to-v2.json", "tests/integration/release-branch-lifecycle.json")
+        TestFixtures            = @("tests/bump-version/major-bump-main.json", "tests/integration/release-branch-lifecycle.json")
     }
     
     MinorBump = @{

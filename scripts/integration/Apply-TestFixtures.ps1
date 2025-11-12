@@ -48,7 +48,7 @@
     . .\scripts\integration\Apply-TestFixtures.ps1
 
     # Apply a fixture by file path
-    Apply-TestFixtures -FixturePath "tests/bump-version/major-bump-v0-to-v1.json"
+    Apply-TestFixtures -FixturePath "tests/bump-version/major-bump-main.json"
 
 .EXAMPLE
     # Apply a scenario directly
@@ -163,7 +163,7 @@ $ScenarioDefinitions = @{
         Tags             = @()  # No tags
         Branches         = @("main")
         CurrentBranch    = "main"
-        Notes            = "Used for testing initial v0.1.0 release (first-release-main.json, multi-step-version-progression.json)"
+        Notes            = "Used for testing initial v0.1.0 release (fminor-bump-main.json, multi-step-version-progression.json)"
     }
     
     MajorBumpV0ToV1 = @{
@@ -173,7 +173,7 @@ $ScenarioDefinitions = @{
         )
         Branches         = @("main")
         CurrentBranch    = "main"
-        Notes            = "Used for testing v0 → v1 promotion (major-bump-v0-to-v1.json, v0-to-v1-release-cycle.json)"
+        Notes            = "Used for testing v0 → v1 promotion (major-bump-main.json, v0-to-v1-release-cycle.json)"
     }
     
     MajorBumpV1ToV2 = @{
@@ -183,7 +183,7 @@ $ScenarioDefinitions = @{
         )
         Branches         = @("main")
         CurrentBranch    = "main"
-        Notes            = "Used for testing v1 → v2 promotion (major-bump-v1-to-v2.json, release-branch-lifecycle.json)"
+        Notes            = "Used for testing v1 → v2 promotion (major-bump-main.json, release-branch-lifecycle.json)"
     }
     
     MinorBump = @{
@@ -431,7 +431,7 @@ function Test-GitBranchExists {
     Path to the fixture JSON file to parse.
 
 .EXAMPLE
-    $fixture = Get-FixtureContent -FixturePath "tests/bump-version/major-bump-v0-to-v1.json"
+    $fixture = Get-FixtureContent -FixturePath "tests/bump-version/major-bump-main.json"
 
 .NOTES
     Throws error if file not found or JSON parsing fails.
@@ -566,7 +566,7 @@ function Get-ExpectedStateFromFixture {
     $scenarios | ForEach-Object { Write-Host $_.ScenarioName }
 
 .EXAMPLE
-    $scenario = Get-FixtureScenarios -FixturePath "tests/bump-version/major-bump-v0-to-v1.json"
+    $scenario = Get-FixtureScenarios -FixturePath "tests/bump-version/major-bump-main.json"
 
 .NOTES
     Returns array of objects with ScenarioName and FixtureFile properties.
@@ -1287,7 +1287,7 @@ function Apply-Scenario {
     Custom path for the generated test-tags.txt file.
 
 .EXAMPLE
-    Apply-TestFixtures -FixturePath "tests/bump-version/major-bump-v0-to-v1.json"
+    Apply-TestFixtures -FixturePath "tests/bump-version/major-bump-main.json"
 
 .EXAMPLE
     Apply-TestFixtures -Scenario "MajorBumpV0ToV1" -CleanState
@@ -1583,7 +1583,7 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-Host "  . .\scripts\integration\Apply-TestFixtures.ps1" -ForegroundColor White
     Write-Host ""
     Write-Host "  # Apply fixture by file path:" -ForegroundColor Gray
-    Write-Host "  Apply-TestFixtures -FixturePath 'tests/bump-version/major-bump-v0-to-v1.json'" -ForegroundColor White
+    Write-Host "  Apply-TestFixtures -FixturePath 'tests/bump-version/major-bump-main.json'" -ForegroundColor White
     Write-Host ""
     Write-Host "  # Apply scenario directly:" -ForegroundColor Gray
     Write-Host "  Apply-TestFixtures -Scenario 'MajorBumpV0ToV1'" -ForegroundColor White
