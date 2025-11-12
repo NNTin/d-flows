@@ -512,7 +512,6 @@ function New-GitCommit {
     )
 
     try {
-        # TODO: Creating commits is not feasible in this context as the commit will be lost on git checkout.
         $args = @("commit")
         if ($AllowEmpty) {
             $args += "--allow-empty"
@@ -527,8 +526,6 @@ function New-GitCommit {
             throw "Failed to create commit"
         }
         Write-Debug "$($Emojis.Tag) Commit created: $sha"
-
-        # Write-Debug "$($Emojis.Tag) We cannot create a commit because the commit will be lost on git checkout, we are not pushing: $sha"
 
         $sha = Get-CurrentCommitSha
         
