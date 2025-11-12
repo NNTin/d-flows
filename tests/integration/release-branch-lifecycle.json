@@ -16,7 +16,7 @@
       "name": "Major bump: v1.2.0 → v2.0.0",
       "action": "run-workflow",
       "workflow": "bump-version.yml",
-      "fixture": "tests/bump-version/major-bump-v1-to-v2.json",
+      "fixture": "tests/bump-version/major-bump-main.json",
       "expectedOutputs": {
         "NEW_VERSION": "2.0.0",
         "CURRENT_MAJOR": "1",

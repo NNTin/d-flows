@@ -320,17 +320,7 @@ act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-versio
 - `MajorBumpV0ToV1` - Setup v0.2.1 tag for v1 promotion testing
 - `MajorBumpV1ToV2` - Setup v1.2.0 tag for v2 release testing
 - `ReleaseBranchPatch` - Setup release/v1 branch with v1.2.0 tag
-- `ReleaseBranchMinor` - Setup release/v1 branch with v1.2.1 tag
-- `DuplicateTag` - Setup duplicate tags for error testing
 - `InvalidBranch` - Create feature/test-branch for error testing
-- `FirstReleaseError` - Setup release/v1 branch with no tags
-- `MajorVersionMismatch` - Setup conflicting version states
-
-**Release Test Scenarios:**
-- `ValidReleaseV0` - Clean state for v0.1.0 release testing
-- `ValidReleaseV1` - Setup v0.2.1 tag for v1.0.0 release testing
-- `ValidReleaseV1Patch` - Setup v1.2.2 tag for v1.2.3 release testing
-- `DuplicateReleaseTag` - Setup v1.0.0 tag for error testing
 
 **Cleanup:**
 - `Reset` - Remove all test tags and branches
@@ -344,7 +334,7 @@ act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-versio
 .\setup-test-git-state.ps1 -Scenario FirstRelease
 
 # Test first release
-act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/first-release-main.json
+act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/minor-bump-main.json
 
 # Should calculate version v0.1.0 and trigger release workflow
 # Check the output for version calculation and job triggers
@@ -376,7 +366,7 @@ act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-versio
 .\setup-test-git-state.ps1 -Scenario MajorBumpV1ToV2
 
 # Test major bump
-act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/major-bump-v1-to-v2.json
+act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/major-bump-main.json
 
 # Should:
 # 1. Calculate version v2.0.0
@@ -406,23 +396,7 @@ act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-versio
 .\setup-test-git-state.ps1 -Scenario Reset
 ```
 
-#### Example 5: Error Scenario Testing
-
-```powershell
-# Setup duplicate tag state
-.\setup-test-git-state.ps1 -Scenario DuplicateTag
-
-# Test error handling
-act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/error-duplicate-tag.json
-
-# Should fail with appropriate error message about duplicate tags
-# Verify error handling and output messages
-
-# Cleanup
-.\setup-test-git-state.ps1 -Scenario Reset
-```
-
-#### Example 6: Release Workflow Testing
+#### Example 5: Release Workflow Testing
 
 ```powershell
 # Setup for v1.0.0 release
@@ -469,13 +443,11 @@ To run all bump-version tests:
 ```powershell
 # Array of all bump-version test scenarios
 $bumpTests = @(
-    @{Scenario="FirstRelease"; Test="first-release-main.json"},
+    @{Scenario="FirstRelease"; Test="minor-bump-main.json"},
     @{Scenario="PatchBump"; Test="patch-bump-main.json"},
     @{Scenario="MinorBump"; Test="minor-bump-main.json"},
-    @{Scenario="MajorBumpV0ToV1"; Test="major-bump-v0-to-v1.json"},
-    @{Scenario="MajorBumpV1ToV2"; Test="major-bump-v1-to-v2.json"},
-    @{Scenario="ReleaseBranchPatch"; Test="patch-bump-release-branch.json"},
-    @{Scenario="ReleaseBranchMinor"; Test="minor-bump-release-branch.json"}
+    @{Scenario="MajorBumpV0ToV1"; Test="major-bump-main.json"},
+    @{Scenario="ReleaseBranchPatch"; Test="patch-bump-release-branch.json"}
 )
 
 # Run each test
@@ -488,40 +460,16 @@ foreach ($test in $bumpTests) {
 }
 ```
 
-To run all release tests:
-
-```powershell
-# Array of all release test scenarios  
-$releaseTests = @(
-    @{Scenario="ValidReleaseV0"; Test="valid-release-v0.1.0.json"},
-    @{Scenario="ValidReleaseV1"; Test="valid-release-v1.0.0.json"},
-    @{Scenario="ValidReleaseV1Patch"; Test="valid-release-v1.2.3.json"}
-)
-
-# Run each test
-foreach ($test in $releaseTests) {
-    Write-Output "Testing: $($test.Test)"
-    .\setup-test-git-state.ps1 -Scenario $test.Scenario
-    act workflow_dispatch -W .github/workflows/release.yml -e "tests/release/$($test.Test)"
-    .\setup-test-git-state.ps1 -Scenario Reset
-    Write-Output "Completed: $($test.Test)`n"
-}
-```
-
 ### Version Management Test Reference
 
 | Test Scenario | Setup Command | Test Command | Expected Outcome |
 |--------------|---------------|--------------|------------------|
-| **First Release** | `.\setup-test-git-state.ps1 -Scenario FirstRelease` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/first-release-main.json` | Calculate v0.1.0, trigger release |
+| **First Release** | `.\setup-test-git-state.ps1 -Scenario FirstRelease` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/minor-bump-main.json` | Calculate v0.1.0, trigger release |
 | **Patch Bump** | `.\setup-test-git-state.ps1 -Scenario PatchBump` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/patch-bump-main.json` | Calculate v0.1.1, trigger release |
 | **Minor Bump** | `.\setup-test-git-state.ps1 -Scenario MinorBump` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/minor-bump-main.json` | Calculate v0.2.0, trigger release |
-| **Major Bump v0→v1** | `.\setup-test-git-state.ps1 -Scenario MajorBumpV0ToV1` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/major-bump-v0-to-v1.json` | Calculate v1.0.0, trigger release |
-| **Major Bump v1→v2** | `.\setup-test-git-state.ps1 -Scenario MajorBumpV1ToV2` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/major-bump-v1-to-v2.json` | Calculate v2.0.0, create release/v1 branch |
+| **Major Bump v0→v1** | `.\setup-test-git-state.ps1 -Scenario MajorBumpV0ToV1` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/major-bump-main.json` | Calculate v1.0.0, trigger release |
+| **Major Bump v1→v2** | `.\setup-test-git-state.ps1 -Scenario MajorBumpV1ToV2` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/major-bump-main.json` | Calculate v2.0.0, create release/v1 branch |
 | **Release Branch Patch** | `.\setup-test-git-state.ps1 -Scenario ReleaseBranchPatch` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/patch-bump-release-branch.json` | Calculate v1.2.1 on release branch |
-| **Release Branch Minor** | `.\setup-test-git-state.ps1 -Scenario ReleaseBranchMinor` | `act workflow_dispatch -W .github/workflows/bump-version.yml -e tests/bump-version/minor-bump-release-branch.json` | Calculate v1.3.0 on release branch |
-| **Release v0.1.0** | `.\setup-test-git-state.ps1 -Scenario ValidReleaseV0` | `act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v0.1.0.json` | Create v0.1.0 tag and release |
-| **Release v1.0.0** | `.\setup-test-git-state.ps1 -Scenario ValidReleaseV1` | `act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v1.0.0.json` | Create v1.0.0 tag and release |
-| **Release v1.2.3** | `.\setup-test-git-state.ps1 -Scenario ValidReleaseV1Patch` | `act workflow_dispatch -W .github/workflows/release.yml -e tests/release/valid-release-v1.2.3.json` | Create v1.2.3 tag and release |
 | **Integration Tests** | See [INTEGRATION_TESTING.md](./INTEGRATION_TESTING.md) | Complete release cycles, multi-workflow orchestration |
 
 ## Integration Testing 🧪
@@ -541,21 +489,18 @@ Integration tests validate:
 **Quick Start:**
 ```powershell
 # Run all integration tests
-.\run-integration-tests.ps1
+.\scripts\integration\Run-ActTests.ps1 -RunAll
 
 # Run specific scenario
-.\run-integration-tests.ps1 -Scenario CompleteReleaseCycle
+.\scripts\integration\Run-ActTests.ps1 -TestName "Complete v0.1.1 to v1.0.0 Release Cycle"
 
 # Run with verbose output
-.\run-integration-tests.ps1 -Verbose
+.\scripts\integration\Run-ActTests.ps1 -TestName "Invalid Branch" -SkipBackup -SkipCleanup -Verbose
 ```
 
-**When to use integration tests vs. unit tests:**
-- **Unit tests** (this document): Test individual workflows in isolation with specific inputs
-- **Integration tests** (INTEGRATION_TESTING.md): Test complete workflows end-to-end with state transitions
 
-For most development and debugging, start with unit tests. Use integration tests before releases and after major changes to validate the complete system.
 
 ---
 
-🎯 **Happy Testing!** These test fixtures and commands provide comprehensive coverage of all workflows. Start with the minimal tests and work your way up to the full feature tests to verify all functionality. For multi-workflow scenarios and complete release cycles, see the integration testing guide.
+🎯 **Happy Testing!**
+These test fixtures and commands provide comprehensive coverage of all workflows. These integration tests run in CI.

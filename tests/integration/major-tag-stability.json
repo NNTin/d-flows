@@ -3,9 +3,53 @@
   "description": "Tests the major tag update mechanism and ensures users understand the difference between pinning to major versions (v1) vs. specific versions (v1.0.0). Validates that major tags move to latest v1.x.x release while historical versions remain accessible.",
   "steps": [
     {
-      "name": "Setup v1.0.0 release",
-      "action": "execute-command",
-      "command": "git tag -a v1.0.0 -m 'Release v1.0.0'; git tag v1 v1.0.0"
+      "name": "Setup initial state",
+      "action": "setup-git-state",
+      "scenario": "MajorBumpV0ToV1",
+      "expectedState": {
+        "tags": ["v0.2.1"],
+        "branches": ["main"],
+        "currentBranch": "main"
+      }
+    },
+    {
+      "name": "Validate release artifacts",
+      "action": "validate-state",
+      "checks": [
+        {"type": "tag-exists", "tag": "v0.2.1"}
+      ]
+    },
+    {
+      "name": "Execute major bump-version workflow",
+      "action": "run-workflow",
+      "workflow": "bump-version.yml",
+      "fixture": "tests/bump-version/major-bump-main.json",
+      "expectedOutputs": {
+        "NEW_VERSION": "1.0.0",
+        "FIRST_RELEASE": "false",
+        "CURRENT_MAJOR": "0"
+      },
+      "expectedStepSummary": [
+        "🔼 major bump: 0.2.2 → 1.0.0",
+        "✅ Version validation passed"
+      ]
+    },
+    {
+      "name": "Validate version calculation",
+      "action": "validate-state",
+      "checks": [
+        {"type": "version-greater", "current": "0.2.2", "new": "1.0.0"},
+        {"type": "major-increment", "from": 0, "to": 1}
+      ]
+    },
+    {
+      "name": "Execute v1.0.0 release workflow",
+      "action": "run-workflow",
+      "workflow": "release.yml",
+      "fixture": "tests/release/valid-release-v1.0.0.json",
+      "expectedOutputs": {
+        "MAJOR_VERSION": "1"
+      }
     },
     {
       "name": "Validate initial major tag points to v1.0.0",

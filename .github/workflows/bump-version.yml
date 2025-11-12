@@ -39,6 +39,61 @@ jobs:
           fetch-tags: false  # Disabled to prevent remote tag fetching during act tests
           token: ${{ secrets.GITHUB_TOKEN != '' && secrets.GITHUB_TOKEN || env.GITHUB_TOKEN != '' && env.GITHUB_TOKEN || env.TOKEN_FALLBACK }}
 
+      # Restore commit objects from bundle before restoring tags. This ensures all commit
+      # SHAs referenced by tags exist in the repository. The bundle is created by
+      # Setup-TestScenario.ps1 during test setup.
+      - name: Restore test commits when running under act
+        if: ${{ env.ACT }}
+        shell: bash
+        run: |
+          echo "📦 Running under act - checking for test commits bundle"
+          
+          echo "📋 Git log BEFORE unbundle:"
+          git log --oneline -n 5 || echo "No commits"
+          
+          BUNDLE_FILE="${TEST_STATE_PATH:-/tmp/test-state}/test-commits.bundle"
+          
+          # Fallback: if test-commits.bundle doesn't exist, try to find timestamped bundle
+          if [[ ! -f "$BUNDLE_FILE" ]]; then
+            echo "⚠️ test-commits.bundle not found, checking for timestamped bundles..."
+            TIMESTAMPED_BUNDLE=$(ls -t "${TEST_STATE_PATH:-/tmp/test-state}"/commits-*.bundle 2>/dev/null | head -n 1 || echo "")
+            if [[ -n "$TIMESTAMPED_BUNDLE" && -f "$TIMESTAMPED_BUNDLE" ]]; then
+              BUNDLE_FILE="$TIMESTAMPED_BUNDLE"
+              echo "📦 Found timestamped bundle: $BUNDLE_FILE"
+            fi
+          fi
+          
+          if [[ -f "$BUNDLE_FILE" ]]; then
+            echo "📦 Found test commits bundle: $BUNDLE_FILE"
+            
+            # Check if bundle file is empty (created for empty repositories)
+            if [[ ! -s "$BUNDLE_FILE" ]]; then
+              echo "⚠️ Bundle file is empty (no commits to restore)"
+            else
+              echo "🔍 Verifying bundle integrity..."
+              if git bundle verify "$BUNDLE_FILE" 2>&1; then
+                echo "✅ Bundle verification passed"
+              else
+                echo "⚠️ Bundle verification failed, attempting unbundle anyway"
+              fi
+              
+              echo "📦 Unbundling commits..."
+              UNBUNDLE_OUTPUT=$(git bundle unbundle "$BUNDLE_FILE" 2>&1 || true)
+              echo "$UNBUNDLE_OUTPUT"
+              
+              # Count refs unbundled
+              REF_COUNT=$(echo "$UNBUNDLE_OUTPUT" | grep -c '^\s*[a-f0-9]\{40\}\s' || echo "0")
+              echo "✅ Test commits restored from bundle ($REF_COUNT refs unbundled)"
+            fi
+          else
+            echo "⚠️ No test commits bundle found at ${TEST_STATE_PATH:-/tmp/test-state}/test-commits.bundle"
+            echo "⚠️ No timestamped commits-*.bundle files found"
+            echo "✅ Clean state - no commits bundle (correct for first release or scenarios without commits)"
+          fi
+          
+          echo "📋 Git log AFTER unbundle:"
+          git log --oneline -n 5 || echo "No commits"
+
       - name: Setup test tags when running under act
         if: ${{ env.ACT }}
         shell: bash
@@ -94,7 +149,7 @@ jobs:
           echo "📋 Git branches AFTER cleanup:"
           git branch -a || echo "No branches"
           
-          BRANCH_FILE="${{ env.TEST_STATE_PATH }}test-branches.txt"
+          BRANCH_FILE="${TEST_STATE_PATH:-/tmp/test-state}/test-branches.txt"
           
           if [[ -f "$BRANCH_FILE" ]]; then
             echo "📋 Found test branches file: $BRANCH_FILE"
@@ -102,17 +157,82 @@ jobs:
             cat "$BRANCH_FILE"
             echo "---"
             
+            # Get current branch before loop
+            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
             while IFS=' ' read -r branch_name commit_sha; do
               if [[ -n "$branch_name" ]] && [[ -n "$commit_sha" ]]; then
                 commit_sha=$(echo "$commit_sha" | tr -d '\r')
+                
+                # Skip the currently checked out branch (will handle it separately)
+                if [[ "$branch_name" == "$CURRENT_BRANCH" ]]; then
+                  echo "Skipping currently checked out branch: $branch_name (will update after detaching)"
+                  continue
+                fi
+                
                 echo "Creating test branch: $branch_name at $commit_sha"
-                git branch "$branch_name" "$commit_sha" 2>/dev/null || echo "Branch $branch_name already exists or failed to create"
+                git branch -f "$branch_name" "$commit_sha" 2>/dev/null || echo "Failed to create branch $branch_name"
               fi
             done < "$BRANCH_FILE"
             echo "✅ Test branches restored from file"
           else
             echo "⚠️ No test branches file found at $BRANCH_FILE"
             echo "✅ Clean state - no branches (correct for first release)"
+          fi
+          
+          # Checkout the target branch to position HEAD at the test commit
+          TARGET_BRANCH="${{ inputs.target_branch }}"
+          TARGET_COMMIT_SHA=""  # Initialize variable to store target branch's commit
+
+          echo "🔍 Current HEAD position:"
+          CURRENT_HEAD=$(git rev-parse HEAD)
+          echo "  Commit: $CURRENT_HEAD"
+
+          # Read the branches file to find the target branch's commit SHA
+          if [[ -f "$BRANCH_FILE" ]]; then
+            while IFS=' ' read -r branch_name commit_sha; do
+              if [[ -n "$branch_name" ]] && [[ -n "$commit_sha" ]]; then
+                commit_sha=$(echo "$commit_sha" | tr -d '\r')
+                
+                # Capture the commit SHA for the target branch
+                if [[ "$branch_name" == "$TARGET_BRANCH" ]]; then
+                  TARGET_COMMIT_SHA="$commit_sha"
+                  echo "📍 Found target branch '$TARGET_BRANCH' should point to: $TARGET_COMMIT_SHA"
+                fi
+              fi
+            done < "$BRANCH_FILE"
+          fi
+
+          # Verify the target branch exists and we have its commit SHA
+          if git show-ref --verify "refs/heads/$TARGET_BRANCH" > /dev/null 2>&1; then
+            if [[ -n "$TARGET_COMMIT_SHA" ]]; then
+              echo "🔄 Repositioning branch '$TARGET_BRANCH' to test commit: $TARGET_COMMIT_SHA"
+              
+              # Detach HEAD first to avoid worktree conflict
+              git checkout --detach
+              
+              # Force-update the branch to point to the test commit
+              git branch -f "$TARGET_BRANCH" "$TARGET_COMMIT_SHA"
+              
+              # Checkout the updated branch
+              git checkout "$TARGET_BRANCH"
+              
+              NEW_HEAD=$(git rev-parse HEAD)
+              echo "✅ HEAD now at: $NEW_HEAD"
+              
+              # Verify we're at the correct commit
+              if [[ "$NEW_HEAD" == "$TARGET_COMMIT_SHA" ]]; then
+                echo "✅ Branch checkout successful - at test commit"
+              else
+                echo "⚠️ Warning: HEAD ($NEW_HEAD) doesn't match expected commit ($TARGET_COMMIT_SHA)"
+              fi
+            else
+              echo "⚠️ Target branch $TARGET_BRANCH exists but commit SHA not found in test-branches.txt"
+              echo "   Skipping checkout"
+            fi
+          else
+            echo "⚠️ Target branch $TARGET_BRANCH not found in test branches"
+            echo "   (This is expected for scenarios without the target branch)"
           fi
           
           echo "📋 Git branches FINAL:"

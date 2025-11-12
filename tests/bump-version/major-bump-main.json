@@ -1,8 +1,8 @@
 {
-  "_comment": "Test fixture for minor version bump on main branch.",
+  "_comment": "Test fixture for major version bump in main",
   "pull_request": null,
   "inputs": {
-    "bump_type": "minor",
+    "bump_type": "major",
     "target_branch": "main"
   },
   "github": {

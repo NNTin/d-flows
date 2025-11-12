@@ -1063,9 +1063,6 @@ function Invoke-ValidationCheck {
             "major-tag-progression" {
                 return Validate-MajorTagProgression -Tags $Check.tags
             }
-            "no-new-tags" {
-                return Validate-NoNewTags -BaselineTagCount $Check.baselineTagCount
-            }
             "no-cross-contamination" {
                 return Validate-NoCrossContamination -V1 $Check.v1 -V2 $Check.v2
             }
@@ -1091,7 +1088,7 @@ function Invoke-ValidationCheck {
                     "tag-exists", "tag-not-exists", "tag-points-to", "tag-accessible", "tag-count",
                     "branch-exists", "branch-points-to-tag", "branch-count", "current-branch",
                     "version-greater", "version-progression", "major-increment", "major-tag-coexistence",
-                    "major-tags-coexist", "major-tag-progression", "no-new-tags", "no-cross-contamination",
+                    "major-tags-coexist", "major-tag-progression", "no-cross-contamination",
                     "no-tag-conflicts", "workflow-success", "idempotency-verified"
                 )
                 throw "Unknown validation type: $checkType. Supported types: $($supportedTypes -join ', ')"
@@ -1606,33 +1603,6 @@ function Validate-MajorTagProgression {
 
 <#
 .SYNOPSIS
-    Check that no new tags were created.
-
-.PARAMETER BaselineTagCount
-    Tag count before operation
-
-.EXAMPLE
-    Validate-NoNewTags -BaselineTagCount 3
-#>
-function Validate-NoNewTags {
-    param([Parameter(Mandatory = $true)][int]$BaselineTagCount)
-    
-    $currentTags = @(git tag -l)
-    $currentCount = $currentTags.Count
-    
-    $noNewTags = ($currentCount -eq $BaselineTagCount)
-    
-    Write-Debug "$($Emojis.Validation) No new tags: $noNewTags (baseline: $BaselineTagCount, current: $currentCount)"
-    
-    return @{
-        Success = $noNewTags
-        Message = if ($noNewTags) { "No new tags created" } else { "New tags created: expected $BaselineTagCount, got $currentCount" }
-        Type    = "no-new-tags"
-    }
-}
-
-<#
-.SYNOPSIS
     Check that major version branches don't contaminate each other.
 
 .PARAMETER V1
@@ -1944,6 +1914,14 @@ function Invoke-RunWorkflow {
             Write-DebugMessage -Type "WARNING" -Message "Failed to update test-branches.txt: $_"
         }
         
+        # Export commit bundle to test-commits.bundle
+        try {
+            $bundleOutputPath = Export-TestCommitsBundle -OutputPath (Join-Path $TestStateDirectory "test-commits.bundle")
+            Write-Debug "$($Emojis.Debug) Test commits bundle updated: $bundleOutputPath"
+        } catch {
+            Write-DebugMessage -Type "WARNING" -Message "Failed to update test-commits.bundle: $_"
+        }
+        
         Write-Debug "$($Emojis.Debug) Test state synchronization completed"
         
         return @{
@@ -2076,6 +2054,35 @@ function Invoke-ExecuteCommand {
         $success = ($exitCode -eq 0)
         
         Write-Debug "$($Emojis.Debug) Command completed with exit code: $exitCode"
+
+        # Update test state files after command execution
+        Write-Debug "$($Emojis.Debug) Updating test state files after command execution"
+
+        # Export current tags to test-tags.txt
+        try {
+            $tagsOutputPath = Export-TestTagsFile -OutputPath (Join-Path $TestStateDirectory "test-tags.txt")
+            Write-Debug "$($Emojis.Debug) Test tags file updated: $tagsOutputPath"
+        } catch {
+            Write-DebugMessage -Type "WARNING" -Message "Failed to update test-tags.txt: $_"
+        }
+        
+        # Export current branches to test-branches.txt
+        try {
+            $branchesOutputPath = Export-TestBranchesFile -OutputPath (Join-Path $TestStateDirectory "test-branches.txt")
+            Write-Debug "$($Emojis.Debug) Test branches file updated: $branchesOutputPath"
+        } catch {
+            Write-DebugMessage -Type "WARNING" -Message "Failed to update test-branches.txt: $_"
+        }
+        
+        # Export commit bundle to test-commits.bundle
+        try {
+            $bundleOutputPath = Export-TestCommitsBundle -OutputPath (Join-Path $TestStateDirectory "test-commits.bundle")
+            Write-Debug "$($Emojis.Debug) Test commits bundle updated: $bundleOutputPath"
+        } catch {
+            Write-DebugMessage -Type "WARNING" -Message "Failed to update test-commits.bundle: $_"
+        }
+        
+        Write-Debug "$($Emojis.Debug) Test state synchronization completed"
         
         return @{
             Success  = $success
