@@ -1,7 +1,6 @@
 # Colors.psm1
 # Provides reusable color mappings and lookup functions for consistent script output.
 
-# region Color definitions
 $script:Colors = [ordered]@{
     # --- Status / Severity ---
     Success    = [System.ConsoleColor]::Green
@@ -31,9 +30,6 @@ $script:Colors = [ordered]@{
     Folder     = [System.ConsoleColor]::White
     Config     = [System.ConsoleColor]::White
 }
-# endregion
-
-# region Public function
 
 function Get-Color {
     <#
@@ -63,9 +59,3 @@ function Get-Color {
         return [System.ConsoleColor]::White
     }
 }
-
-# endregion
-
-# region Exports
-Export-ModuleMember -Variable Colors -Function Get-Color
-# endregion

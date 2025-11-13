@@ -1,10 +1,6 @@
 # MessageUtils.psm1
 # Function for consistent debug output with emoji and color support.
 
-# Import required modules
-Import-Module -Name Emojis -ErrorAction Stop
-Import-Module -Name Colors -ErrorAction Stop
-
 function Convert-ColorNameToConsoleColor {
     param (
         [string]$colorName
@@ -56,13 +52,18 @@ function Write-Message {
     .PARAMETER ForegroundColor
         Optional color to override the default color from the Colors module
 
+    .PARAMETER NoNewline
+        If specified, the message will not end with a newline.
+
     .EXAMPLE
-        Write-Message -Type "INFO" -Message "Starting scenario application" -ForegroundColor Cyan
+        Write-Message -Type "INFO" "Starting scenario application" -ForegroundColor Cyan
     #>
     param(
-        [string]$Type = "Unknown",
-        [string]$Message,
-        [string]$ForegroundColor
+        [Parameter(Position = 0)]
+        [string]$Message = "",
+        [string]$Type = "None",
+        [string]$ForegroundColor,
+        [switch]$NoNewline
     )
 
     # Lazy-load module variables
@@ -76,9 +77,19 @@ function Write-Message {
     $emoji = Get-Emoji $Type
     $color = if ($ForegroundColor) { Convert-ColorNameToConsoleColor $ForegroundColor } else { Get-Color $Type }
 
-    Write-Host "$emoji $Message" -ForegroundColor $color
+    if ($Type -eq "None") {
+        if ($NoNewline) {
+            Write-Host "$Message" -ForegroundColor $color -NoNewline
+        } else {
+            Write-Host "$Message" -ForegroundColor $color
+        }
+    }
+    else {
+        $emoji = Get-Emoji $Type
+        if ($NoNewline) {
+            Write-Host "$emoji $Message" -ForegroundColor $color -NoNewline
+        } else {
+            Write-Host "$emoji $Message" -ForegroundColor $color
+        }
+    }
 }
-
-
-# Export the function
-Export-ModuleMember -Function Write-Message
