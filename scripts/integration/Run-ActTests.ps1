@@ -148,6 +148,61 @@ param(
 # Module Imports
 # ============================================================================
 
+<#
+.SYNOPSIS
+    Detect the git repository root directory.
+
+.DESCRIPTION
+    Walks up the directory tree from the current location until finding a .git directory.
+    Pattern reused from Backup-GitState.ps1 lines 110-127.
+
+.EXAMPLE
+    $repoRoot = Get-RepositoryRoot
+    Write-Message -Type "Info" -Message "Repository root: $repoRoot"
+
+.NOTES
+    Throws an error if not in a git repository.
+#>
+function Get-RepositoryRoot {
+    $searchPath = (Get-Location).Path
+
+    while ($searchPath -ne (Split-Path $searchPath)) {
+        Write-Host "Searching for .git in: $searchPath"
+        
+        $gitPath = Join-Path $searchPath '.git'
+        if (Test-Path $gitPath) {
+            Write-Host "Found repository root: $searchPath"
+            return $searchPath
+        }
+        
+        $searchPath = Split-Path $searchPath -Parent
+    }
+
+    throw "❌ Not in a git repository. Please navigate to the repository root and try again."
+}
+
+# Clear old module versions before bootstrapping
+Get-Module | Where-Object { $_.Name -in 'MessageUtils','Emojis','Colors' } | Remove-Module -Force
+Remove-Variable -Name Emojis,Colors -Scope Global -ErrorAction SilentlyContinue
+
+$root = Get-RepositoryRoot
+
+# Add to PSModulePath only if not already present
+$projectModules = Join-Path $root 'scripts\Modules'
+$utilitiesModules = Join-Path $projectModules 'Utilities'
+
+# Function to prepend a path if missing
+function Add-ToPSModulePath {
+    param([string]$Path)
+    if (-not ($env:PSModulePath -split ';' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ieq $Path })) {
+        $env:PSModulePath = "$Path;$env:PSModulePath"
+    }
+}
+
+# Prepend both paths
+Add-ToPSModulePath $utilitiesModules
+Add-ToPSModulePath $projectModules
+
 Import-Module -Name (Join-Path $PSScriptRoot "../Modules/Utilities/MessageUtils") -ErrorAction Stop
 
 # ============================================================================
@@ -181,39 +236,6 @@ $ActCommand = Get-Command "act" | Select-Object -ExpandProperty Source
 # ============================================================================
 # Helper Functions
 # ============================================================================
-
-<#
-.SYNOPSIS
-    Detect the git repository root directory.
-
-.DESCRIPTION
-    Walks up the directory tree from the current location until finding a .git directory.
-    Pattern reused from Backup-GitState.ps1 lines 110-127.
-
-.EXAMPLE
-    $repoRoot = Get-RepositoryRoot
-    Write-Message -Type "Info" -Message "Repository root: $repoRoot"
-
-.NOTES
-    Throws an error if not in a git repository.
-#>
-function Get-RepositoryRoot {
-    $searchPath = (Get-Location).Path
-
-    while ($searchPath -ne (Split-Path $searchPath)) {
-        Write-Message -Type "Debug" -Message "Searching for .git in: $searchPath"
-        
-        $gitPath = Join-Path $searchPath '.git'
-        if (Test-Path $gitPath) {
-            Write-Message -Type "Debug" -Message "Found repository root: $searchPath"
-            return $searchPath
-        }
-        
-        $searchPath = Split-Path $searchPath -Parent
-    }
-
-    throw "❌ Not in a git repository. Please navigate to the repository root and try again."
-}
 
 <#
 .SYNOPSIS
