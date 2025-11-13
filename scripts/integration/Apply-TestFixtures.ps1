@@ -180,11 +180,11 @@ function Get-RepositoryRoot {
     $searchPath = $currentPath
 
     while ($searchPath.Path -ne (Split-Path $searchPath.Path)) {
-        Write-Debug "$($Emojis.Debug) Searching for .git in: $searchPath"
+        Write-Message -Type "Debug" -Message "Searching for .git in: $searchPath"
         
         $gitPath = Join-Path $searchPath.Path ".git"
         if (Test-Path $gitPath) {
-            Write-Debug "$($Emojis.Debug) Found repository root: $($searchPath.Path)"
+            Write-Message -Type "Debug" -Message "Found repository root: $($searchPath.Path)"
             return $searchPath.Path
         }
         
@@ -211,11 +211,11 @@ function New-TestStateDirectory {
     $fullTestStatePath = Get-TestStateBasePath
     
     if (-not (Test-Path $fullTestStatePath)) {
-        Write-Debug "$($Emojis.Debug) Creating temp test state directory: $fullTestStatePath"
+        Write-Message -Type "Debug" -Message "Creating temp test state directory: $fullTestStatePath"
         New-Item -ItemType Directory -Path $fullTestStatePath -Force | Out-Null
-        Write-Debug "$($Emojis.Debug) Test state directory created"
+        Write-Message -Type "Debug" -Message "Test state directory created"
     } else {
-        Write-Debug "$($Emojis.Debug) Test state directory already exists: $fullTestStatePath"
+        Write-Message -Type "Debug" -Message "Test state directory already exists: $fullTestStatePath"
     }
 
     return $fullTestStatePath
@@ -293,7 +293,7 @@ function Test-GitTagExists {
     $existingTag = git tag -l $TagName 2>$null
     $exists = -not [string]::IsNullOrWhiteSpace($existingTag)
     
-    Write-Debug "$($Emojis.Debug) Tag exists check '$TagName': $exists"
+    Write-Message -Type "Debug" -Message "Tag exists check '$TagName': $exists"
     return $exists
 }
 
@@ -324,7 +324,7 @@ function Test-GitBranchExists {
     $existingBranch = git branch -l $BranchName 2>$null
     $exists = -not [string]::IsNullOrWhiteSpace($existingBranch)
     
-    Write-Debug "$($Emojis.Debug) Branch exists check '$BranchName': $exists"
+    Write-Message -Type "Debug" -Message "Branch exists check '$BranchName': $exists"
     return $exists
 }
 
@@ -359,10 +359,10 @@ function Get-FixtureContent {
             throw "Fixture file not found: $FixturePath"
         }
 
-        Write-Debug "$($Emojis.Fixture) Reading fixture file: $FixturePath"
+        Write-Message -Type "Fixture" -Message "Reading fixture file: $FixturePath"
         $content = Get-Content -Path $FixturePath -Raw -Encoding UTF8 | ConvertFrom-Json
         
-        Write-Debug "$($Emojis.Debug) Fixture parsed successfully"
+        Write-Message -Type "Debug" -Message "Fixture parsed successfully"
         return $content
     } catch {
         Write-Message -Type "Error" -Message "Failed to parse fixture file: $_"
@@ -399,7 +399,7 @@ function Get-ScenarioFromFixture {
         if ($FixtureContent.steps) {
             foreach ($step in $FixtureContent.steps) {
                 if ($step.action -eq "setup-git-state" -and $step.scenario) {
-                    Write-Debug "$($Emojis.Scenario) Found scenario in integration test: $($step.scenario)"
+                    Write-Message -Type "Scenario" -Message "Found scenario in integration test: $($step.scenario)"
                     return $step.scenario
                 }
             }
@@ -410,12 +410,12 @@ function Get-ScenarioFromFixture {
             # Pattern: "Setup: Run 'setup-test-git-state.ps1 -Scenario <ScenarioName>'"
             if ($FixtureContent._comment -match "Scenario\s+(\w+)") {
                 $scenario = $matches[1]
-                Write-Debug "$($Emojis.Scenario) Found scenario in comment: $scenario"
+                Write-Message -Type "Scenario" -Message "Found scenario in comment: $scenario"
                 return $scenario
             }
         }
 
-        Write-Debug "$($Emojis.Debug) No scenario found in fixture"
+        Write-Message -Type "Debug" -Message "No scenario found in fixture"
         return $null
     } catch {
         Write-Message -Type "Warning" -Message "Error extracting scenario: $_"
@@ -450,7 +450,7 @@ function Get-ExpectedStateFromFixture {
         if ($FixtureContent.steps) {
             foreach ($step in $FixtureContent.steps) {
                 if ($step.action -eq "setup-git-state" -and $step.expectedState) {
-                    Write-Debug "$($Emojis.Debug) Found expectedState in integration test"
+                    Write-Message -Type "Debug" -Message "Found expectedState in integration test"
                     return $step.expectedState
                 }
             }
@@ -496,7 +496,7 @@ function Get-FixtureScenarios {
 
         if ($FixturePath) {
             # Process single fixture
-            Write-Debug "$($Emojis.Fixture) Processing single fixture: $FixturePath"
+            Write-Message -Type "Fixture" -Message "Processing single fixture: $FixturePath"
             $content = Get-FixtureContent -FixturePath $FixturePath
             $scenario = Get-ScenarioFromFixture -FixtureContent $content
             
@@ -514,7 +514,7 @@ function Get-FixtureScenarios {
 
             # Scan integration fixtures
             if (Test-Path $integrationDir) {
-                Write-Debug "$($Emojis.Debug) Scanning integration fixtures: $integrationDir"
+                Write-Message -Type "Debug" -Message "Scanning integration fixtures: $integrationDir"
                 $integrationFixtures = Get-ChildItem -Path $integrationDir -Filter "*.json" -ErrorAction SilentlyContinue
                 
                 foreach ($fixture in $integrationFixtures) {
@@ -530,14 +530,14 @@ function Get-FixtureScenarios {
                             $processedScenarios[$scenario] = $true
                         }
                     } catch {
-                        Write-Debug "$($Emojis.Debug) Skipping fixture due to error: $($fixture.Name)"
+                        Write-Message -Type "Debug" -Message "Skipping fixture due to error: $($fixture.Name)"
                     }
                 }
             }
 
             # Scan bump-version fixtures
             if (Test-Path $bumpVersionDir) {
-                Write-Debug "$($Emojis.Debug) Scanning bump-version fixtures: $bumpVersionDir"
+                Write-Message -Type "Debug" -Message "Scanning bump-version fixtures: $bumpVersionDir"
                 $bumpVersionFixtures = Get-ChildItem -Path $bumpVersionDir -Filter "*.json" -ErrorAction SilentlyContinue
                 
                 foreach ($fixture in $bumpVersionFixtures) {
@@ -553,7 +553,7 @@ function Get-FixtureScenarios {
                             $processedScenarios[$scenario] = $true
                         }
                     } catch {
-                        Write-Debug "$($Emojis.Debug) Skipping fixture due to error: $($fixture.Name)"
+                        Write-Message -Type "Debug" -Message "Skipping fixture due to error: $($fixture.Name)"
                     }
                 }
             }
@@ -612,14 +612,14 @@ function New-GitCommit {
         }
         $args += @("-m", $Message)
 
-        Write-Debug "$($Emojis.Debug) Creating commit: $Message"
+        Write-Message -Type "Debug" -Message "Creating commit: $Message"
         
         git @args 2>&1 | Out-Null
         
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to create commit"
         }
-        Write-Debug "$($Emojis.Tag) Commit created: $sha"
+        Write-Message -Type "Tag" -Message "Commit created: $sha"
 
         $sha = Get-CurrentCommitSha
         
@@ -671,7 +671,7 @@ function New-GitTag {
             $CommitSha = Get-CurrentCommitSha
         }
 
-        Write-Debug "$($Emojis.Tag) Creating tag: $TagName -> $CommitSha"
+        Write-Message -Type "Tag" -Message "Creating tag: $TagName -> $CommitSha"
 
         # Check if tag already exists
         if (Test-GitTagExists -TagName $TagName) {
@@ -681,7 +681,7 @@ function New-GitTag {
             }
 
             # Delete existing tag if force is enabled
-            Write-Debug "$($Emojis.Debug) Deleting existing tag for force restore: $TagName"
+            Write-Message -Type "Debug" -Message "Deleting existing tag for force restore: $TagName"
             git tag -d $TagName 2>&1 | Out-Null
         }
 
@@ -692,7 +692,7 @@ function New-GitTag {
             throw "Failed to create tag"
         }
 
-        Write-Debug "$($Emojis.Tag) Tag created successfully: $TagName"
+        Write-Message -Type "Tag" -Message "Tag created successfully: $TagName"
         return $true
     } catch {
         Write-Message -Type "Error" -Message "Failed to create tag '$TagName': $_"
@@ -741,7 +741,7 @@ function New-GitBranch {
             $CommitSha = Get-CurrentCommitSha
         }
 
-        Write-Debug "$($Emojis.Branch) Creating branch: $BranchName -> $CommitSha"
+        Write-Message -Type "Branch" -Message "Creating branch: $BranchName -> $CommitSha"
 
         # Check if branch already exists
         if (Test-GitBranchExists -BranchName $BranchName) {
@@ -758,7 +758,7 @@ function New-GitBranch {
             }
 
             # Delete existing branch if force is enabled
-            Write-Debug "$($Emojis.Debug) Deleting existing branch for force restore: $BranchName"
+            Write-Message -Type "Debug" -Message "Deleting existing branch for force restore: $BranchName"
             git branch -D $BranchName 2>&1 | Out-Null
         }
 
@@ -769,7 +769,7 @@ function New-GitBranch {
             throw "Failed to create branch"
         }
 
-        Write-Debug "$($Emojis.Branch) Branch created successfully: $BranchName"
+        Write-Message -Type "Branch" -Message "Branch created successfully: $BranchName"
         return $true
     } catch {
         Write-Message -Type "Error" -Message "Failed to create branch '$BranchName': $_"
@@ -801,7 +801,7 @@ function Set-GitBranch {
     )
 
     try {
-        Write-Debug "$($Emojis.Branch) Checking out branch: $BranchName"
+        Write-Message -Type "Branch" -Message "Checking out branch: $BranchName"
         
         git checkout $BranchName 2>&1 | Out-Null
         
@@ -809,7 +809,7 @@ function Set-GitBranch {
             throw "Failed to checkout branch - check for uncommitted changes"
         }
 
-        Write-Debug "$($Emojis.Branch) Branch checked out: $BranchName"
+        Write-Message -Type "Branch" -Message "Branch checked out: $BranchName"
         return $true
     } catch {
         Write-Message -Type "Error" -Message "Failed to checkout branch '$BranchName': $_"
@@ -862,11 +862,11 @@ function Export-TestTagsFile {
         }
 
         Write-Message -Type "Info" -Message "Generating test-tags.txt file"
-        Write-Debug "$($Emojis.Debug) Output path: $OutputPath"
+        Write-Message -Type "Debug" -Message "Output path: $OutputPath"
 
         # Only export tags that were explicitly passed
         if (-not $Tags -or $Tags.Count -eq 0) {
-            Write-Debug "$($Emojis.Debug) No tags specified, will write header only"
+            Write-Message -Type "Debug" -Message "No tags specified, will write header only"
             $Tags = @()
         }
 
@@ -879,7 +879,7 @@ function Export-TestTagsFile {
                 
                 if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($sha)) {
                     $fileContent += "$tag $sha"
-                    Write-Debug "$($Emojis.Tag) Exporting tag: $tag -> $sha"
+                    Write-Message -Type "Tag" -Message "Exporting tag: $tag -> $sha"
                 } else {
                     Write-Message -Type "Warning" -Message "Failed to get SHA for tag: $tag"
                 }
@@ -893,7 +893,7 @@ function Export-TestTagsFile {
         $outputDir = Split-Path $OutputPath -Parent
         if (-not (Test-Path $outputDir)) {
             New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-            Write-Debug "$($Emojis.Debug) Created output directory: $outputDir"
+            Write-Message -Type "Debug" -Message "Created output directory: $outputDir"
         }
 
         # Write to file
@@ -901,7 +901,7 @@ function Export-TestTagsFile {
         
         $tagCount = $fileContent.Count
         Write-Message -Type "Success" -Message "Test-tags.txt generated with $tagCount tags"
-        Write-Debug "$($Emojis.Debug) File path: $OutputPath"
+        Write-Message -Type "Debug" -Message "File path: $OutputPath"
 
         return $OutputPath
     } catch {
@@ -950,7 +950,7 @@ function Clear-GitState {
                 
                 foreach ($tag in $existingTags) {
                     git tag -d $tag 2>&1 | Out-Null
-                    Write-Debug "$($Emojis.Debug) Deleted tag: $tag"
+                    Write-Message -Type "Debug" -Message "Deleted tag: $tag"
                 }
             }
         }
@@ -970,7 +970,7 @@ function Clear-GitState {
                     
                     if ($branch -and $branch -ne $currentBranch) {
                         git branch -D $branch 2>&1 | Out-Null
-                        Write-Debug "$($Emojis.Debug) Deleted branch: $branch"
+                        Write-Message -Type "Debug" -Message "Deleted branch: $branch"
                     }
                 }
             }
@@ -1028,15 +1028,15 @@ function Apply-Scenario {
         }
 
         $scenario = $ScenarioDefinitions[$ScenarioName]
-        Write-Debug "$($Emojis.Scenario) Scenario description: $($scenario.Description)"
+        Write-Message -Type "Scenario" -Message "Scenario description: $($scenario.Description)"
 
         # Apply expectedState overrides if provided
         if ($ExpectedState) {
-            Write-Debug "$($Emojis.Debug) Applying expectedState overrides from fixture"
+            Write-Message -Type "Debug" -Message "Applying expectedState overrides from fixture"
             
             # Override tags if specified in expectedState
             if ($ExpectedState.tags) {
-                Write-Debug "$($Emojis.Debug) Overriding tags from fixture: $($ExpectedState.tags -join ', ')"
+                Write-Message -Type "Debug" -Message "Overriding tags from fixture: $($ExpectedState.tags -join ', ')"
                 $scenario.Tags = @()
                 foreach ($tagName in $ExpectedState.tags) {
                     $scenario.Tags += @{ Name = $tagName; CommitMessage = "Release $tagName" }
@@ -1045,13 +1045,13 @@ function Apply-Scenario {
             
             # Override branches if specified in expectedState
             if ($ExpectedState.branches) {
-                Write-Debug "$($Emojis.Debug) Overriding branches from fixture: $($ExpectedState.branches -join ', ')"
+                Write-Message -Type "Debug" -Message "Overriding branches from fixture: $($ExpectedState.branches -join ', ')"
                 $scenario.Branches = $ExpectedState.branches
             }
             
             # Override currentBranch if specified in expectedState
             if ($ExpectedState.currentBranch) {
-                Write-Debug "$($Emojis.Debug) Overriding currentBranch from fixture: $($ExpectedState.currentBranch)"
+                Write-Message -Type "Debug" -Message "Overriding currentBranch from fixture: $($ExpectedState.currentBranch)"
                 $scenario.CurrentBranch = $ExpectedState.currentBranch
             }
             
@@ -1072,7 +1072,7 @@ function Apply-Scenario {
             $firstSha = Get-CurrentCommitSha
             $hasCommits = $true
         } catch {
-            Write-Debug "$($Emojis.Debug) Repository appears to be empty, will create initial commit"
+            Write-Message -Type "Debug" -Message "Repository appears to be empty, will create initial commit"
             $hasCommits = $false
         }
 
@@ -1104,7 +1104,7 @@ function Apply-Scenario {
                 # Skip if branch already exists and not force
                 if (Test-GitBranchExists -BranchName $branch) {
                     if (-not $Force) {
-                        Write-Debug "$($Emojis.Branch) Branch already exists, skipping: $branch"
+                        Write-Message -Type "Branch" -Message "Branch already exists, skipping: $branch"
                         continue
                     }
                 }
@@ -1235,7 +1235,7 @@ function Apply-TestFixtures {
 
         # Extract scenario from fixture if provided
         if ($FixturePath) {
-            Write-Debug "$($Emojis.Fixture) Processing fixture file: $FixturePath"
+            Write-Message -Type "Fixture" -Message "Processing fixture file: $FixturePath"
             
             $content = Get-FixtureContent -FixturePath $FixturePath
             $scenarioToApply = Get-ScenarioFromFixture -FixtureContent $content
@@ -1249,7 +1249,7 @@ function Apply-TestFixtures {
             # Extract expected state from fixture if present
             $expectedState = Get-ExpectedStateFromFixture -FixtureContent $content
             if ($expectedState) {
-                Write-Debug "$($Emojis.Debug) Found expectedState in fixture - applying overrides"
+                Write-Message -Type "Debug" -Message "Found expectedState in fixture - applying overrides"
                 $fixtureOverrides = $expectedState
             }
         } elseif ($Scenario) {
@@ -1258,7 +1258,7 @@ function Apply-TestFixtures {
 
         # Apply scenario with optional fixture overrides
         if ($fixtureOverrides) {
-            Write-Debug "$($Emojis.Debug) Applying fixture-specific state overrides to scenario '$scenarioToApply'"
+            Write-Message -Type "Debug" -Message "Applying fixture-specific state overrides to scenario '$scenarioToApply'"
             if ($OutputPath) {
                 $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -ExpectedState $fixtureOverrides -OutputPath $OutputPath
             } else {
@@ -1275,7 +1275,7 @@ function Apply-TestFixtures {
         # Update output path if specified (already handled in Apply-Scenario if OutputPath provided)
         # This is kept for backward compatibility but shouldn't regenerate if already done
         if ($OutputPath -and $result -and -not $result.TestTagsFile) {
-            Write-Debug "$($Emojis.Debug) Regenerating test-tags.txt at custom path (fallback)"
+            Write-Message -Type "Debug" -Message "Regenerating test-tags.txt at custom path (fallback)"
             $result.TestTagsFile = Export-TestTagsFile -OutputPath $OutputPath -Tags $result.TagsCreated
         }
 
@@ -1332,7 +1332,7 @@ function Test-ScenarioState {
         foreach ($tag in $scenario.Tags) {
             if (-not (Test-GitTagExists -TagName $tag.Name)) {
                 $missingTags += $tag.Name
-                Write-Debug "$($Emojis.Tag) Missing tag: $($tag.Name)"
+                Write-Message -Type "Tag" -Message "Missing tag: $($tag.Name)"
             }
         }
 
@@ -1340,7 +1340,7 @@ function Test-ScenarioState {
         foreach ($branch in $scenario.Branches) {
             if (-not (Test-GitBranchExists -BranchName $branch)) {
                 $missingBranches += $branch
-                Write-Debug "$($Emojis.Branch) Missing branch: $branch"
+                Write-Message -Type "Branch" -Message "Missing branch: $branch"
             }
         }
 
@@ -1348,7 +1348,7 @@ function Test-ScenarioState {
         $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
         if ($currentBranch -ne $scenario.CurrentBranch) {
             $currentBranchMismatch = $true
-            Write-Debug "$($Emojis.Debug) Current branch mismatch: expected '$($scenario.CurrentBranch)', got '$currentBranch'"
+            Write-Message -Type "Debug" -Message "Current branch mismatch: expected '$($scenario.CurrentBranch)', got '$currentBranch'"
         }
 
         $isValid = ($missingTags.Count -eq 0 -and $missingBranches.Count -eq 0 -and -not $currentBranchMismatch)
@@ -1505,6 +1505,7 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-Host "  Test-ScenarioState -ScenarioName 'MajorBumpV0ToV1'" -ForegroundColor White
     Write-Host ""
     Write-Host "==============================================================================" -ForegroundColor Cyan
-    Write-Host ""
+    Write-Message -Type "Info" -Message ""
 }
+
 

@@ -168,7 +168,7 @@ $ScenarioDefinitions = @{
     }
 }
 
-Write-Debug "$($Emojis.Debug) Loaded $($ScenarioDefinitions.Count) scenario definitions"
+Write-Message -Type "Debug" -Message "Loaded $($ScenarioDefinitions.Count) scenario definitions"
 
 # ============================================================================
 # Helper Functions
@@ -192,11 +192,11 @@ function Get-RepositoryRoot {
     $searchPath = (Get-Location).Path
 
     while ($searchPath -ne (Split-Path $searchPath)) {
-        Write-Debug "$($Emojis.Debug) Searching for .git in: $searchPath"
+        Write-Message -Type "Debug" -Message "Searching for .git in: $searchPath"
         
         $gitPath = Join-Path $searchPath ".git"
         if (Test-Path $gitPath) {
-            Write-Debug "$($Emojis.Debug) Found repository root: $searchPath"
+            Write-Message -Type "Debug" -Message "Found repository root: $searchPath"
             return $searchPath
         }
         
@@ -223,11 +223,11 @@ function New-TestStateDirectory {
     $fullTestStatePath = Get-TestStateBasePath
     
     if (-not (Test-Path $fullTestStatePath)) {
-        Write-Debug "$($Emojis.Debug) Creating temp test state directory: $fullTestStatePath"
+        Write-Message -Type "Debug" -Message "Creating temp test state directory: $fullTestStatePath"
         New-Item -ItemType Directory -Path $fullTestStatePath -Force | Out-Null
-        Write-Debug "$($Emojis.Debug) Test state directory created"
+        Write-Message -Type "Debug" -Message "Test state directory created"
     } else {
-        Write-Debug "$($Emojis.Debug) Test state directory already exists: $fullTestStatePath"
+        Write-Message -Type "Debug" -Message "Test state directory already exists: $fullTestStatePath"
     }
 
     return $fullTestStatePath
@@ -255,7 +255,7 @@ function Get-CurrentCommitSha {
     try {
         $sha = git rev-parse HEAD 2>$null
         if ($LASTEXITCODE -eq 0) {
-            Write-Debug "$($Emojis.Debug) Current commit SHA: $sha"
+            Write-Message -Type "Debug" -Message "Current commit SHA: $sha"
             return $sha
         } else {
             throw "Failed to get current commit SHA"
@@ -293,7 +293,7 @@ function Test-GitTagExists {
     $existingTag = git tag -l $TagName 2>$null
     $exists = -not [string]::IsNullOrWhiteSpace($existingTag)
     
-    Write-Debug "$($Emojis.Debug) Tag exists check '$TagName': $exists"
+    Write-Message -Type "Debug" -Message "Tag exists check '$TagName': $exists"
     return $exists
 }
 
@@ -324,7 +324,7 @@ function Test-GitBranchExists {
     $existingBranch = git branch -l $BranchName 2>$null
     $exists = -not [string]::IsNullOrWhiteSpace($existingBranch)
     
-    Write-Debug "$($Emojis.Debug) Branch exists check '$BranchName': $exists"
+    Write-Message -Type "Debug" -Message "Branch exists check '$BranchName': $exists"
     return $exists
 }
 
@@ -360,7 +360,7 @@ function Get-ScenarioDefinition {
             throw "Scenario not found: $ScenarioName. Available scenarios: $availableScenarios"
         }
 
-        Write-Debug "$($Emojis.Scenario) Retrieved scenario definition: $ScenarioName"
+        Write-Message -Type "Scenario" -Message "Retrieved scenario definition: $ScenarioName"
         return $ScenarioDefinitions[$ScenarioName]
     } catch {
         Write-Message -Type "Error" -Message $_
@@ -383,7 +383,7 @@ function Get-ScenarioDefinition {
     Returns array of scenario summary objects.
 #>
 function Get-AllScenarios {
-    Write-Debug "$($Emojis.Debug) Listing all available scenarios"
+    Write-Message -Type "Debug" -Message "Listing all available scenarios"
     
     $scenarios = @()
     foreach ($scenarioName in $ScenarioDefinitions.Keys) {
@@ -398,7 +398,7 @@ function Get-AllScenarios {
         }
     }
     
-    Write-Debug "$($Emojis.Debug) Found $($scenarios.Count) scenarios"
+    Write-Message -Type "Debug" -Message "Found $($scenarios.Count) scenarios"
     return $scenarios
 }
 
@@ -417,7 +417,7 @@ function Get-AllScenarios {
     Returns array of scenario names.
 #>
 function Get-ScenarioNames {
-    Write-Debug "$($Emojis.Debug) Retrieved scenario names"
+    Write-Message -Type "Debug" -Message "Retrieved scenario names"
     return @($ScenarioDefinitions.Keys)
 }
 
@@ -460,14 +460,14 @@ function New-GitCommit {
         }
         $args += @("-m", $Message)
 
-        Write-Debug "$($Emojis.Debug) Creating commit: $Message"
+        Write-Message -Type "Debug" -Message "Creating commit: $Message"
         
         git @args 2>&1 | Out-Null
         
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to create commit"
         }
-        Write-Debug "$($Emojis.Tag) Commit created: $sha"
+        Write-Message -Type "Tag" -Message "Commit created: $sha"
 
         $sha = Get-CurrentCommitSha
         
@@ -516,7 +516,7 @@ function New-GitTag {
             $CommitSha = Get-CurrentCommitSha
         }
 
-        Write-Debug "$($Emojis.Tag) Creating tag: $TagName -> $CommitSha"
+        Write-Message -Type "Tag" -Message "Creating tag: $TagName -> $CommitSha"
 
         # Check if tag already exists
         if (Test-GitTagExists -TagName $TagName) {
@@ -526,7 +526,7 @@ function New-GitTag {
             }
 
             # Delete existing tag if force is enabled
-            Write-Debug "$($Emojis.Debug) Deleted existing tag for force creation: $TagName"
+            Write-Message -Type "Debug" -Message "Deleted existing tag for force creation: $TagName"
             git tag -d $TagName 2>&1 | Out-Null
         }
 
@@ -537,7 +537,7 @@ function New-GitTag {
             throw "Failed to create tag"
         }
 
-        Write-Debug "$($Emojis.Tag) Created tag: $TagName -> $CommitSha"
+        Write-Message -Type "Tag" -Message "Created tag: $TagName -> $CommitSha"
         return $true
     } catch {
         Write-Message -Type "Error" -Message "Failed to create tag '$TagName': $_"
@@ -583,7 +583,7 @@ function New-GitBranch {
             $CommitSha = Get-CurrentCommitSha
         }
 
-        Write-Debug "$($Emojis.Branch) Creating branch: $BranchName -> $CommitSha"
+        Write-Message -Type "Branch" -Message "Creating branch: $BranchName -> $CommitSha"
 
         # Check if branch already exists
         if (Test-GitBranchExists -BranchName $BranchName) {
@@ -600,7 +600,7 @@ function New-GitBranch {
             }
 
             # Delete existing branch if force is enabled
-            Write-Debug "$($Emojis.Debug) Deleted existing branch for force creation: $BranchName"
+            Write-Message -Type "Debug" -Message "Deleted existing branch for force creation: $BranchName"
             git branch -D $BranchName 2>&1 | Out-Null
         }
 
@@ -611,7 +611,7 @@ function New-GitBranch {
             throw "Failed to create branch"
         }
 
-        Write-Debug "$($Emojis.Branch) Created branch: $BranchName -> $CommitSha"
+        Write-Message -Type "Branch" -Message "Created branch: $BranchName -> $CommitSha"
         return $true
     } catch {
         Write-Message -Type "Error" -Message "Failed to create branch '$BranchName': $_"
@@ -643,7 +643,7 @@ function Set-GitBranch {
     )
 
     try {
-        Write-Debug "$($Emojis.Branch) Checking out branch: $BranchName"
+        Write-Message -Type "Branch" -Message "Checking out branch: $BranchName"
         
         git checkout $BranchName 2>&1 | Out-Null
         
@@ -651,7 +651,7 @@ function Set-GitBranch {
             throw "Failed to checkout branch - check for uncommitted changes"
         }
 
-        Write-Debug "$($Emojis.Branch) Checked out branch: $BranchName"
+        Write-Message -Type "Branch" -Message "Checked out branch: $BranchName"
         return $true
     } catch {
         Write-Message -Type "Error" -Message "❌ Cannot checkout branch due to uncommitted changes. Please commit or stash changes first."
@@ -693,10 +693,10 @@ function Clear-GitState {
             $existingTags = @(git tag -l)
             if ($existingTags.Count -gt 0) {
                 $deletedTagNames = $existingTags
-                Write-Debug "$($Emojis.Debug) Will delete $($existingTags.Count) production tags"
+                Write-Message -Type "Debug" -Message "Will delete $($existingTags.Count) production tags"
                 foreach ($tag in $existingTags) {
                     git tag -d $tag 2>&1 | Out-Null
-                    Write-Debug "$($Emojis.Debug) Deleted tag: $tag"
+                    Write-Message -Type "Debug" -Message "Deleted tag: $tag"
                 }
                 Write-Message -Type "Info" -Message "Deleted $($existingTags.Count) tags"
             }
@@ -716,7 +716,7 @@ function Clear-GitState {
                     
                     if ($branch -and $branch -ne $currentBranch -and $branch -ne "main") {
                         git branch -D $branch 2>&1 | Out-Null
-                        Write-Debug "$($Emojis.Debug) Deleted branch: $branch"
+                        Write-Message -Type "Debug" -Message "Deleted branch: $branch"
                         $deletedCount++
                     }
                 }
@@ -801,7 +801,7 @@ function Set-TestScenario {
 
         # Get scenario definition
         $scenario = Get-ScenarioDefinition -ScenarioName $ScenarioName
-        Write-Debug "$($Emojis.Scenario) Scenario description: $($scenario.Description)"
+        Write-Message -Type "Scenario" -Message "Scenario description: $($scenario.Description)"
 
         # Clean state if requested and capture production tags deleted
         $productionTagsDeleted = @()
@@ -809,7 +809,7 @@ function Set-TestScenario {
             $cleanStateResult = Clear-GitState -DeleteTags $true
             if ($cleanStateResult.PSObject.Properties.Name -contains 'DeletedTagNames') {
                 $productionTagsDeleted = @($cleanStateResult.DeletedTagNames)
-                Write-Debug "$($Emojis.Debug) Captured $($productionTagsDeleted.Count) production tags deleted during clean state"
+                Write-Message -Type "Debug" -Message "Captured $($productionTagsDeleted.Count) production tags deleted during clean state"
             }
         }
 
@@ -821,7 +821,7 @@ function Set-TestScenario {
             $sha = Get-CurrentCommitSha
             $hasCommits = $true
         } catch {
-            Write-Debug "$($Emojis.Debug) Repository appears to be empty, will create initial commit"
+            Write-Message -Type "Debug" -Message "Repository appears to be empty, will create initial commit"
             $hasCommits = $false
         }
 
@@ -853,7 +853,7 @@ function Set-TestScenario {
                 # Skip if branch already exists and not force
                 if (Test-GitBranchExists -BranchName $branch) {
                     if (-not $Force) {
-                        Write-Debug "$($Emojis.Branch) Branch already exists, skipping: $branch"
+                        Write-Message -Type "Branch" -Message "Branch already exists, skipping: $branch"
                         continue
                     }
                 }
@@ -919,8 +919,8 @@ function Set-TestScenario {
                 $testBranchesPath = Export-TestBranchesFile -Branches $branchesCreated
                 $testCommitsPath = Export-TestCommitsBundle -Tags $tagsCreated -Branches $branchesCreated
             }
-            Write-Debug "$($Emojis.Branch) Test branches file exported to: $testBranchesPath"
-            Write-Debug "$($Emojis.Backup) Test commits bundle exported to: $testCommitsPath"
+            Write-Message -Type "Branch" -Message "Test branches file exported to: $testBranchesPath"
+            Write-Message -Type "Backup" -Message "Test commits bundle exported to: $testCommitsPath"
         }
 
         Write-Message -Type "Success" -Message "Scenario applied successfully: $ScenarioName"
@@ -980,12 +980,12 @@ function Export-TestTagsFile {
         }
 
         Write-Message -Type "Info" -Message "Generating test-tags.txt file"
-        Write-Debug "$($Emojis.Debug) Output path: $OutputPath"
+        Write-Message -Type "Debug" -Message "Output path: $OutputPath"
 
         # If no tags specified, get all tags
         if (-not $Tags -or $Tags.Count -eq 0) {
             $Tags = @(git tag -l)
-            Write-Debug "$($Emojis.Debug) No tags specified, using all repository tags: $($Tags.Count) tags"
+            Write-Message -Type "Debug" -Message "No tags specified, using all repository tags: $($Tags.Count) tags"
         }
 
         # Build file content
@@ -997,7 +997,7 @@ function Export-TestTagsFile {
                 
                 if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($sha)) {
                     $fileContent += "$tag $sha"
-                    Write-Debug "$($Emojis.Tag) Exporting tag: $tag -> $sha"
+                    Write-Message -Type "Tag" -Message "Exporting tag: $tag -> $sha"
                 } else {
                     Write-Message -Type "Warning" -Message "Failed to get SHA for tag: $tag"
                 }
@@ -1011,14 +1011,14 @@ function Export-TestTagsFile {
         $outputDir = Split-Path $OutputPath -Parent
         if (-not (Test-Path $outputDir)) {
             New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-            Write-Debug "$($Emojis.Debug) Created output directory: $outputDir"
+            Write-Message -Type "Debug" -Message "Created output directory: $outputDir"
         }
 
         # Write to file
         $fileContent | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
         
         Write-Message -Type "Success" -Message "Test-tags.txt generated with $($fileContent.Count) tags"
-        Write-Debug "$($Emojis.Debug) File path: $OutputPath"
+        Write-Message -Type "Debug" -Message "File path: $OutputPath"
 
         return $OutputPath
     } catch {
@@ -1077,7 +1077,7 @@ function Export-TestBranchesFile {
         }
 
         Write-Message -Type "Info" -Message "Generating test-branches.txt file"
-        Write-Debug "$($Emojis.Debug) Output path: $OutputPath"
+        Write-Message -Type "Debug" -Message "Output path: $OutputPath"
 
         # If no branches specified, get all branches
         if (-not $Branches -or $Branches.Count -eq 0) {
@@ -1091,7 +1091,7 @@ function Export-TestBranchesFile {
                     $Branches += $cleanBranch
                 }
             }
-            Write-Debug "$($Emojis.Debug) No branches specified, using all repository branches: $($Branches.Count) branches"
+            Write-Message -Type "Debug" -Message "No branches specified, using all repository branches: $($Branches.Count) branches"
         }
 
         # Build file content
@@ -1103,7 +1103,7 @@ function Export-TestBranchesFile {
                 
                 if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($sha)) {
                     $fileContent += "$branch $sha"
-                    Write-Debug "$($Emojis.Branch) Exporting branch: $branch -> $sha"
+                    Write-Message -Type "Branch" -Message "Exporting branch: $branch -> $sha"
                 } else {
                     Write-Message -Type "Warning" -Message "Failed to get SHA for branch: $branch"
                 }
@@ -1117,14 +1117,14 @@ function Export-TestBranchesFile {
         $outputDir = Split-Path $OutputPath -Parent
         if (-not (Test-Path $outputDir)) {
             New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-            Write-Debug "$($Emojis.Debug) Created output directory: $outputDir"
+            Write-Message -Type "Debug" -Message "Created output directory: $outputDir"
         }
 
         # Write to file
         $fileContent | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
         
         Write-Message -Type "Success" -Message "Test-branches.txt generated with $($fileContent.Count) branches"
-        Write-Debug "$($Emojis.Debug) File path: $OutputPath"
+        Write-Message -Type "Debug" -Message "File path: $OutputPath"
 
         return $OutputPath
     } catch {
@@ -1200,11 +1200,11 @@ function Export-TestCommitsBundle {
             $gitTags = @(git tag -l 2>$null)
             if ($gitTags.Count -gt 0) {
                 $allRefs += $gitTags
-                Write-Debug "$($Emojis.Tag) Including $($gitTags.Count) tags in bundle"
+                Write-Message -Type "Tag" -Message "Including $($gitTags.Count) tags in bundle"
             }
         } else {
             $allRefs += $Tags
-            Write-Debug "$($Emojis.Tag) Including $($Tags.Count) specified tags in bundle"
+            Write-Message -Type "Tag" -Message "Including $($Tags.Count) specified tags in bundle"
         }
         
         # If no branches specified, get all branches
@@ -1221,11 +1221,11 @@ function Export-TestCommitsBundle {
             }
             if ($cleanBranches.Count -gt 0) {
                 $allRefs += $cleanBranches
-                Write-Debug "$($Emojis.Branch) Including $($cleanBranches.Count) branches in bundle"
+                Write-Message -Type "Branch" -Message "Including $($cleanBranches.Count) branches in bundle"
             }
         } else {
             $allRefs += $Branches
-            Write-Debug "$($Emojis.Branch) Including $($Branches.Count) specified branches in bundle"
+            Write-Message -Type "Branch" -Message "Including $($Branches.Count) specified branches in bundle"
         }
         
         # Handle empty repository (no refs to bundle)
@@ -1233,11 +1233,11 @@ function Export-TestCommitsBundle {
             Write-Message -Type "Warning" -Message "No refs found to bundle (empty repository or no tags/branches)"
             # Create an empty file to maintain backup structure
             "" | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
-            Write-Debug "$($Emojis.Debug) Created empty bundle file: $OutputPath"
+            Write-Message -Type "Debug" -Message "Created empty bundle file: $OutputPath"
             return $OutputPath
         }
 
-        Write-Debug "$($Emojis.Debug) Bundling $($allRefs.Count) refs"
+        Write-Message -Type "Debug" -Message "Bundling $($allRefs.Count) refs"
 
         # Create git bundle with explicit ref list
         $bundleArgs = @('bundle', 'create', $OutputPath) + $allRefs
@@ -1249,7 +1249,7 @@ function Export-TestCommitsBundle {
         }
 
         Write-Message -Type "Success" -Message "Test-commits.bundle generated with $($allRefs.Count) refs"
-        Write-Debug "$($Emojis.Debug) File path: $OutputPath"
+        Write-Message -Type "Debug" -Message "File path: $OutputPath"
 
         return $OutputPath
     } catch {
@@ -1311,10 +1311,10 @@ function Test-ScenarioState {
             if (-not (Test-GitTagExists -TagName $tag.Name)) {
                 $missingTags += $tag.Name
                 $isValid = $false
-                Write-Debug "$($Emojis.Tag) ❌ Missing tag: $($tag.Name)"
+                Write-Message -Type "Tag" -Message "❌ Missing tag: $($tag.Name)"
                 $validationMessages += "Missing tag: $($tag.Name)"
             } else {
-                Write-Debug "$($Emojis.Tag) ✅ Tag exists: $($tag.Name)"
+                Write-Message -Type "Tag" -Message "✅ Tag exists: $($tag.Name)"
                 $validationMessages += "✅ Tag exists: $($tag.Name)"
             }
         }
@@ -1324,10 +1324,10 @@ function Test-ScenarioState {
             if (-not (Test-GitBranchExists -BranchName $branch)) {
                 $missingBranches += $branch
                 $isValid = $false
-                Write-Debug "$($Emojis.Branch) ❌ Missing branch: $branch"
+                Write-Message -Type "Branch" -Message "❌ Missing branch: $branch"
                 $validationMessages += "Missing branch: $branch"
             } else {
-                Write-Debug "$($Emojis.Branch) ✅ Branch exists: $branch"
+                Write-Message -Type "Branch" -Message "✅ Branch exists: $branch"
                 $validationMessages += "✅ Branch exists: $branch"
             }
         }
@@ -1337,10 +1337,10 @@ function Test-ScenarioState {
         if ($currentBranch -ne $scenario.CurrentBranch) {
             $currentBranchMismatch = $true
             $isValid = $false
-            Write-Debug "$($Emojis.Debug) ❌ Current branch mismatch: expected '$($scenario.CurrentBranch)', got '$currentBranch'"
+            Write-Message -Type "Debug" -Message "❌ Current branch mismatch: expected '$($scenario.CurrentBranch)', got '$currentBranch'"
             $validationMessages += "Current branch mismatch: expected '$($scenario.CurrentBranch)', got '$currentBranch'"
         } else {
-            Write-Debug "$($Emojis.Debug) ✅ Current branch correct: $currentBranch"
+            Write-Message -Type "Debug" -Message "✅ Current branch correct: $currentBranch"
             $validationMessages += "✅ Current branch correct: $currentBranch"
         }
 
@@ -1352,7 +1352,7 @@ function Test-ScenarioState {
                 if ($scenarioTagNames -notcontains $tag) {
                     $extraTags += $tag
                     $isValid = $false
-                    Write-Debug "$($Emojis.Tag) ⚠️ Extra tag: $tag"
+                    Write-Message -Type "Tag" -Message "⚠️ Extra tag: $tag"
                     $validationMessages += "Extra tag (Strict mode): $tag"
                 }
             }
@@ -1366,7 +1366,7 @@ function Test-ScenarioState {
                 if ($scenario.Branches -notcontains $branch -and $branch -ne "main") {
                     $extraBranches += $branch
                     $isValid = $false
-                    Write-Debug "$($Emojis.Branch) ⚠️ Extra branch: $branch"
+                    Write-Message -Type "Branch" -Message "⚠️ Extra branch: $branch"
                     $validationMessages += "Extra branch (Strict mode): $branch"
                 }
             }
@@ -1589,6 +1589,7 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-Host ""
     
     Write-Host "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host ""
+    Write-Message -Type "Info" -Message ""
 }
+
 

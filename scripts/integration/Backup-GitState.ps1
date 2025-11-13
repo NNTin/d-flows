@@ -115,11 +115,11 @@ function Get-RepositoryRoot {
     $searchPath = $currentPath
 
     while ($searchPath.Path -ne (Split-Path $searchPath.Path)) {
-        Write-Debug "$($Emojis.Debug) Searching for .git in: $searchPath"
+        Write-Message -Type "Debug" -Message "Searching for .git in: $searchPath"
         
         $gitPath = Join-Path $searchPath.Path ".git"
         if (Test-Path $gitPath) {
-            Write-Debug "$($Emojis.Debug) Found repository root: $($searchPath.Path)"
+            Write-Message -Type "Debug" -Message "Found repository root: $($searchPath.Path)"
             return $searchPath.Path
         }
         
@@ -148,11 +148,11 @@ function New-BackupDirectory {
     $fullBackupPath = Get-BackupBasePath
     
     if (-not (Test-Path $fullBackupPath)) {
-        Write-Debug "$($Emojis.Debug) Creating temp backup directory: $fullBackupPath"
+        Write-Message -Type "Debug" -Message "Creating temp backup directory: $fullBackupPath"
         New-Item -ItemType Directory -Path $fullBackupPath -Force | Out-Null
-        Write-Debug "$($Emojis.Debug) Backup directory created"
+        Write-Message -Type "Debug" -Message "Backup directory created"
     } else {
-        Write-Debug "$($Emojis.Debug) Backup directory already exists: $fullBackupPath"
+        Write-Message -Type "Debug" -Message "Backup directory already exists: $fullBackupPath"
     }
 
     return $fullBackupPath
@@ -171,7 +171,7 @@ function New-BackupDirectory {
 #>
 function Get-BackupTimestamp {
     $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    Write-Debug "$($Emojis.Debug) Generated backup timestamp: $timestamp"
+    Write-Message -Type "Debug" -Message "Generated backup timestamp: $timestamp"
     return $timestamp
 }
 
@@ -231,7 +231,7 @@ function Backup-GitTags {
     Write-Message -Type "Info" -Message "Starting git tags backup"
     
     try {
-        Write-Debug "$($Emojis.Debug) Backing up git tags"
+        Write-Message -Type "Debug" -Message "Backing up git tags"
 
         # Generate backup path if not provided
         if (-not $BackupPath) {
@@ -242,7 +242,7 @@ function Backup-GitTags {
 
         # Get list of tags
         $tags = @(git tag -l)
-        Write-Debug "$($Emojis.Debug) Found $($tags.Count) tags"
+        Write-Message -Type "Debug" -Message "Found $($tags.Count) tags"
 
         $tagContent = @()
 
@@ -261,7 +261,7 @@ function Backup-GitTags {
                     }
 
                     $tagContent += "$tag $sha"
-                    Write-Debug "$($Emojis.Tag) Backing up tag: $tag -> $sha"
+                    Write-Message -Type "Tag" -Message "Backing up tag: $tag -> $sha"
                 } catch {
                     Write-Message -Type "Warning" -Message "Error processing tag '$tag': $_"
                     continue
@@ -314,7 +314,7 @@ function Backup-GitBranches {
     Write-Message -Type "Info" -Message "Starting git branches backup"
     
     try {
-        Write-Debug "$($Emojis.Debug) Backing up git branches"
+        Write-Message -Type "Debug" -Message "Backing up git branches"
 
         # Generate backup path if not provided
         if (-not $BackupPath) {
@@ -326,7 +326,7 @@ function Backup-GitBranches {
         # Get current branch
         $currentBranchOutput = git rev-parse --abbrev-ref HEAD 2>$null
         $currentBranch = if ($LASTEXITCODE -eq 0) { $currentBranchOutput } else { "HEAD" }
-        Write-Debug "$($Emojis.Debug) Current branch: $currentBranch"
+        Write-Message -Type "Debug" -Message "Current branch: $currentBranch"
 
         # Get list of branches
         $branchesOutput = git branch -a
@@ -371,7 +371,7 @@ function Backup-GitBranches {
                     isRemote = $isRemote
                 }
 
-                Write-Debug "$($Emojis.Branch) Backing up branch: $branchName -> $sha"
+                Write-Message -Type "Branch" -Message "Backing up branch: $branchName -> $sha"
             } catch {
                 Write-Message -Type "Warning" -Message "Error processing branch '$branchName': $_"
                 continue
@@ -417,7 +417,7 @@ function Backup-GitBranches {
 function Backup-GitCommits {
     param([string]$BackupPath)
 
-    Write-Debug "$($Emojis.Backup) Starting git commits backup"
+    Write-Message -Type "Backup" -Message "Starting git commits backup"
     
     try {
         # Generate backup path if not provided
@@ -446,7 +446,7 @@ function Backup-GitCommits {
             return $BackupPath
         }
 
-        Write-Debug "$($Emojis.Debug) Bundling $($allRefs.Count) refs ($($tags.Count) tags, $($branches.Count) branches)"
+        Write-Message -Type "Debug" -Message "Bundling $($allRefs.Count) refs ($($tags.Count) tags, $($branches.Count) branches)"
 
         # Create git bundle with explicit ref list
         $bundleArgs = @('bundle', 'create', $BackupPath) + $allRefs
@@ -511,14 +511,14 @@ function Restore-GitCommits {
         }
 
         # Verify bundle is valid (optional, log warning if fails)
-        Write-Debug "$($Emojis.Debug) Verifying bundle integrity"
+        Write-Message -Type "Debug" -Message "Verifying bundle integrity"
         $verifyResult = git bundle verify $BackupPath 2>&1
         if ($LASTEXITCODE -ne 0) {
             Write-Message -Type "Warning" -Message "Bundle verification failed, attempting unbundle anyway: $verifyResult"
         }
 
         # Unbundle commits to restore commit objects
-        Write-Debug "$($Emojis.Debug) Unbundling commits from: $BackupPath"
+        Write-Message -Type "Debug" -Message "Unbundling commits from: $BackupPath"
         $unbundleOutput = git bundle unbundle $BackupPath 2>&1
         
         if ($LASTEXITCODE -ne 0) {
@@ -581,14 +581,14 @@ function Restore-GitTags {
         }
 
         $repoRoot = Get-RepositoryRoot
-        Write-Debug "$($Emojis.Debug) Repository root: $repoRoot"
+        Write-Message -Type "Debug" -Message "Repository root: $repoRoot"
 
         # Delete existing tags if requested
         if ($DeleteExisting) {
             $existingTags = @(git tag -l)
             foreach ($tag in $existingTags) {
                 git tag -d $tag
-                Write-Debug "$($Emojis.Debug) Deleted existing tag: $tag"
+                Write-Message -Type "Debug" -Message "Deleted existing tag: $tag"
             }
         }
 
@@ -624,13 +624,13 @@ function Restore-GitTags {
                 # Delete existing tag if force is enabled
                 if ($existingTag -and $Force) {
                     git tag -d $tagName
-                    Write-Debug "$($Emojis.Debug) Deleted existing tag for force restore: $tagName"
+                    Write-Message -Type "Debug" -Message "Deleted existing tag for force restore: $tagName"
                 }
 
                 # Create tag
                 git tag $tagName $sha
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Debug "$($Emojis.Tag) Restored tag: $tagName -> $sha"
+                    Write-Message -Type "Tag" -Message "Restored tag: $tagName -> $sha"
                     $restoredCount++
                 } else {
                     Write-Message -Type "Warning" -Message "Failed to create tag: $tagName"
@@ -694,15 +694,15 @@ function Restore-GitBranches {
         }
 
         $repoRoot = Get-RepositoryRoot
-        Write-Debug "$($Emojis.Debug) Repository root: $repoRoot"
+        Write-Message -Type "Debug" -Message "Repository root: $repoRoot"
 
         # Read and parse JSON backup file
         $backupContent = Get-Content -Path $BackupPath -Encoding UTF8 | ConvertFrom-Json
         $currentBranch = $backupContent.currentBranch
         $branches = $backupContent.branches
 
-        Write-Debug "$($Emojis.Debug) Original current branch: $currentBranch"
-        Write-Debug "$($Emojis.Debug) Found $($branches.Count) branches to restore"
+        Write-Message -Type "Debug" -Message "Original current branch: $currentBranch"
+        Write-Message -Type "Debug" -Message "Found $($branches.Count) branches to restore"
 
         # Store current branch and prepare for restoration
         $originalCurrentBranch = git rev-parse --abbrev-ref HEAD 2>$null
@@ -715,7 +715,7 @@ function Restore-GitBranches {
             try {
                 git checkout -b $tempBranchName $currentCommitSha 2>&1 | Out-Null
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Debug "$($Emojis.Debug) Created and checked out temporary branch: $tempBranchName"
+                    Write-Message -Type "Debug" -Message "Created and checked out temporary branch: $tempBranchName"
                     $tempBranchCreated = $true
                 } else {
                     Write-Message -Type "Warning" -Message "Failed to create temporary branch, continuing without switching"
@@ -730,7 +730,7 @@ function Restore-GitBranches {
         foreach ($branch in $branches) {
             # Skip remote branches
             if ($branch.isRemote) {
-                Write-Debug "$($Emojis.Debug) Skipping remote branch: $($branch.name)"
+                Write-Message -Type "Debug" -Message "Skipping remote branch: $($branch.name)"
                 continue
             }
 
@@ -749,14 +749,14 @@ function Restore-GitBranches {
                 if ($existingBranch -and $Force) {
                     git branch -D $branchName 2>&1 | Out-Null
                     if ($LASTEXITCODE -eq 0) {
-                        Write-Debug "$($Emojis.Debug) Deleted existing branch for force restore: $branchName"
+                        Write-Message -Type "Debug" -Message "Deleted existing branch for force restore: $branchName"
                     }
                 }
 
                 # Create branch
                 git branch $branchName $sha
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Debug "$($Emojis.Branch) Restored branch: $branchName -> $sha"
+                    Write-Message -Type "Branch" -Message "Restored branch: $branchName -> $sha"
                     $restoredCount++
                 } else {
                     Write-Message -Type "Warning" -Message "Failed to create branch: $branchName"
@@ -777,7 +777,7 @@ function Restore-GitBranches {
                 # Then delete the temp branch
                 git branch -D $tempBranchName 2>&1 | Out-Null
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Debug "$($Emojis.Debug) Deleted temporary branch: $tempBranchName"
+                    Write-Message -Type "Debug" -Message "Deleted temporary branch: $tempBranchName"
                 } else {
                     Write-Message -Type "Warning" -Message "Failed to delete temporary branch: $tempBranchName"
                 }
@@ -791,7 +791,7 @@ function Restore-GitBranches {
             try {
                 git checkout $currentBranch 2>&1 | Out-Null
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Debug "$($Emojis.Branch) Checked out original branch: $currentBranch"
+                    Write-Message -Type "Branch" -Message "Checked out original branch: $currentBranch"
                 } else {
                     Write-Message -Type "Warning" -Message "Failed to checkout original branch '$currentBranch'. Check for uncommitted changes."
                 }
@@ -857,7 +857,7 @@ function Backup-GitState {
             $BackupName = Get-BackupTimestamp
         }
 
-        Write-Debug "$($Emojis.Backup) Backup name: $BackupName"
+        Write-Message -Type "Backup" -Message "Backup name: $BackupName"
 
         # Backup tags
         $tagsBackupPath = Backup-GitTags -BackupPath (Join-Path $backupDir "tags-$BackupName.txt")
@@ -869,9 +869,9 @@ function Backup-GitState {
             if ($LASTEXITCODE -eq 0 -and $tagOutput) {
                 $productionTagNames = @($tagOutput | Where-Object { $_ -match '\S' })
             }
-            Write-Debug "$($Emojis.Debug) Captured $($productionTagNames.Count) production tags"
+            Write-Message -Type "Debug" -Message "Captured $($productionTagNames.Count) production tags"
         } catch {
-            Write-Debug "$($Emojis.Debug) No tags found or error capturing production tags: $_"
+            Write-Message -Type "Debug" -Message "No tags found or error capturing production tags: $_"
         }
         
         # Backup branches
@@ -896,7 +896,7 @@ function Backup-GitState {
         } | ConvertTo-Json -Depth 3
 
         $manifest | Out-File -FilePath $manifestPath -Encoding UTF8 -Force
-        Write-Debug "$($Emojis.Debug) Manifest created: $manifestPath"
+        Write-Message -Type "Debug" -Message "Manifest created: $manifestPath"
 
         Write-Message -Type "Success" -Message "Git state backed up successfully to $backupDir"
 
@@ -965,15 +965,15 @@ function Restore-GitState {
         }
 
         $manifest = Get-Content -Path $manifestPath -Encoding UTF8 | ConvertFrom-Json
-        Write-Debug "$($Emojis.Debug) Loaded manifest from: $manifestPath"
+        Write-Message -Type "Debug" -Message "Loaded manifest from: $manifestPath"
 
         # Extract production tags list from manifest (for backward compatibility)
         $productionTagNames = @()
         if ($manifest.PSObject.Properties.Name -contains 'productionTags') {
             $productionTagNames = @($manifest.productionTags)
-            Write-Debug "$($Emojis.Debug) Found $($productionTagNames.Count) production tags in manifest"
+            Write-Message -Type "Debug" -Message "Found $($productionTagNames.Count) production tags in manifest"
         } else {
-            Write-Debug "$($Emojis.Debug) No production tags field in manifest (backward compatibility with old backups)"
+            Write-Message -Type "Debug" -Message "No production tags field in manifest (backward compatibility with old backups)"
         }
 
         # Construct paths to backup files
@@ -986,7 +986,7 @@ function Restore-GitState {
             $commitsPath = Join-Path $backupDir $manifest.commitsFile
             $commitsRestored = Restore-GitCommits -BackupPath $commitsPath
         } else {
-            Write-Debug "$($Emojis.Debug) No commits file in manifest (backward compatibility with old backups)"
+            Write-Message -Type "Debug" -Message "No commits file in manifest (backward compatibility with old backups)"
         }
 
         # Handle tag deletion before restoration
@@ -1002,16 +1002,16 @@ function Restore-GitState {
                     foreach ($tag in $currentTags) {
                         git tag -d $tag 2>&1 | Out-Null
                         if ($LASTEXITCODE -eq 0) {
-                            Write-Debug "$($Emojis.Debug) Deleted tag: $tag"
+                            Write-Message -Type "Debug" -Message "Deleted tag: $tag"
                         }
                     }
                     
                     # We've handled deletion, don't delete again in Restore-GitTags
                     $deleteExistingForRestore = $false
-                    Write-Debug "$($Emojis.Debug) Deleted $($currentTags.Count) tags before restoration"
+                    Write-Message -Type "Debug" -Message "Deleted $($currentTags.Count) tags before restoration"
                 }
             } catch {
-                Write-Debug "$($Emojis.Debug) Error during tag deletion: $_"
+                Write-Message -Type "Debug" -Message "Error during tag deletion: $_"
                 # Fall back to original behavior
                 $deleteExistingForRestore = $DeleteExistingTags
             }
@@ -1061,7 +1061,7 @@ function Get-AvailableBackups {
         $backupDir = New-BackupDirectory
         
         $manifestFiles = @(Get-ChildItem -Path $backupDir -Filter "manifest-*.json" -ErrorAction SilentlyContinue)
-        Write-Debug "$($Emojis.Debug) Found $($manifestFiles.Count) backup manifests"
+        Write-Message -Type "Debug" -Message "Found $($manifestFiles.Count) backup manifests"
 
         $backups = @()
         foreach ($manifestFile in $manifestFiles) {
@@ -1139,6 +1139,7 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-Host "  Restore-GitState -BackupName \$backup.BackupName" -ForegroundColor White
     Write-Host ""
     Write-Host "==============================================================================" -ForegroundColor Cyan
-    Write-Host ""
+    Write-Message -Type "Info" -Message ""
 }
+
 
