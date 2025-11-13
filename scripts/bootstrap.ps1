@@ -53,3 +53,8 @@ Write-Message -Type Error -Message "Error Message"
 Write-Message -Type Info -Message "Info Message"
 Write-Message -Type Debug -Message "Debug Message"
 Write-Message -Type Test -Message "Test Message"
+Write-Message -Type Test -Message ""
+Write-Message
+Write-Message -Message ""
+Write-Message -Message "Only message"
+

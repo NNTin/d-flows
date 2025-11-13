@@ -23,10 +23,7 @@ function Write-Message {
         Write-DebugMessage -Type "INFO" -Message "Starting scenario application"
     #>
     param(
-        [Parameter(Mandatory)]
-        [string]$Type,
-
-        [Parameter(Mandatory)]
+        [string]$Type = "Unknown",
         [string]$Message
     )
 
