@@ -2079,7 +2079,7 @@ function Invoke-ValidateState {
 .EXAMPLE
     $result = Run-Command "git commit --allow-empty -m 'Trigger release v0.2.1'"
     Write-Message -Type "Debug" -Message "Exit code: $($result.ExitCode)"
-    Write-Message -Type "Info" -Message "Output:`n$($result.Output)"
+    Write-Message -Type "Info" -Message "Output: $($result.Output)"
 
 .EXAMPLE
     Run-Command "docker build -t myimage ." -VerboseOutput
@@ -2118,7 +2118,7 @@ function Run-Command {
 
     if ($VerboseOutput) {
         Write-Message -Type "Debug" -Message "Exit code: $exitCode"
-        Write-Message -Type "Debug" -Message "Output:`n$output"
+        Write-Message -Type "Debug" -Message "Output: $output"
     }
 
     return [PSCustomObject]@{
@@ -2687,7 +2687,7 @@ function Write-TestSummary {
     }
     
     Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
-`n}
+}
 
 <#
 .SYNOPSIS
