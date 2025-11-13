@@ -55,7 +55,7 @@
     # Validate current git state against a scenario
     $result = Test-ScenarioState -ScenarioName "FirstRelease"
     if ($result.IsValid) {
-        Write-Host "Git state is valid for scenario"
+        Write-Message -Type "Success" -Message "Git state is valid for scenario"
     }
 
 .NOTES
@@ -183,7 +183,7 @@ Write-Message -Type "Debug" -Message "Loaded $($ScenarioDefinitions.Count) scena
 
 .EXAMPLE
     $repoRoot = Get-RepositoryRoot
-    Write-Host "Repository root: $repoRoot"
+    Write-Message -Type "Info" -Message "Repository root: $repoRoot"
 
 .NOTES
     Throws an error if not in a git repository.
@@ -246,7 +246,7 @@ function New-TestStateDirectory {
 
 .EXAMPLE
     $sha = Get-CurrentCommitSha
-    Write-Host "Current commit: $sha"
+    Write-Message -Type "Debug" -Message "Current commit: $sha"
 
 .NOTES
     Handles detached HEAD and no commits states gracefully.
@@ -278,7 +278,7 @@ function Get-CurrentCommitSha {
 
 .EXAMPLE
     if (Test-GitTagExists -TagName "v1.0.0") {
-        Write-Host "Tag exists"
+        Write-Message -Type "Success" -Message "Tag exists"
     }
 
 .NOTES
@@ -309,7 +309,7 @@ function Test-GitTagExists {
 
 .EXAMPLE
     if (Test-GitBranchExists -BranchName "main") {
-        Write-Host "Branch exists"
+        Write-Message -Type "Success" -Message "Branch exists"
     }
 
 .NOTES
@@ -411,7 +411,7 @@ function Get-AllScenarios {
 
 .EXAMPLE
     $names = Get-ScenarioNames
-    Write-Host "Available: $($names -join ', ')"
+    Write-Message -Type "Info" -Message "Available: $($names -join ', ')"
 
 .NOTES
     Returns array of scenario names.
@@ -1278,7 +1278,7 @@ function Export-TestCommitsBundle {
 .EXAMPLE
     $result = Test-ScenarioState -ScenarioName "FirstRelease"
     if ($result.IsValid) {
-        Write-Host "Valid"
+        Write-Message -Type "Success" -Message "Valid"
     }
 
 .NOTES
@@ -1432,69 +1432,58 @@ function Show-ScenarioDefinition {
         # Get scenario definition
         $scenario = Get-ScenarioDefinition -ScenarioName $ScenarioName
 
-        Write-Host ""
-        Write-Host "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-        Write-Host "  $($Emojis.Scenario) Scenario: $ScenarioName" -ForegroundColor Cyan
-        Write-Host "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-        Write-Host ""
+        Write-Message -Type "Scenario" -Message ""
+        Write-Message -Type "Scenario" -Message "═══════════════════════════════════════════════════════════════════════════"
+        Write-Message -Type "Scenario" -Message "  Scenario: $ScenarioName"
+        Write-Message -Type "Scenario" -Message "═══════════════════════════════════════════════════════════════════════════"
+        Write-Message -Type "Scenario" -Message ""
         
-        Write-Host "Description:" -ForegroundColor Yellow
-        Write-Host "  $($scenario.Description)" -ForegroundColor White
-        Write-Host ""
+        Write-Message -Type "Info" -Message "Description:"
+        Write-Message -Type "Info" -Message "  $($scenario.Description)"
+        Write-Message -Type "Info" -Message ""
 
-        Write-Host "$($Emojis.Tag) Tags:" -ForegroundColor Yellow
+        Write-Message -Type "Tag" -Message "Tags:"
         if ($scenario.Tags.Count -eq 0) {
-            Write-Host "  (none)" -ForegroundColor DarkGray
+            Write-Message -Type "Info" -Message "  (none)"
         } else {
             foreach ($tag in $scenario.Tags) {
-                Write-Host "  • $($tag.Name) - $($tag.CommitMessage)" -ForegroundColor Cyan
+                Write-Message -Type "Tag" -Message "  • $($tag.Name) - $($tag.CommitMessage)"
             }
         }
-        Write-Host ""
+        Write-Message -Type "Info" -Message ""
 
-        Write-Host "$($Emojis.Branch) Branches:" -ForegroundColor Yellow
+        Write-Message -Type "Branch" -Message "Branches:"
         if ($scenario.Branches.Count -eq 0) {
-            Write-Host "  (none)" -ForegroundColor DarkGray
+            Write-Message -Type "Info" -Message "  (none)"
         } else {
             foreach ($branch in $scenario.Branches) {
-                Write-Host "  • $branch" -ForegroundColor Cyan
+                Write-Message -Type "Branch" -Message "  • $branch"
             }
         }
-        Write-Host ""
-
-        Write-Host "📍 Current Branch:" -ForegroundColor Yellow
-        Write-Host "  $($scenario.CurrentBranch)" -ForegroundColor Green
-        Write-Host ""
-
+        Write-Message -Type "Info" -Message "📍 Current Branch:" # Was ForegroundColor Yellow
+        Write-Message -Type "Info" -Message "  $($scenario.CurrentBranch)" # Was ForegroundColor Green
         if ($Detailed) {
-            Write-Host "$($Emojis.Target) Expected Version:" -ForegroundColor Yellow
-            Write-Host "  $($scenario.ExpectedVersion)" -ForegroundColor Cyan
-            Write-Host ""
-
-            if ($scenario.ExpectedBranchCreation) {
-                Write-Host "➕ Expected Branch Creation:" -ForegroundColor Yellow
-                Write-Host "  $($scenario.ExpectedBranchCreation)" -ForegroundColor Cyan
-                Write-Host ""
-            }
+            Write-Message -Type "Target" -Message "Expected Version:"
+            Write-Message -Type "Info" -Message "  $($scenario.ExpectedVersion)" # Was ForegroundColor Cyan
+                if ($scenario.ExpectedBranchCreation) {
+                Write-Message -Type "Info" -Message "➕ Expected Branch Creation:" # Was ForegroundColor Yellow
+                Write-Message -Type "Info" -Message "  $($scenario.ExpectedBranchCreation)" # Was ForegroundColor Cyan
+                    }
 
             if ($scenario.TestFixtures) {
-                Write-Host "$($Emojis.List) Test Fixtures:" -ForegroundColor Yellow
+                Write-Message -Type "List" -Message "Test Fixtures:"
                 foreach ($fixture in $scenario.TestFixtures) {
-                    Write-Host "  • $fixture" -ForegroundColor DarkGray
+                    Write-Message -Type "Info" -Message "  • $fixture" # Was ForegroundColor DarkGray
                 }
-                Write-Host ""
-            }
+                    }
         }
 
         if ($scenario.Notes) {
-            Write-Host "$($Emojis.Note) Notes:" -ForegroundColor Yellow
-            Write-Host "  $($scenario.Notes)" -ForegroundColor DarkGray
-            Write-Host ""
-        }
+            Write-Message -Type "Note" -Message "Notes:"
+            Write-Message -Type "Info" -Message "  $($scenario.Notes)" # Was ForegroundColor DarkGray
+            }
 
-        Write-Host "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-        Write-Host ""
-
+        Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
         return $scenario
     } catch {
         Write-Message -Type "Error" -Message "Error displaying scenario: $_"
@@ -1514,26 +1503,20 @@ function Show-ScenarioDefinition {
 #>
 function Show-AllScenarios {
     try {
-        Write-Host ""
-        Write-Host "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-        Write-Host "  Available Test Scenarios" -ForegroundColor Cyan
-        Write-Host "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-        Write-Host ""
-
+        Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
+        Write-Message -Type "Info" -Message "  Available Test Scenarios" # Was ForegroundColor Cyan
+        Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
         $scenarios = Get-AllScenarios
         
         foreach ($scenario in $scenarios) {
-            Write-Host "$($Emojis.Scenario) $($scenario.Name)" -ForegroundColor Cyan
-            Write-Host "   $($scenario.Description)" -ForegroundColor White
-            Write-Host "   Tags: $($scenario.TagCount), Branches: $($scenario.BranchCount), Current: $($scenario.CurrentBranch)" -ForegroundColor DarkGray
-            Write-Host ""
-        }
+            Write-Message -Type "Scenario" -Message "$($scenario.Name)"
+            Write-Message -Type "Info" -Message "   $($scenario.Description)" # Was ForegroundColor White
+            Write-Message -Type "Info" -Message "   Tags: $($scenario.TagCount), Branches: $($scenario.BranchCount), Current: $($scenario.CurrentBranch)" # Was ForegroundColor DarkGray
+            }
 
         Write-Message -Type "Info" -Message "Total scenarios: $($scenarios.Count)"
         
-        Write-Host "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-        Write-Host ""
-
+        Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
         return $scenarios
     } catch {
         Write-Message -Type "Error" -Message "Error displaying all scenarios: $_"
@@ -1548,48 +1531,42 @@ function Show-AllScenarios {
 # Check if script is being dot-sourced or executed directly
 if ($MyInvocation.InvocationName -ne ".") {
     # Script is being executed directly
-    Write-Host ""
-    Write-Host "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host "  Test Scenario Setup Script" -ForegroundColor Cyan
-    Write-Host "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "This script provides centralized scenario definitions and management for act integration testing." -ForegroundColor Gray
-    Write-Host ""
-    
-    Write-Host "Available Functions:" -ForegroundColor Yellow
-    Write-Host "  Get-ScenarioDefinition [-ScenarioName]    - Get specific scenario definition" -ForegroundColor Cyan
-    Write-Host "  Get-AllScenarios                          - List all scenarios" -ForegroundColor Cyan
-    Write-Host "  Get-ScenarioNames                         - Get scenario names only" -ForegroundColor Cyan
-    Write-Host "  Set-TestScenario [-ScenarioName]          - Apply scenario to git state" -ForegroundColor Cyan
-    Write-Host "  Test-ScenarioState [-ScenarioName]        - Validate current state" -ForegroundColor Cyan
-    Write-Host "  Show-ScenarioDefinition [-ScenarioName]   - Display scenario details" -ForegroundColor Cyan
-    Write-Host "  Show-AllScenarios                         - Display all scenarios" -ForegroundColor Cyan
-    Write-Host "  Export-TestTagsFile [-Tags]               - Generate test-tags.txt" -ForegroundColor Cyan
-    Write-Host "  Clear-GitState [-DeleteTags]              - Clean git state" -ForegroundColor Cyan
-    Write-Host ""
-    
-    Write-Host "Usage Examples:" -ForegroundColor Yellow
-    Write-Host "  # Dot-source to load functions:" -ForegroundColor Gray
-    Write-Host "  . .\scripts\integration\Setup-TestScenario.ps1" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  # List available scenarios:" -ForegroundColor Gray
-    Write-Host "  Show-AllScenarios" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  # Apply a scenario:" -ForegroundColor Gray
-    Write-Host "  Set-TestScenario -ScenarioName ""FirstRelease""" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  # Validate current state:" -ForegroundColor Gray
-    Write-Host "  Test-ScenarioState -ScenarioName ""MajorBumpV0ToV1""" -ForegroundColor White
-    Write-Host ""
-    
-    Write-Host "Available Scenarios:" -ForegroundColor Yellow
+    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Test Scenario Setup Script" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "This script provides centralized scenario definitions and management for act integration testing." # Was ForegroundColor Gray
+
+    Write-Message -Type "Info" -Message "Available Functions:" # Was ForegroundColor Yellow
+    Write-Message -Type "Info" -Message "  Get-ScenarioDefinition [-ScenarioName]    - Get specific scenario definition" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Get-AllScenarios                          - List all scenarios" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Get-ScenarioNames                         - Get scenario names only" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Set-TestScenario [-ScenarioName]          - Apply scenario to git state" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Test-ScenarioState [-ScenarioName]        - Validate current state" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Show-ScenarioDefinition [-ScenarioName]   - Display scenario details" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Show-AllScenarios                         - Display all scenarios" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Export-TestTagsFile [-Tags]               - Generate test-tags.txt" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Clear-GitState [-DeleteTags]              - Clean git state" # Was ForegroundColor Cyan
+
+    Write-Message -Type "Info" -Message "Usage Examples:" # Was ForegroundColor Yellow
+    Write-Message -Type "Info" -Message "  # Dot-source to load functions:" # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "  . .\scripts\integration\Setup-TestScenario.ps1" # Was ForegroundColor White
+    Write-Message -Type "Info" -Message "  # List available scenarios:" # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "  Show-AllScenarios" # Was ForegroundColor White
+    Write-Message -Type "Info" -Message "  # Apply a scenario:" # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "  Set-TestScenario -ScenarioName ""FirstRelease""" # Was ForegroundColor White
+    Write-Message -Type "Info" -Message "  # Validate current state:" # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "  Test-ScenarioState -ScenarioName ""MajorBumpV0ToV1""" # Was ForegroundColor White
+
+    Write-Message -Type "Info" -Message "Available Scenarios:" # Was ForegroundColor Yellow
     foreach ($scenarioName in (Get-ScenarioNames)) {
-        Write-Host "  $($Emojis.Scenario) $scenarioName" -ForegroundColor Cyan
+        Write-Message -Type "Scenario" -Message "  $scenarioName"
     }
-    Write-Host ""
-    
-    Write-Host "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+
+    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
     Write-Message -Type "Info" -Message ""
 }
+
+
+
 
 

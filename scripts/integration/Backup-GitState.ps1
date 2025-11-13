@@ -22,7 +22,7 @@
 
     # Backup current git state
     $backup = Backup-GitState
-    Write-Host "Backup created: $($backup.BackupName)"
+    Write-Message -Type "Success" -Message "Backup created: $($backup.BackupName)"
 
     # ... run tests that modify git state ...
 
@@ -105,7 +105,7 @@ $DebugPreference = "Continue"
 
 .EXAMPLE
     $repoRoot = Get-RepositoryRoot
-    Write-Host "Repository root: $repoRoot"
+    Write-Message -Type "Info" -Message "Repository root: $repoRoot"
 
 .NOTES
     Throws an error if not in a git repository.
@@ -139,7 +139,7 @@ function Get-RepositoryRoot {
 
 .EXAMPLE
     $backupDir = New-BackupDirectory
-    Write-Host "Backup directory: $backupDir"
+    Write-Message -Type "Info" -Message "Backup directory: $backupDir"
 
 .NOTES
     Returns the full path to the backup directory in temp.
@@ -167,7 +167,7 @@ function New-BackupDirectory {
 
 .EXAMPLE
     $timestamp = Get-BackupTimestamp
-    Write-Host "Timestamp: $timestamp"
+    Write-Message -Type "Debug" -Message "Timestamp: $timestamp"
 #>
 function Get-BackupTimestamp {
     $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -213,7 +213,7 @@ function Get-BackupTimestamp {
 
 .EXAMPLE
     $tagsBackupPath = Backup-GitTags
-    Write-Host "Tags backed up to: $tagsBackupPath"
+    Write-Message -Type "Backup" -Message "Tags backed up to: $tagsBackupPath"
 
 .EXAMPLE
     $tagsBackupPath = Backup-GitTags -BackupPath "C:\repo\.test-state\backup\tags-manual.txt"
@@ -296,7 +296,7 @@ function Backup-GitTags {
 
 .EXAMPLE
     $branchesBackupPath = Backup-GitBranches
-    Write-Host "Branches backed up to: $branchesBackupPath"
+    Write-Message -Type "Backup" -Message "Branches backed up to: $branchesBackupPath"
 
 .EXAMPLE
     $branchesBackupPath = Backup-GitBranches -BackupPath "C:\repo\.test-state\backup\branches-manual.json" -IncludeRemote $false
@@ -494,7 +494,7 @@ function Restore-GitCommits {
         [string]$BackupPath
     )
 
-    Write-Debug "$($Emojis.Restore) Starting git commits restore from bundle"
+    Write-Message -Type "Restore" -Message "Starting git commits restore from bundle"
     
     try {
         # Validate bundle file exists
@@ -828,11 +828,11 @@ function Restore-GitBranches {
 
 .EXAMPLE
     $backup = Backup-GitState
-    Write-Host "Backup created: $($backup.BackupName)"
+    Write-Message -Type "Success" -Message "Backup created: $($backup.BackupName)"
 
 .EXAMPLE
     $backup = Backup-GitState -BackupName "before-release-test"
-    Write-Host "Backup stored at: $($backup.BackupDirectory)"
+    Write-Message -Type "Info" -Message "Backup stored at: $($backup.BackupDirectory)"
 
 .NOTES
     Creates four files:
@@ -1048,7 +1048,7 @@ function Restore-GitState {
 .EXAMPLE
     $backups = Get-AvailableBackups
     foreach ($backup in $backups) {
-        Write-Host "Backup: $($backup.BackupName) created at $($backup.Timestamp)"
+        Write-Message -Type "Info" -Message "Backup: $($backup.BackupName) created at $($backup.Timestamp)"
     }
 
 .NOTES
@@ -1109,37 +1109,32 @@ function Get-AvailableBackups {
 # Check if script is being dot-sourced or executed directly
 if ($MyInvocation.InvocationName -ne ".") {
     # Script is being executed directly
-    Write-Host ""
-    Write-Host "==============================================================================" -ForegroundColor Cyan
-    Write-Host "  Git State Backup/Restore Script" -ForegroundColor Cyan
-    Write-Host "==============================================================================" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "This script provides functions for backing up and restoring git repository state." -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "Available Functions:" -ForegroundColor Yellow
-    Write-Host "  Backup-GitState                   - Backup all tags and branches" -ForegroundColor Cyan
-    Write-Host "  Restore-GitState [-BackupName]    - Restore tags and branches from backup" -ForegroundColor Cyan
-    Write-Host "  Get-AvailableBackups              - List all available backups" -ForegroundColor Cyan
-    Write-Host "  Backup-GitTags                    - Backup tags only" -ForegroundColor Cyan
-    Write-Host "  Backup-GitBranches                - Backup branches only" -ForegroundColor Cyan
-    Write-Host "  Restore-GitTags [-BackupPath]     - Restore tags only" -ForegroundColor Cyan
-    Write-Host "  Restore-GitBranches [-BackupPath] - Restore branches only" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "Usage Examples:" -ForegroundColor Yellow
-    Write-Host "  # Dot-source to load functions:" -ForegroundColor Gray
-    Write-Host "  . .\scripts\integration\Backup-GitState.ps1" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  # Backup current state:" -ForegroundColor Gray
-    Write-Host "  \$backup = Backup-GitState" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  # List available backups:" -ForegroundColor Gray
-    Write-Host "  Get-AvailableBackups" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  # Restore from backup:" -ForegroundColor Gray
-    Write-Host "  Restore-GitState -BackupName \$backup.BackupName" -ForegroundColor White
-    Write-Host ""
-    Write-Host "==============================================================================" -ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "==============================================================================" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Git State Backup/Restore Script" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "==============================================================================" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "This script provides functions for backing up and restoring git repository state." # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "Available Functions:" # Was ForegroundColor Yellow
+    Write-Message -Type "Info" -Message "  Backup-GitState                   - Backup all tags and branches" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Restore-GitState [-BackupName]    - Restore tags and branches from backup" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Get-AvailableBackups              - List all available backups" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Backup-GitTags                    - Backup tags only" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Backup-GitBranches                - Backup branches only" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Restore-GitTags [-BackupPath]     - Restore tags only" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Restore-GitBranches [-BackupPath] - Restore branches only" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "Usage Examples:" # Was ForegroundColor Yellow
+    Write-Message -Type "Info" -Message "  # Dot-source to load functions:" # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "  . .\scripts\integration\Backup-GitState.ps1" # Was ForegroundColor White
+    Write-Message -Type "Info" -Message "  # Backup current state:" # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "  \$backup = Backup-GitState" # Was ForegroundColor White
+    Write-Message -Type "Info" -Message "  # List available backups:" # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "  Get-AvailableBackups" # Was ForegroundColor White
+    Write-Message -Type "Info" -Message "  # Restore from backup:" # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "  Restore-GitState -BackupName \$backup.BackupName" # Was ForegroundColor White
+    Write-Message -Type "Info" -Message "==============================================================================" # Was ForegroundColor Cyan
     Write-Message -Type "Info" -Message ""
 }
+
+
+
 
 

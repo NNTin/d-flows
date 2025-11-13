@@ -192,7 +192,7 @@ $ActCommand = Get-Command "act" | Select-Object -ExpandProperty Source
 
 .EXAMPLE
     $repoRoot = Get-RepositoryRoot
-    Write-Host "Repository root: $repoRoot"
+    Write-Message -Type "Info" -Message "Repository root: $repoRoot"
 
 .NOTES
     Throws an error if not in a git repository.
@@ -226,7 +226,7 @@ function Get-RepositoryRoot {
 
 .EXAMPLE
     $testStateDir = New-TestStateDirectory
-    Write-Host "Test state directory: $testStateDir"
+    Write-Message -Type "Info" -Message "Test state directory: $testStateDir"
 
 .NOTES
     Returns the full path to the test state directory in temp.
@@ -468,14 +468,14 @@ function Write-TestHeader {
         [string]$TestDescription
     )
 
-    Write-Host ""
-    Write-Host "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host "$($Emojis.Test) $TestName" -ForegroundColor Cyan
+    Write-Message -Type "Test" -Message ""
+    Write-Message -Type "Test" -Message "═══════════════════════════════════════════════════════════════════════"
+    Write-Message -Type "Test" -Message "$TestName"
     if ($TestDescription) {
-        Write-Host "   $TestDescription" -ForegroundColor Gray
+        Write-Message -Type "Info" -Message "   $TestDescription"
     }
-    Write-Host "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host ""
+    Write-Message -Type "Test" -Message "═══════════════════════════════════════════════════════════════════════"
+    Write-Message -Type "Test" -Message ""
     
     Write-Message -Type "Debug" -Message "Starting test: $TestName"
 }
@@ -594,7 +594,7 @@ function Get-FixtureContent {
 
 .EXAMPLE
     $fixtures = Get-AllIntegrationTestFixtures
-    Write-Host "Found $($fixtures.Count) fixtures"
+    Write-Message -Type "Info" -Message "Found $($fixtures.Count) fixtures"
 
 .NOTES
     Returns array of fixture objects with file paths.
@@ -689,7 +689,7 @@ function Find-FixtureByName {
     Executes 'act --version' to verify act is installed.
 
 .EXAMPLE
-    if (Test-ActAvailable) { Write-Host "act is available" }
+    if (Test-ActAvailable) { Write-Message -Type "Info" -Message "act is available" }
 
 .NOTES
     Returns $true if available, $false otherwise.
@@ -721,7 +721,7 @@ function Test-ActAvailable {
     Executes 'docker ps' to verify Docker daemon is accessible.
 
 .EXAMPLE
-    if (Test-DockerRunning) { Write-Host "Docker is running" }
+    if (Test-DockerRunning) { Write-Message -Type "Info" -Message "Docker is running" }
 
 .NOTES
     Returns $true if running, $false otherwise.
@@ -2056,7 +2056,7 @@ function Invoke-ValidateState {
 
 .EXAMPLE
     $result = Run-Command "git commit --allow-empty -m 'Trigger release v0.2.1'"
-    Write-Host "Exit code: $($result.ExitCode)"
+    Write-Message -Type "Debug" -Message "Exit code: $($result.ExitCode)"
     Write-Message -Type "Info" -Message "Output:`n$($result.Output)"
 
 .EXAMPLE
@@ -2087,7 +2087,7 @@ function Run-Command {
     }
 
     if ($VerboseOutput) {
-        Write-Host "🔹 Executing: $exe $($args -join ' ')"
+        Write-Message -Type "Debug" -Message "Executing: $exe $($args -join ' ')"
     }
 
     # Execute command, capture stdout + stderr
@@ -2095,8 +2095,8 @@ function Run-Command {
     $exitCode = $LASTEXITCODE
 
     if ($VerboseOutput) {
-        Write-Host "🔹 Exit code: $exitCode"
-        Write-Host "🔹 Output:`n$output"
+        Write-Message -Type "Debug" -Message "Exit code: $exitCode"
+        Write-Message -Type "Debug" -Message "Output:`n$output"
     }
 
     return [PSCustomObject]@{
@@ -2337,7 +2337,7 @@ function Invoke-TestCleanup {
 
     $action = $Cleanup.action
     
-    Write-Debug "$($Emojis.Cleanup) Executing cleanup: $action"
+    Write-Message -Type "Cleanup" -Message "Executing cleanup: $action"
     
     try {
         if ($action -eq "reset-git-state") {
@@ -2508,7 +2508,7 @@ function Invoke-IntegrationTest {
         # Restore git state
         # Integration with Backup-GitState.ps1: Call Restore-GitState after each test
         if (-not $SkipBackup -and $backupName) {
-            Write-Debug "$($Emojis.Restore) Restoring git state from backup: $backupName"
+            Write-Message -Type "Restore" -Message "Restoring git state from backup: $backupName"
             try {
                 # TODO: writing to $null to suppress output, fixes the issue with unwanted output in test results
                 # However doing so duration calculation is affected since Restore-GitState outputs time taken
@@ -2629,48 +2629,43 @@ function Write-TestSummary {
     $avgDuration = if ($totalTests -gt 0) { $totalDuration.TotalSeconds / $totalTests } else { 0 }
     
     # Display header
-    Write-Host ""
-    Write-Host "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host "  Test Execution Summary" -ForegroundColor Cyan
-    Write-Host "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host ""
-    
+    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Test Execution Summary" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
+
     # Display statistics
-    Write-Host "Total Tests:     $totalTests" -ForegroundColor Gray
-    Write-Host "Passed Tests:    " -NoNewline -ForegroundColor Gray
-    Write-Host "$passedTests" -ForegroundColor Green
-    Write-Host "Failed Tests:    " -NoNewline -ForegroundColor Gray
+    Write-Message -Type "Info" -Message "Total Tests:     $totalTests" # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "Passed Tests:    " -NoNewline # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "$passedTests" # Was ForegroundColor Green
+    Write-Message -Type "Info" -Message "Failed Tests:    " -NoNewline # Was ForegroundColor Gray
     if ($failedTests -gt 0) {
-        Write-Host "$failedTests" -ForegroundColor Red
+        Write-Message -Type "Info" -Message "$failedTests" # Was ForegroundColor Red
     } else {
-        Write-Host "$failedTests" -ForegroundColor Green
+        Write-Message -Type "Info" -Message "$failedTests" # Was ForegroundColor Green
     }
-    Write-Host "Total Duration:  $("{0:N2}s" -f $totalDuration.TotalSeconds)" -ForegroundColor Gray
-    Write-Host "Average Duration: $("{0:N2}s" -f $avgDuration)" -ForegroundColor Gray
-    Write-Host ""
-    
+    Write-Message -Type "Info" -Message "Total Duration:  $("{0:N2}s" -f $totalDuration.TotalSeconds)" # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "Average Duration: $("{0:N2}s" -f $avgDuration)" # Was ForegroundColor Gray
+
     # List failed tests
     if ($failedTests -gt 0) {
-        Write-Host "Failed Tests:" -ForegroundColor Red
+        Write-Message -Type "Info" -Message "Failed Tests:" # Was ForegroundColor Red
         foreach ($result in $TestResults) {
             if (-not $result.Success) {
-                Write-Host "  $($Emojis.Error) $($result.TestName)" -ForegroundColor Red
-                Write-Host "     $($result.Message)" -ForegroundColor Gray
+                Write-Message -Type "Error" -Message "  $($result.TestName)"
+                Write-Message -Type "Info" -Message "     $($result.Message)" # Was ForegroundColor Gray
             }
         }
-        Write-Host ""
     }
     
     # Overall result
     if ($failedTests -eq 0) {
-        Write-Host "$($Emojis.Success) ALL TESTS PASSED" -ForegroundColor Green
+        Write-Message -Type "Success" -Message "ALL TESTS PASSED"
     } else {
-        Write-Host "$($Emojis.Error) SOME TESTS FAILED" -ForegroundColor Red
+        Write-Message -Type "Error" -Message "SOME TESTS FAILED"
     }
     
-    Write-Host "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host ""
-}
+    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
+`n}
 
 <#
 .SYNOPSIS
@@ -2754,14 +2749,11 @@ function Export-TestReport {
 # Check if script is being dot-sourced or executed directly
 if ($MyInvocation.InvocationName -ne ".") {
     # Script is being executed directly
-    Write-Host ""
-    Write-Host "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host "  Act Integration Test Runner" -ForegroundColor Cyan
-    Write-Host "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "Purpose: Orchestrate integration tests for d-flows workflows using act" -ForegroundColor Gray
-    Write-Host ""
-    
+    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Act Integration Test Runner" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "Purpose: Orchestrate integration tests for d-flows workflows using act" # Was ForegroundColor Gray
+
     # Validate prerequisites
     Write-Message -Type "Info" -Message "Validating prerequisites..."
     
@@ -2807,12 +2799,11 @@ if ($MyInvocation.InvocationName -ne ".") {
     }
     
     # Display configuration
-    Write-Host "Configuration:" -ForegroundColor Yellow
-    Write-Host "  Skip Backup:   $SkipBackup" -ForegroundColor Gray
-    Write-Host "  Skip Cleanup:  $SkipCleanup" -ForegroundColor Gray
-    Write-Host "  Stop On Failure: $StopOnFailure" -ForegroundColor Gray
-    Write-Host ""
-    
+    Write-Message -Type "Info" -Message "Configuration:" # Was ForegroundColor Yellow
+    Write-Message -Type "Info" -Message "  Skip Backup:   $SkipBackup" # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "  Skip Cleanup:  $SkipCleanup" # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "  Stop On Failure: $StopOnFailure" # Was ForegroundColor Gray
+
     # Determine execution mode and run tests
     $testResults = @()
     
@@ -2841,13 +2832,11 @@ if ($MyInvocation.InvocationName -ne ".") {
         else {
             # No execution mode specified
             Write-Message -Type "Warning" -Message "No test execution mode specified. Use -RunAll to run all tests, -TestFixturePath for a specific test, or -TestName to search for a test."
-            Write-Host ""
-            Write-Host "Usage:" -ForegroundColor Yellow
-            Write-Host "  .\scripts\integration\Run-ActTests.ps1 -RunAll                                                      # Run all tests" -ForegroundColor Gray
-            Write-Host "  .\scripts\integration\Run-ActTests.ps1 -TestFixturePath 'tests/integration/v0-to-v1-release-cycle.json'  # Run specific test" -ForegroundColor Gray
-            Write-Host "  .\scripts\integration\Run-ActTests.ps1 -TestName 'Test Name'                                       # Search for and run test" -ForegroundColor Gray
-            Write-Host ""
-            exit 0
+                Write-Message -Type "Info" -Message "Usage:" # Was ForegroundColor Yellow
+            Write-Message -Type "Info" -Message "  .\scripts\integration\Run-ActTests.ps1 -RunAll                                                      # Run all tests" # Was ForegroundColor Gray
+            Write-Message -Type "Info" -Message "  .\scripts\integration\Run-ActTests.ps1 -TestFixturePath 'tests/integration/v0-to-v1-release-cycle.json'  # Run specific test" # Was ForegroundColor Gray
+            Write-Message -Type "Info" -Message "  .\scripts\integration\Run-ActTests.ps1 -TestName 'Test Name'                                       # Search for and run test" # Was ForegroundColor Gray
+                exit 0
         }
     } catch {
         Write-Message -Type "Error" -Message "Test execution failed: $_"
@@ -2863,7 +2852,7 @@ if ($MyInvocation.InvocationName -ne ".") {
     
     # Cleanup test state directory
     if (-not $SkipCleanup) {
-        Write-Debug "$($Emojis.Cleanup) Cleaning up test state directory"
+        Write-Message -Type "Cleanup" -Message "Cleaning up test state directory"
         $cleanupResult = Remove-TestStateDirectory
         if ($cleanupResult) {
             Write-Message -Type "Success" -Message "Test state directory cleaned up successfully"
@@ -2878,6 +2867,10 @@ if ($MyInvocation.InvocationName -ne ".") {
     $failedTests = @($testResults | Where-Object { -not $_.Success }).Count
     exit $(if ($failedTests -eq 0) { 0 } else { 1 })
 }
+
+
+
+
 
 
 
