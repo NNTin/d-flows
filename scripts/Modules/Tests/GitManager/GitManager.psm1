@@ -21,16 +21,18 @@
     Throws an error if the repository has no commits or if git command fails.
 #>
 function Get-CurrentCommitSha {
-    Write-Message -Type "Debug" "Getting current commit SHA"
-    
-    $sha = git rev-parse HEAD 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Message -Type "Error" "Failed to get current commit SHA. Repository may have no commits."
-        throw "Failed to get current commit SHA"
+    try {
+        $sha = git rev-parse HEAD 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Message -Type "Debug" -Message "Current commit SHA: $sha"
+            return $sha
+        } else {
+            throw "Failed to get current commit SHA"
+        }
+    } catch {
+        Write-Message -Type "Error" -Message "Error getting current commit: $_"
+        throw $_
     }
-    
-    Write-Message -Type "Debug" "Current commit SHA: $sha"
-    return $sha
 }
 
 <#
@@ -57,10 +59,12 @@ function Test-GitTagExists {
         [Parameter(Mandatory = $true)]
         [string]$TagName
     )
+
+    $existingTag = git tag -l $TagName 2>$null
+    $exists = -not [string]::IsNullOrWhiteSpace($existingTag)
     
-    Write-Message -Type "Debug" "Checking if tag exists: $TagName"
-    $existingTag = git tag -l $TagName
-    return [bool]$existingTag
+    Write-Message -Type "Debug" -Message "Tag exists check '$TagName': $exists"
+    return $exists
 }
 
 <#
@@ -87,10 +91,12 @@ function Test-GitBranchExists {
         [Parameter(Mandatory = $true)]
         [string]$BranchName
     )
+
+    $existingBranch = git branch -l $BranchName 2>$null
+    $exists = -not [string]::IsNullOrWhiteSpace($existingBranch)
     
-    Write-Message -Type "Debug" "Checking if branch exists: $BranchName"
-    $existingBranch = git branch -l $BranchName
-    return [bool]$existingBranch
+    Write-Message -Type "Debug" -Message "Branch exists check '$BranchName': $exists"
+    return $exists
 }
 
 <#
@@ -128,30 +134,30 @@ function New-GitCommit {
         [Parameter(Mandatory = $true)]
         [string]$Message,
         
-        [Parameter(Mandatory = $false)]
         [bool]$AllowEmpty = $true
     )
-    
-    Write-Message -Type "Debug" "Creating commit with message: $Message"
-    
+
     try {
-        $commitArgs = @('commit', '-m', $Message)
+        $args = @("commit")
         if ($AllowEmpty) {
-            $commitArgs += '--allow-empty'
+            $args += "--allow-empty"
         }
+        $args += @("-m", $Message)
+
+        Write-Message -Type "Debug" -Message "Creating commit: $Message"
         
-        & git @commitArgs
+        git @args 2>&1 | Out-Null
         
         if ($LASTEXITCODE -ne 0) {
-            throw "Git commit failed with exit code: $LASTEXITCODE"
+            throw "Failed to create commit"
         }
-        
+        Write-Message -Type "Tag" -Message "Commit created: $sha"
+
         $sha = Get-CurrentCommitSha
-        Write-Message -Type "Tag" "Created commit: $Message -> $sha"
         
         return $sha
     } catch {
-        Write-Message -Type "Error" "Failed to create commit: $_"
+        Write-Message -Type "Error" -Message "Failed to create commit: $_"
         throw $_
     }
 }
@@ -196,45 +202,42 @@ function New-GitTag {
         [Parameter(Mandatory = $true)]
         [string]$TagName,
         
-        [Parameter(Mandatory = $false)]
         [string]$CommitSha,
         
-        [Parameter(Mandatory = $false)]
         [bool]$Force = $false
     )
-    
+
     try {
         # Default to HEAD if no commit specified
         if (-not $CommitSha) {
             $CommitSha = Get-CurrentCommitSha
         }
-        
-        Write-Message -Type "Debug" "Creating tag: $TagName at $CommitSha"
-        
+
+        Write-Message -Type "Tag" -Message "Creating tag: $TagName -> $CommitSha"
+
         # Check if tag already exists
-        $tagExists = Test-GitTagExists -TagName $TagName
-        
-        if ($tagExists -and -not $Force) {
-            Write-Message -Type "Warning" "Tag already exists: $TagName (use -Force to overwrite)"
-            return $false
+        if (Test-GitTagExists -TagName $TagName) {
+            if (-not $Force) {
+                Write-Message -Type "Warning" -Message "Tag already exists and Force not set: $TagName"
+                return $false
+            }
+
+            # Delete existing tag if force is enabled
+            Write-Message -Type "Debug" -Message "Deleting existing tag for force restore: $TagName"
+            git tag -d $TagName 2>&1 | Out-Null
         }
-        
-        if ($tagExists -and $Force) {
-            Write-Message -Type "Debug" "Deleting existing tag: $TagName"
-            git tag -d $TagName | Out-Null
-        }
-        
-        # Create the tag
-        git tag $TagName $CommitSha
+
+        # Create tag
+        git tag $TagName $CommitSha 2>&1 | Out-Null
         
         if ($LASTEXITCODE -ne 0) {
-            throw "Failed to create tag: $TagName"
+            throw "Failed to create tag"
         }
-        
-        Write-Message -Type "Tag" "Created tag: $TagName -> $CommitSha"
+
+        Write-Message -Type "Tag" -Message "Tag created successfully: $TagName"
         return $true
     } catch {
-        Write-Message -Type "Error" "Error creating tag '$TagName': $_"
+        Write-Message -Type "Error" -Message "Failed to create tag '$TagName': $_"
         throw $_
     }
 }
@@ -280,53 +283,49 @@ function New-GitBranch {
         [Parameter(Mandatory = $true)]
         [string]$BranchName,
         
-        [Parameter(Mandatory = $false)]
         [string]$CommitSha,
         
-        [Parameter(Mandatory = $false)]
         [bool]$Force = $false
     )
-    
+
     try {
         # Default to HEAD if no commit specified
         if (-not $CommitSha) {
             $CommitSha = Get-CurrentCommitSha
         }
-        
-        Write-Message -Type "Debug" "Creating branch: $BranchName at $CommitSha"
-        
+
+        Write-Message -Type "Branch" -Message "Creating branch: $BranchName -> $CommitSha"
+
         # Check if branch already exists
-        $branchExists = Test-GitBranchExists -BranchName $BranchName
-        
-        if ($branchExists -and -not $Force) {
-            Write-Message -Type "Warning" "Branch already exists: $BranchName (use -Force to overwrite)"
-            return $false
-        }
-        
-        if ($branchExists -and $Force) {
-            # Get current branch to avoid deleting it
-            $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
-            
-            if ($currentBranch -eq $BranchName) {
-                Write-Message -Type "Warning" "Cannot delete current branch: $BranchName"
+        if (Test-GitBranchExists -BranchName $BranchName) {
+            if (-not $Force) {
+                Write-Message -Type "Warning" -Message "Branch already exists and Force not set: $BranchName"
                 return $false
             }
-            
-            Write-Message -Type "Debug" "Deleting existing branch: $BranchName"
-            git branch -D $BranchName | Out-Null
+
+            # Check if this is the current branch
+            $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
+            if ($currentBranch -eq $BranchName) {
+                Write-Message -Type "Warning" -Message "Cannot delete current branch: $BranchName"
+                return $false
+            }
+
+            # Delete existing branch if force is enabled
+            Write-Message -Type "Debug" -Message "Deleting existing branch for force restore: $BranchName"
+            git branch -D $BranchName 2>&1 | Out-Null
         }
-        
-        # Create the branch
-        git branch $BranchName $CommitSha
+
+        # Create branch
+        git branch $BranchName $CommitSha 2>&1 | Out-Null
         
         if ($LASTEXITCODE -ne 0) {
-            throw "Failed to create branch: $BranchName"
+            throw "Failed to create branch"
         }
-        
-        Write-Message -Type "Branch" "Created branch: $BranchName -> $CommitSha"
+
+        Write-Message -Type "Branch" -Message "Branch created successfully: $BranchName"
         return $true
     } catch {
-        Write-Message -Type "Error" "Error creating branch '$BranchName': $_"
+        Write-Message -Type "Error" -Message "Failed to create branch '$BranchName': $_"
         throw $_
     }
 }
@@ -362,22 +361,21 @@ function Set-GitBranch {
         [Parameter(Mandatory = $true)]
         [string]$BranchName
     )
-    
+
     try {
-        Write-Message -Type "Debug" "Checking out branch: $BranchName"
+        Write-Message -Type "Branch" "Checking out branch: $BranchName"
         
         git checkout $BranchName 2>&1 | Out-Null
         
         if ($LASTEXITCODE -ne 0) {
-            Write-Message -Type "Error" "Failed to checkout branch: $BranchName"
-            throw "Failed to checkout branch: $BranchName"
+            throw "Failed to checkout branch - check for uncommitted changes"
         }
-        
-        Write-Message -Type "Branch" "Checked out branch: $BranchName"
+
+        Write-Message -Type "Branch" "Branch checked out: $BranchName"
         return $true
     } catch {
-        Write-Message -Type "Error" "Error checking out branch '$BranchName': $_"
-        throw $_
+        Write-Message -Type "Error" "Failed to checkout branch '$BranchName': $_"
+        return $false
     }
 }
 
@@ -416,67 +414,45 @@ function Set-GitBranch {
 #>
 function Clear-GitState {
     param(
-        [Parameter(Mandatory = $false)]
         [bool]$DeleteTags = $true,
-        
-        [Parameter(Mandatory = $false)]
         [bool]$DeleteBranches = $false
     )
-    
+
     try {
-        $tagsDeleted = 0
-        $deletedTagNames = @()
-        $branchesDeleted = 0
-        
-        # Delete all tags if requested
         if ($DeleteTags) {
-            Write-Message -Type "Warning" "Deleting all git tags"
-            
-            $tags = @(git tag -l)
-            $deletedTagNames = $tags
-            
-            foreach ($tag in $tags) {
-                git tag -d $tag | Out-Null
-                if ($LASTEXITCODE -eq 0) {
-                    $tagsDeleted++
-                    Write-Message -Type "Debug" "Deleted tag: $tag"
-                }
-            }
-            
-            Write-Message -Type "Info" "Deleted $tagsDeleted tags"
-        }
-        
-        # Delete all branches except current and main if requested
-        if ($DeleteBranches) {
-            Write-Message -Type "Warning" "Deleting all git branches (except current and main)"
-            
-            $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
-            $branches = @(git branch --format='%(refname:short)')
-            
-            foreach ($branch in $branches) {
-                # Skip current branch and main
-                if ($branch -eq $currentBranch -or $branch -eq "main") {
-                    Write-Message -Type "Debug" "Skipping branch: $branch (protected)"
-                    continue
-                }
+            $existingTags = @(git tag -l)
+            if ($existingTags.Count -gt 0) {
+                Write-Message -Type "Warning" -Message "Deleting $($existingTags.Count) existing tags"
                 
-                git branch -D $branch | Out-Null
-                if ($LASTEXITCODE -eq 0) {
-                    $branchesDeleted++
-                    Write-Message -Type "Debug" "Deleted branch: $branch"
+                foreach ($tag in $existingTags) {
+                    git tag -d $tag 2>&1 | Out-Null
+                    Write-Message -Type "Debug" -Message "Deleted tag: $tag"
                 }
             }
-            
-            Write-Message -Type "Info" "Deleted $branchesDeleted branches"
         }
-        
-        return @{
-            TagsDeleted      = $tagsDeleted
-            DeletedTagNames  = $deletedTagNames
-            BranchesDeleted  = $branchesDeleted
+
+        if ($DeleteBranches) {
+            $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
+            $existingBranches = @(git branch -l | Where-Object { $_ -notlike "*$currentBranch*" } )
+            
+            if ($existingBranches.Count -gt 0) {
+                Write-Message -Type "Warning" -Message "Deleting $($existingBranches.Count) existing branches (excluding current)"
+                
+                foreach ($branchLine in $existingBranches) {
+                    $branch = $branchLine.Trim()
+                    if ($branch.StartsWith("* ")) {
+                        $branch = $branch.Substring(2).Trim()
+                    }
+                    
+                    if ($branch -and $branch -ne $currentBranch) {
+                        git branch -D $branch 2>&1 | Out-Null
+                        Write-Message -Type "Debug" -Message "Deleted branch: $branch"
+                    }
+                }
+            }
         }
     } catch {
-        Write-Message -Type "Error" "Failed to clear git state: $_"
+        Write-Message -Type "Error" -Message "Error during state cleanup: $_"
         throw $_
     }
 }
