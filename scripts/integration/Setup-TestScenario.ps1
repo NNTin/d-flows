@@ -55,7 +55,7 @@
     # Validate current git state against a scenario
     $result = Test-ScenarioState -ScenarioName "FirstRelease"
     if ($result.IsValid) {
-        Write-Message -Type "Success" -Message "Git state is valid for scenario"
+        Write-Message -Type "Success" "Git state is valid for scenario"
     }
 
 .NOTES
@@ -162,7 +162,7 @@ $ScenarioDefinitions = @{
     }
 }
 
-Write-Message -Type "Debug" -Message "Loaded $($ScenarioDefinitions.Count) scenario definitions"
+Write-Message -Type "Debug" "Loaded $($ScenarioDefinitions.Count) scenario definitions"
 
 # ============================================================================
 # Helper Functions
@@ -185,11 +185,11 @@ function New-TestStateDirectory {
     $fullTestStatePath = Get-TestStateBasePath
     
     if (-not (Test-Path $fullTestStatePath)) {
-        Write-Message -Type "Debug" -Message "Creating temp test state directory: $fullTestStatePath"
+        Write-Message -Type "Debug" "Creating temp test state directory: $fullTestStatePath"
         New-Item -ItemType Directory -Path $fullTestStatePath -Force | Out-Null
-        Write-Message -Type "Debug" -Message "Test state directory created"
+        Write-Message -Type "Debug" "Test state directory created"
     } else {
-        Write-Message -Type "Debug" -Message "Test state directory already exists: $fullTestStatePath"
+        Write-Message -Type "Debug" "Test state directory already exists: $fullTestStatePath"
     }
 
     return $fullTestStatePath
@@ -208,7 +208,7 @@ function New-TestStateDirectory {
 
 .EXAMPLE
     $sha = Get-CurrentCommitSha
-    Write-Message -Type "Debug" -Message "Current commit: $sha"
+    Write-Message -Type "Debug" "Current commit: $sha"
 
 .NOTES
     Handles detached HEAD and no commits states gracefully.
@@ -217,13 +217,13 @@ function Get-CurrentCommitSha {
     try {
         $sha = git rev-parse HEAD 2>$null
         if ($LASTEXITCODE -eq 0) {
-            Write-Message -Type "Debug" -Message "Current commit SHA: $sha"
+            Write-Message -Type "Debug" "Current commit SHA: $sha"
             return $sha
         } else {
             throw "Failed to get current commit SHA"
         }
     } catch {
-        Write-Message -Type "Error" -Message "Error getting current commit: $_"
+        Write-Message -Type "Error" "Error getting current commit: $_"
         throw $_
     }
 }
@@ -240,7 +240,7 @@ function Get-CurrentCommitSha {
 
 .EXAMPLE
     if (Test-GitTagExists -TagName "v1.0.0") {
-        Write-Message -Type "Success" -Message "Tag exists"
+        Write-Message -Type "Success" "Tag exists"
     }
 
 .NOTES
@@ -255,7 +255,7 @@ function Test-GitTagExists {
     $existingTag = git tag -l $TagName 2>$null
     $exists = -not [string]::IsNullOrWhiteSpace($existingTag)
     
-    Write-Message -Type "Debug" -Message "Tag exists check '$TagName': $exists"
+    Write-Message -Type "Debug" "Tag exists check '$TagName': $exists"
     return $exists
 }
 
@@ -271,7 +271,7 @@ function Test-GitTagExists {
 
 .EXAMPLE
     if (Test-GitBranchExists -BranchName "main") {
-        Write-Message -Type "Success" -Message "Branch exists"
+        Write-Message -Type "Success" "Branch exists"
     }
 
 .NOTES
@@ -286,7 +286,7 @@ function Test-GitBranchExists {
     $existingBranch = git branch -l $BranchName 2>$null
     $exists = -not [string]::IsNullOrWhiteSpace($existingBranch)
     
-    Write-Message -Type "Debug" -Message "Branch exists check '$BranchName': $exists"
+    Write-Message -Type "Debug" "Branch exists check '$BranchName': $exists"
     return $exists
 }
 
@@ -322,10 +322,10 @@ function Get-ScenarioDefinition {
             throw "Scenario not found: $ScenarioName. Available scenarios: $availableScenarios"
         }
 
-        Write-Message -Type "Scenario" -Message "Retrieved scenario definition: $ScenarioName"
+        Write-Message -Type "Scenario" "Retrieved scenario definition: $ScenarioName"
         return $ScenarioDefinitions[$ScenarioName]
     } catch {
-        Write-Message -Type "Error" -Message $_
+        Write-Message -Type "Error" $_
         throw $_
     }
 }
@@ -345,7 +345,7 @@ function Get-ScenarioDefinition {
     Returns array of scenario summary objects.
 #>
 function Get-AllScenarios {
-    Write-Message -Type "Debug" -Message "Listing all available scenarios"
+    Write-Message -Type "Debug" "Listing all available scenarios"
     
     $scenarios = @()
     foreach ($scenarioName in $ScenarioDefinitions.Keys) {
@@ -360,7 +360,7 @@ function Get-AllScenarios {
         }
     }
     
-    Write-Message -Type "Debug" -Message "Found $($scenarios.Count) scenarios"
+    Write-Message -Type "Debug" "Found $($scenarios.Count) scenarios"
     return $scenarios
 }
 
@@ -373,13 +373,13 @@ function Get-AllScenarios {
 
 .EXAMPLE
     $names = Get-ScenarioNames
-    Write-Message -Type "Info" -Message "Available: $($names -join ', ')"
+    Write-Message -Type "Info" "Available: $($names -join ', ')"
 
 .NOTES
     Returns array of scenario names.
 #>
 function Get-ScenarioNames {
-    Write-Message -Type "Debug" -Message "Retrieved scenario names"
+    Write-Message -Type "Debug" "Retrieved scenario names"
     return @($ScenarioDefinitions.Keys)
 }
 
@@ -422,20 +422,20 @@ function New-GitCommit {
         }
         $args += @("-m", $Message)
 
-        Write-Message -Type "Debug" -Message "Creating commit: $Message"
+        Write-Message -Type "Debug" "Creating commit: $Message"
         
         git @args 2>&1 | Out-Null
         
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to create commit"
         }
-        Write-Message -Type "Tag" -Message "Commit created: $sha"
+        Write-Message -Type "Tag" "Commit created: $sha"
 
         $sha = Get-CurrentCommitSha
         
         return $sha
     } catch {
-        Write-Message -Type "Error" -Message "Failed to create commit: $_"
+        Write-Message -Type "Error" "Failed to create commit: $_"
         throw $_
     }
 }
@@ -478,17 +478,17 @@ function New-GitTag {
             $CommitSha = Get-CurrentCommitSha
         }
 
-        Write-Message -Type "Tag" -Message "Creating tag: $TagName -> $CommitSha"
+        Write-Message -Type "Tag" "Creating tag: $TagName -> $CommitSha"
 
         # Check if tag already exists
         if (Test-GitTagExists -TagName $TagName) {
             if (-not $Force) {
-                Write-Message -Type "Warning" -Message "Tag already exists: $TagName"
+                Write-Message -Type "Warning" "Tag already exists: $TagName"
                 return $false
             }
 
             # Delete existing tag if force is enabled
-            Write-Message -Type "Debug" -Message "Deleted existing tag for force creation: $TagName"
+            Write-Message -Type "Debug" "Deleted existing tag for force creation: $TagName"
             git tag -d $TagName 2>&1 | Out-Null
         }
 
@@ -499,10 +499,10 @@ function New-GitTag {
             throw "Failed to create tag"
         }
 
-        Write-Message -Type "Tag" -Message "Created tag: $TagName -> $CommitSha"
+        Write-Message -Type "Tag" "Created tag: $TagName -> $CommitSha"
         return $true
     } catch {
-        Write-Message -Type "Error" -Message "Failed to create tag '$TagName': $_"
+        Write-Message -Type "Error" "Failed to create tag '$TagName': $_"
         throw $_
     }
 }
@@ -545,24 +545,24 @@ function New-GitBranch {
             $CommitSha = Get-CurrentCommitSha
         }
 
-        Write-Message -Type "Branch" -Message "Creating branch: $BranchName -> $CommitSha"
+        Write-Message -Type "Branch" "Creating branch: $BranchName -> $CommitSha"
 
         # Check if branch already exists
         if (Test-GitBranchExists -BranchName $BranchName) {
             if (-not $Force) {
-                Write-Message -Type "Warning" -Message "Branch already exists: $BranchName"
+                Write-Message -Type "Warning" "Branch already exists: $BranchName"
                 return $false
             }
 
             # Check if this is the current branch
             $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
             if ($currentBranch -eq $BranchName) {
-                Write-Message -Type "Warning" -Message "Cannot delete current branch: $BranchName"
+                Write-Message -Type "Warning" "Cannot delete current branch: $BranchName"
                 return $false
             }
 
             # Delete existing branch if force is enabled
-            Write-Message -Type "Debug" -Message "Deleted existing branch for force creation: $BranchName"
+            Write-Message -Type "Debug" "Deleted existing branch for force creation: $BranchName"
             git branch -D $BranchName 2>&1 | Out-Null
         }
 
@@ -573,10 +573,10 @@ function New-GitBranch {
             throw "Failed to create branch"
         }
 
-        Write-Message -Type "Branch" -Message "Created branch: $BranchName -> $CommitSha"
+        Write-Message -Type "Branch" "Created branch: $BranchName -> $CommitSha"
         return $true
     } catch {
-        Write-Message -Type "Error" -Message "Failed to create branch '$BranchName': $_"
+        Write-Message -Type "Error" "Failed to create branch '$BranchName': $_"
         throw $_
     }
 }
@@ -605,7 +605,7 @@ function Set-GitBranch {
     )
 
     try {
-        Write-Message -Type "Branch" -Message "Checking out branch: $BranchName"
+        Write-Message -Type "Branch" "Checking out branch: $BranchName"
         
         git checkout $BranchName 2>&1 | Out-Null
         
@@ -613,10 +613,10 @@ function Set-GitBranch {
             throw "Failed to checkout branch - check for uncommitted changes"
         }
 
-        Write-Message -Type "Branch" -Message "Checked out branch: $BranchName"
+        Write-Message -Type "Branch" "Checked out branch: $BranchName"
         return $true
     } catch {
-        Write-Message -Type "Error" -Message "❌ Cannot checkout branch due to uncommitted changes. Please commit or stash changes first."
+        Write-Message -Type "Error" "❌ Cannot checkout branch due to uncommitted changes. Please commit or stash changes first."
         return $false
     }
 }
@@ -648,19 +648,19 @@ function Clear-GitState {
     )
 
     try {
-        Write-Message -Type "Warning" -Message "Cleaning git state - DeleteTags: $DeleteTags, DeleteBranches: $DeleteBranches"
+        Write-Message -Type "Warning" "Cleaning git state - DeleteTags: $DeleteTags, DeleteBranches: $DeleteBranches"
 
         $deletedTagNames = @()
         if ($DeleteTags) {
             $existingTags = @(git tag -l)
             if ($existingTags.Count -gt 0) {
                 $deletedTagNames = $existingTags
-                Write-Message -Type "Debug" -Message "Will delete $($existingTags.Count) production tags"
+                Write-Message -Type "Debug" "Will delete $($existingTags.Count) production tags"
                 foreach ($tag in $existingTags) {
                     git tag -d $tag 2>&1 | Out-Null
-                    Write-Message -Type "Debug" -Message "Deleted tag: $tag"
+                    Write-Message -Type "Debug" "Deleted tag: $tag"
                 }
-                Write-Message -Type "Info" -Message "Deleted $($existingTags.Count) tags"
+                Write-Message -Type "Info" "Deleted $($existingTags.Count) tags"
             }
         }
 
@@ -678,12 +678,12 @@ function Clear-GitState {
                     
                     if ($branch -and $branch -ne $currentBranch -and $branch -ne "main") {
                         git branch -D $branch 2>&1 | Out-Null
-                        Write-Message -Type "Debug" -Message "Deleted branch: $branch"
+                        Write-Message -Type "Debug" "Deleted branch: $branch"
                         $deletedCount++
                     }
                 }
                 if ($deletedCount -gt 0) {
-                    Write-Message -Type "Info" -Message "Deleted $deletedCount branches"
+                    Write-Message -Type "Info" "Deleted $deletedCount branches"
                 }
             }
         }
@@ -694,7 +694,7 @@ function Clear-GitState {
             BranchesDeleted  = if ($DeleteBranches) { $deletedCount } else { 0 }
         }
     } catch {
-        Write-Message -Type "Error" -Message "Error during state cleanup: $_"
+        Write-Message -Type "Error" "Error during state cleanup: $_"
         throw $_
     }
 }
@@ -759,11 +759,11 @@ function Set-TestScenario {
     )
 
     try {
-        Write-Message -Type "Info" -Message "Applying test scenario: $ScenarioName"
+        Write-Message -Type "Info" "Applying test scenario: $ScenarioName"
 
         # Get scenario definition
         $scenario = Get-ScenarioDefinition -ScenarioName $ScenarioName
-        Write-Message -Type "Scenario" -Message "Scenario description: $($scenario.Description)"
+        Write-Message -Type "Scenario" "Scenario description: $($scenario.Description)"
 
         # Clean state if requested and capture production tags deleted
         $productionTagsDeleted = @()
@@ -771,7 +771,7 @@ function Set-TestScenario {
             $cleanStateResult = Clear-GitState -DeleteTags $true
             if ($cleanStateResult.PSObject.Properties.Name -contains 'DeletedTagNames') {
                 $productionTagsDeleted = @($cleanStateResult.DeletedTagNames)
-                Write-Message -Type "Debug" -Message "Captured $($productionTagsDeleted.Count) production tags deleted during clean state"
+                Write-Message -Type "Debug" "Captured $($productionTagsDeleted.Count) production tags deleted during clean state"
             }
         }
         
@@ -781,7 +781,7 @@ function Set-TestScenario {
             $sha = Get-CurrentCommitSha
             $hasCommits = $true
         } catch {
-            Write-Message -Type "Debug" -Message "Repository appears to be empty, will create initial commit"
+            Write-Message -Type "Debug" "Repository appears to be empty, will create initial commit"
             $hasCommits = $false
         }
 
@@ -801,7 +801,7 @@ function Set-TestScenario {
                     $tagsCreated += $tag.Name
                 }
             } catch {
-                Write-Message -Type "Warning" -Message "Failed to create tag $($tag.Name): $_"
+                Write-Message -Type "Warning" "Failed to create tag $($tag.Name): $_"
                 continue
             }
         }
@@ -813,7 +813,7 @@ function Set-TestScenario {
                 # Skip if branch already exists and not force
                 if (Test-GitBranchExists -BranchName $branch) {
                     if (-not $Force) {
-                        Write-Message -Type "Branch" -Message "Branch already exists, skipping: $branch"
+                        Write-Message -Type "Branch" "Branch already exists, skipping: $branch"
                         continue
                     }
                 }
@@ -844,7 +844,7 @@ function Set-TestScenario {
                     $branchesCreated += $branch
                 }
             } catch {
-                Write-Message -Type "Warning" -Message "Failed to create branch ${branch}: $_"
+                Write-Message -Type "Warning" "Failed to create branch ${branch}: $_"
                 continue
             }
         }
@@ -854,10 +854,10 @@ function Set-TestScenario {
             try {
                 $checkoutSuccess = Set-GitBranch -BranchName $scenario.CurrentBranch
                 if (-not $checkoutSuccess) {
-                    Write-Message -Type "Warning" -Message "Failed to checkout current branch, continuing anyway"
+                    Write-Message -Type "Warning" "Failed to checkout current branch, continuing anyway"
                 }
             } catch {
-                Write-Message -Type "Warning" -Message "Error checking out current branch: $_"
+                Write-Message -Type "Warning" "Error checking out current branch: $_"
             }
         }
 
@@ -879,11 +879,11 @@ function Set-TestScenario {
                 $testBranchesPath = Export-TestBranchesFile -Branches $branchesCreated
                 $testCommitsPath = Export-TestCommitsBundle -Tags $tagsCreated -Branches $branchesCreated
             }
-            Write-Message -Type "Branch" -Message "Test branches file exported to: $testBranchesPath"
-            Write-Message -Type "Backup" -Message "Test commits bundle exported to: $testCommitsPath"
+            Write-Message -Type "Branch" "Test branches file exported to: $testBranchesPath"
+            Write-Message -Type "Backup" "Test commits bundle exported to: $testCommitsPath"
         }
 
-        Write-Message -Type "Success" -Message "Scenario applied successfully: $ScenarioName"
+        Write-Message -Type "Success" "Scenario applied successfully: $ScenarioName"
 
         return @{
             ScenarioName          = $ScenarioName
@@ -898,7 +898,7 @@ function Set-TestScenario {
             Success               = $true
         }
     } catch {
-        Write-Message -Type "Error" -Message "Failed to apply scenario: $_"
+        Write-Message -Type "Error" "Failed to apply scenario: $_"
         throw $_
     }
 }
@@ -939,13 +939,13 @@ function Export-TestTagsFile {
             $OutputPath = Join-Path $testStateDir $TestTagsFile
         }
 
-        Write-Message -Type "Info" -Message "Generating test-tags.txt file"
-        Write-Message -Type "Debug" -Message "Output path: $OutputPath"
+        Write-Message -Type "Info" "Generating test-tags.txt file"
+        Write-Message -Type "Debug" "Output path: $OutputPath"
 
         # If no tags specified, get all tags
         if (-not $Tags -or $Tags.Count -eq 0) {
             $Tags = @(git tag -l)
-            Write-Message -Type "Debug" -Message "No tags specified, using all repository tags: $($Tags.Count) tags"
+            Write-Message -Type "Debug" "No tags specified, using all repository tags: $($Tags.Count) tags"
         }
 
         # Build file content
@@ -957,12 +957,12 @@ function Export-TestTagsFile {
                 
                 if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($sha)) {
                     $fileContent += "$tag $sha"
-                    Write-Message -Type "Tag" -Message "Exporting tag: $tag -> $sha"
+                    Write-Message -Type "Tag" "Exporting tag: $tag -> $sha"
                 } else {
-                    Write-Message -Type "Warning" -Message "Failed to get SHA for tag: $tag"
+                    Write-Message -Type "Warning" "Failed to get SHA for tag: $tag"
                 }
             } catch {
-                Write-Message -Type "Warning" -Message "Error exporting tag '$tag': $_"
+                Write-Message -Type "Warning" "Error exporting tag '$tag': $_"
                 continue
             }
         }
@@ -971,18 +971,18 @@ function Export-TestTagsFile {
         $outputDir = Split-Path $OutputPath -Parent
         if (-not (Test-Path $outputDir)) {
             New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-            Write-Message -Type "Debug" -Message "Created output directory: $outputDir"
+            Write-Message -Type "Debug" "Created output directory: $outputDir"
         }
 
         # Write to file
         $fileContent | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
         
-        Write-Message -Type "Success" -Message "Test-tags.txt generated with $($fileContent.Count) tags"
-        Write-Message -Type "Debug" -Message "File path: $OutputPath"
+        Write-Message -Type "Success" "Test-tags.txt generated with $($fileContent.Count) tags"
+        Write-Message -Type "Debug" "File path: $OutputPath"
 
         return $OutputPath
     } catch {
-        Write-Message -Type "Error" -Message "Failed to export test tags file: $_"
+        Write-Message -Type "Error" "Failed to export test tags file: $_"
         throw $_
     }
 }
@@ -1036,8 +1036,8 @@ function Export-TestBranchesFile {
             $OutputPath = Join-Path $testStateDir $TestBranchesFile
         }
 
-        Write-Message -Type "Info" -Message "Generating test-branches.txt file"
-        Write-Message -Type "Debug" -Message "Output path: $OutputPath"
+        Write-Message -Type "Info" "Generating test-branches.txt file"
+        Write-Message -Type "Debug" "Output path: $OutputPath"
 
         # If no branches specified, get all branches
         if (-not $Branches -or $Branches.Count -eq 0) {
@@ -1051,7 +1051,7 @@ function Export-TestBranchesFile {
                     $Branches += $cleanBranch
                 }
             }
-            Write-Message -Type "Debug" -Message "No branches specified, using all repository branches: $($Branches.Count) branches"
+            Write-Message -Type "Debug" "No branches specified, using all repository branches: $($Branches.Count) branches"
         }
 
         # Build file content
@@ -1063,12 +1063,12 @@ function Export-TestBranchesFile {
                 
                 if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($sha)) {
                     $fileContent += "$branch $sha"
-                    Write-Message -Type "Branch" -Message "Exporting branch: $branch -> $sha"
+                    Write-Message -Type "Branch" "Exporting branch: $branch -> $sha"
                 } else {
-                    Write-Message -Type "Warning" -Message "Failed to get SHA for branch: $branch"
+                    Write-Message -Type "Warning" "Failed to get SHA for branch: $branch"
                 }
             } catch {
-                Write-Message -Type "Warning" -Message "Error exporting branch '$branch': $_"
+                Write-Message -Type "Warning" "Error exporting branch '$branch': $_"
                 continue
             }
         }
@@ -1077,18 +1077,18 @@ function Export-TestBranchesFile {
         $outputDir = Split-Path $OutputPath -Parent
         if (-not (Test-Path $outputDir)) {
             New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-            Write-Message -Type "Debug" -Message "Created output directory: $outputDir"
+            Write-Message -Type "Debug" "Created output directory: $outputDir"
         }
 
         # Write to file
         $fileContent | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
         
-        Write-Message -Type "Success" -Message "Test-branches.txt generated with $($fileContent.Count) branches"
-        Write-Message -Type "Debug" -Message "File path: $OutputPath"
+        Write-Message -Type "Success" "Test-branches.txt generated with $($fileContent.Count) branches"
+        Write-Message -Type "Debug" "File path: $OutputPath"
 
         return $OutputPath
     } catch {
-        Write-Message -Type "Error" -Message "Failed to export test branches file: $_"
+        Write-Message -Type "Error" "Failed to export test branches file: $_"
         throw $_
     }
 }
@@ -1150,7 +1150,7 @@ function Export-TestCommitsBundle {
             $OutputPath = Join-Path $testStateDir "test-commits.bundle"
         }
 
-        Write-Message -Type "Info" -Message "Generating test-commits.bundle file"
+        Write-Message -Type "Info" "Generating test-commits.bundle file"
         
         # Collect all refs to bundle
         $allRefs = @()
@@ -1160,11 +1160,11 @@ function Export-TestCommitsBundle {
             $gitTags = @(git tag -l 2>$null)
             if ($gitTags.Count -gt 0) {
                 $allRefs += $gitTags
-                Write-Message -Type "Tag" -Message "Including $($gitTags.Count) tags in bundle"
+                Write-Message -Type "Tag" "Including $($gitTags.Count) tags in bundle"
             }
         } else {
             $allRefs += $Tags
-            Write-Message -Type "Tag" -Message "Including $($Tags.Count) specified tags in bundle"
+            Write-Message -Type "Tag" "Including $($Tags.Count) specified tags in bundle"
         }
         
         # If no branches specified, get all branches
@@ -1181,23 +1181,23 @@ function Export-TestCommitsBundle {
             }
             if ($cleanBranches.Count -gt 0) {
                 $allRefs += $cleanBranches
-                Write-Message -Type "Branch" -Message "Including $($cleanBranches.Count) branches in bundle"
+                Write-Message -Type "Branch" "Including $($cleanBranches.Count) branches in bundle"
             }
         } else {
             $allRefs += $Branches
-            Write-Message -Type "Branch" -Message "Including $($Branches.Count) specified branches in bundle"
+            Write-Message -Type "Branch" "Including $($Branches.Count) specified branches in bundle"
         }
         
         # Handle empty repository (no refs to bundle)
         if ($allRefs.Count -eq 0) {
-            Write-Message -Type "Warning" -Message "No refs found to bundle (empty repository or no tags/branches)"
+            Write-Message -Type "Warning" "No refs found to bundle (empty repository or no tags/branches)"
             # Create an empty file to maintain backup structure
             "" | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
-            Write-Message -Type "Debug" -Message "Created empty bundle file: $OutputPath"
+            Write-Message -Type "Debug" "Created empty bundle file: $OutputPath"
             return $OutputPath
         }
 
-        Write-Message -Type "Debug" -Message "Bundling $($allRefs.Count) refs"
+        Write-Message -Type "Debug" "Bundling $($allRefs.Count) refs"
 
         # Create git bundle with explicit ref list
         $bundleArgs = @('bundle', 'create', $OutputPath) + $allRefs
@@ -1208,12 +1208,12 @@ function Export-TestCommitsBundle {
             throw "Git bundle create failed with exit code: $LASTEXITCODE"
         }
 
-        Write-Message -Type "Success" -Message "Test-commits.bundle generated with $($allRefs.Count) refs"
-        Write-Message -Type "Debug" -Message "File path: $OutputPath"
+        Write-Message -Type "Success" "Test-commits.bundle generated with $($allRefs.Count) refs"
+        Write-Message -Type "Debug" "File path: $OutputPath"
 
         return $OutputPath
     } catch {
-        Write-Message -Type "Error" -Message "Failed to export test commits bundle: $_"
+        Write-Message -Type "Error" "Failed to export test commits bundle: $_"
         throw $_
     }
 }
@@ -1238,7 +1238,7 @@ function Export-TestCommitsBundle {
 .EXAMPLE
     $result = Test-ScenarioState -ScenarioName "FirstRelease"
     if ($result.IsValid) {
-        Write-Message -Type "Success" -Message "Valid"
+        Write-Message -Type "Success" "Valid"
     }
 
 .NOTES
@@ -1253,7 +1253,7 @@ function Test-ScenarioState {
     )
 
     try {
-        Write-Message -Type "Info" -Message "Validating git state against scenario: $ScenarioName"
+        Write-Message -Type "Info" "Validating git state against scenario: $ScenarioName"
 
         # Get scenario definition
         $scenario = Get-ScenarioDefinition -ScenarioName $ScenarioName
@@ -1271,10 +1271,10 @@ function Test-ScenarioState {
             if (-not (Test-GitTagExists -TagName $tag.Name)) {
                 $missingTags += $tag.Name
                 $isValid = $false
-                Write-Message -Type "Tag" -Message "❌ Missing tag: $($tag.Name)"
+                Write-Message -Type "Tag" "❌ Missing tag: $($tag.Name)"
                 $validationMessages += "Missing tag: $($tag.Name)"
             } else {
-                Write-Message -Type "Tag" -Message "✅ Tag exists: $($tag.Name)"
+                Write-Message -Type "Tag" "✅ Tag exists: $($tag.Name)"
                 $validationMessages += "✅ Tag exists: $($tag.Name)"
             }
         }
@@ -1284,10 +1284,10 @@ function Test-ScenarioState {
             if (-not (Test-GitBranchExists -BranchName $branch)) {
                 $missingBranches += $branch
                 $isValid = $false
-                Write-Message -Type "Branch" -Message "❌ Missing branch: $branch"
+                Write-Message -Type "Branch" "❌ Missing branch: $branch"
                 $validationMessages += "Missing branch: $branch"
             } else {
-                Write-Message -Type "Branch" -Message "✅ Branch exists: $branch"
+                Write-Message -Type "Branch" "✅ Branch exists: $branch"
                 $validationMessages += "✅ Branch exists: $branch"
             }
         }
@@ -1297,10 +1297,10 @@ function Test-ScenarioState {
         if ($currentBranch -ne $scenario.CurrentBranch) {
             $currentBranchMismatch = $true
             $isValid = $false
-            Write-Message -Type "Debug" -Message "❌ Current branch mismatch: expected '$($scenario.CurrentBranch)', got '$currentBranch'"
+            Write-Message -Type "Debug" "❌ Current branch mismatch: expected '$($scenario.CurrentBranch)', got '$currentBranch'"
             $validationMessages += "Current branch mismatch: expected '$($scenario.CurrentBranch)', got '$currentBranch'"
         } else {
-            Write-Message -Type "Debug" -Message "✅ Current branch correct: $currentBranch"
+            Write-Message -Type "Debug" "✅ Current branch correct: $currentBranch"
             $validationMessages += "✅ Current branch correct: $currentBranch"
         }
 
@@ -1312,7 +1312,7 @@ function Test-ScenarioState {
                 if ($scenarioTagNames -notcontains $tag) {
                     $extraTags += $tag
                     $isValid = $false
-                    Write-Message -Type "Tag" -Message "⚠️ Extra tag: $tag"
+                    Write-Message -Type "Tag" "⚠️ Extra tag: $tag"
                     $validationMessages += "Extra tag (Strict mode): $tag"
                 }
             }
@@ -1326,7 +1326,7 @@ function Test-ScenarioState {
                 if ($scenario.Branches -notcontains $branch -and $branch -ne "main") {
                     $extraBranches += $branch
                     $isValid = $false
-                    Write-Message -Type "Branch" -Message "⚠️ Extra branch: $branch"
+                    Write-Message -Type "Branch" "⚠️ Extra branch: $branch"
                     $validationMessages += "Extra branch (Strict mode): $branch"
                 }
             }
@@ -1334,13 +1334,13 @@ function Test-ScenarioState {
 
         # Build summary message
         if ($isValid) {
-            Write-Message -Type "Success" -Message "✅ Git state matches scenario: $ScenarioName"
+            Write-Message -Type "Success" "✅ Git state matches scenario: $ScenarioName"
         } else {
             $summary = "Git state does NOT match scenario: Missing tags: $($missingTags.Count), Missing branches: $($missingBranches.Count)"
             if ($currentBranchMismatch) {
                 $summary += ", Branch mismatch: true"
             }
-            Write-Message -Type "Warning" -Message $summary
+            Write-Message -Type "Warning" $summary
         }
 
         return @{
@@ -1355,7 +1355,7 @@ function Test-ScenarioState {
             ValidationMessages       = $validationMessages
         }
     } catch {
-        Write-Message -Type "Error" -Message "Error validating scenario state: $_"
+        Write-Message -Type "Error" "Error validating scenario state: $_"
         throw $_
     }
 }
@@ -1392,61 +1392,61 @@ function Show-ScenarioDefinition {
         # Get scenario definition
         $scenario = Get-ScenarioDefinition -ScenarioName $ScenarioName
 
-        Write-Message -Message ""
-        Write-Message -Message "═══════════════════════════════════════════════════════════════════════════"
-        Write-Message -Message "  Scenario: $ScenarioName"
-        Write-Message -Message "═══════════════════════════════════════════════════════════════════════════"
-        Write-Message -Message ""
+        Write-Message ""
+        Write-Message "═══════════════════════════════════════════════════════════════════════════"
+        Write-Message "  Scenario: $ScenarioName"
+        Write-Message "═══════════════════════════════════════════════════════════════════════════"
+        Write-Message ""
         
-        Write-Message -Type "Info" -Message "Description:"
-        Write-Message -Type "Info" -Message "  $($scenario.Description)"
-        Write-Message -Message ""
+        Write-Message -Type "Info" "Description:"
+        Write-Message -Type "Info" "  $($scenario.Description)"
+        Write-Message ""
 
-        Write-Message -Type "Tag" -Message "Tags:"
+        Write-Message -Type "Tag" "Tags:"
         if ($scenario.Tags.Count -eq 0) {
-            Write-Message -Type "Info" -Message "  (none)"
+            Write-Message -Type "Info" "  (none)"
         } else {
             foreach ($tag in $scenario.Tags) {
-                Write-Message -Type "Tag" -Message "  • $($tag.Name) - $($tag.CommitMessage)"
+                Write-Message -Type "Tag" "  • $($tag.Name) - $($tag.CommitMessage)"
             }
         }
-        Write-Message -Message ""
+        Write-Message ""
 
-        Write-Message -Type "Branch" -Message "Branches:"
+        Write-Message -Type "Branch" "Branches:"
         if ($scenario.Branches.Count -eq 0) {
-            Write-Message -Type "Info" -Message "  (none)"
+            Write-Message -Type "Info" "  (none)"
         } else {
             foreach ($branch in $scenario.Branches) {
-                Write-Message -Type "Branch" -Message "  • $branch"
+                Write-Message -Type "Branch" "  • $branch"
             }
         }
-        Write-Message -Type "Info" -Message "📍 Current Branch:" -ForegroundColor Yellow
-        Write-Message -Type "Info" -Message "  $($scenario.CurrentBranch)" -ForegroundColor Green
+        Write-Message -Type "Info" "📍 Current Branch:" -ForegroundColor Yellow
+        Write-Message -Type "Info" "  $($scenario.CurrentBranch)" -ForegroundColor Green
         if ($Detailed) {
-            Write-Message -Type "Target" -Message "Expected Version:"
-            Write-Message -Type "Info" -Message "  $($scenario.ExpectedVersion)" -ForegroundColor Cyan
+            Write-Message -Type "Target" "Expected Version:"
+            Write-Message -Type "Info" "  $($scenario.ExpectedVersion)" -ForegroundColor Cyan
                 if ($scenario.ExpectedBranchCreation) {
-                Write-Message -Type "Info" -Message "➕ Expected Branch Creation:" -ForegroundColor Yellow
-                Write-Message -Type "Info" -Message "  $($scenario.ExpectedBranchCreation)" -ForegroundColor Cyan
+                Write-Message -Type "Info" "➕ Expected Branch Creation:" -ForegroundColor Yellow
+                Write-Message -Type "Info" "  $($scenario.ExpectedBranchCreation)" -ForegroundColor Cyan
                     }
 
             if ($scenario.TestFixtures) {
-                Write-Message -Type "List" -Message "Test Fixtures:"
+                Write-Message -Type "List" "Test Fixtures:"
                 foreach ($fixture in $scenario.TestFixtures) {
-                    Write-Message -Type "Info" -Message "  • $fixture" -ForegroundColor DarkGray
+                    Write-Message -Type "Info" "  • $fixture" -ForegroundColor DarkGray
                 }
                     }
         }
 
         if ($scenario.Notes) {
-            Write-Message -Type "Note" -Message "Notes:"
-            Write-Message -Type "Info" -Message "  $($scenario.Notes)" -ForegroundColor DarkGray
+            Write-Message -Type "Note" "Notes:"
+            Write-Message -Type "Info" "  $($scenario.Notes)" -ForegroundColor DarkGray
             }
 
-        Write-Message -Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
         return $scenario
     } catch {
-        Write-Message -Type "Error" -Message "Error displaying scenario: $_"
+        Write-Message -Type "Error" "Error displaying scenario: $_"
         throw $_
     }
 }
@@ -1463,23 +1463,23 @@ function Show-ScenarioDefinition {
 #>
 function Show-AllScenarios {
     try {
-        Write-Message -Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-        Write-Message -Message "  Available Test Scenarios" -ForegroundColor Cyan
-        Write-Message -Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Message "  Available Test Scenarios" -ForegroundColor Cyan
+        Write-Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
         $scenarios = Get-AllScenarios
         
         foreach ($scenario in $scenarios) {
-            Write-Message -Type "Scenario" -Message "$($scenario.Name)"
-            Write-Message -Type "Info" -Message "   $($scenario.Description)" -ForegroundColor White
-            Write-Message -Type "Info" -Message "   Tags: $($scenario.TagCount), Branches: $($scenario.BranchCount), Current: $($scenario.CurrentBranch)" -ForegroundColor DarkGray
+            Write-Message -Type "Scenario" "$($scenario.Name)"
+            Write-Message -Type "Info" "   $($scenario.Description)" -ForegroundColor White
+            Write-Message -Type "Info" "   Tags: $($scenario.TagCount), Branches: $($scenario.BranchCount), Current: $($scenario.CurrentBranch)" -ForegroundColor DarkGray
             }
 
-        Write-Message -Type "Info" -Message "Total scenarios: $($scenarios.Count)"
+        Write-Message -Type "Info" "Total scenarios: $($scenarios.Count)"
         
-        Write-Message -Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+        Write-Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
         return $scenarios
     } catch {
-        Write-Message -Type "Error" -Message "Error displaying all scenarios: $_"
+        Write-Message -Type "Error" "Error displaying all scenarios: $_"
         throw $_
     }
 }
@@ -1491,39 +1491,39 @@ function Show-AllScenarios {
 # Check if script is being dot-sourced or executed directly
 if ($MyInvocation.InvocationName -ne ".") {
     # Script is being executed directly
-    Write-Message -Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Message -Message "  Test Scenario Setup Script" -ForegroundColor Cyan
-    Write-Message -Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Message -Message "This script provides centralized scenario definitions and management for act integration testing." -ForegroundColor Gray
+    Write-Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Message "  Test Scenario Setup Script" -ForegroundColor Cyan
+    Write-Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Message "This script provides centralized scenario definitions and management for act integration testing." -ForegroundColor Gray
 
-    Write-Message -Message "Available Functions:" -ForegroundColor Yellow
-    Write-Message -Message "  Get-ScenarioDefinition [-ScenarioName]    - Get specific scenario definition" -ForegroundColor Cyan
-    Write-Message -Message "  Get-AllScenarios                          - List all scenarios" -ForegroundColor Cyan
-    Write-Message -Message "  Get-ScenarioNames                         - Get scenario names only" -ForegroundColor Cyan
-    Write-Message -Message "  Set-TestScenario [-ScenarioName]          - Apply scenario to git state" -ForegroundColor Cyan
-    Write-Message -Message "  Test-ScenarioState [-ScenarioName]        - Validate current state" -ForegroundColor Cyan
-    Write-Message -Message "  Show-ScenarioDefinition [-ScenarioName]   - Display scenario details" -ForegroundColor Cyan
-    Write-Message -Message "  Show-AllScenarios                         - Display all scenarios" -ForegroundColor Cyan
-    Write-Message -Message "  Export-TestTagsFile [-Tags]               - Generate test-tags.txt" -ForegroundColor Cyan
-    Write-Message -Message "  Clear-GitState [-DeleteTags]              - Clean git state" -ForegroundColor Cyan
+    Write-Message "Available Functions:" -ForegroundColor Yellow
+    Write-Message "  Get-ScenarioDefinition [-ScenarioName]    - Get specific scenario definition" -ForegroundColor Cyan
+    Write-Message "  Get-AllScenarios                          - List all scenarios" -ForegroundColor Cyan
+    Write-Message "  Get-ScenarioNames                         - Get scenario names only" -ForegroundColor Cyan
+    Write-Message "  Set-TestScenario [-ScenarioName]          - Apply scenario to git state" -ForegroundColor Cyan
+    Write-Message "  Test-ScenarioState [-ScenarioName]        - Validate current state" -ForegroundColor Cyan
+    Write-Message "  Show-ScenarioDefinition [-ScenarioName]   - Display scenario details" -ForegroundColor Cyan
+    Write-Message "  Show-AllScenarios                         - Display all scenarios" -ForegroundColor Cyan
+    Write-Message "  Export-TestTagsFile [-Tags]               - Generate test-tags.txt" -ForegroundColor Cyan
+    Write-Message "  Clear-GitState [-DeleteTags]              - Clean git state" -ForegroundColor Cyan
 
-    Write-Message -Message "Usage Examples:" -ForegroundColor Yellow
-    Write-Message -Message "  # Dot-source to load functions:" -ForegroundColor Gray
-    Write-Message -Message "  . .\scripts\integration\Setup-TestScenario.ps1" -ForegroundColor White
-    Write-Message -Message "  # List available scenarios:" -ForegroundColor Gray
-    Write-Message -Message "  Show-AllScenarios" -ForegroundColor White
-    Write-Message -Message "  # Apply a scenario:" -ForegroundColor Gray
-    Write-Message -Message "  Set-TestScenario -ScenarioName ""FirstRelease""" -ForegroundColor White
-    Write-Message -Message "  # Validate current state:" -ForegroundColor Gray
-    Write-Message -Message "  Test-ScenarioState -ScenarioName ""MajorBumpV0ToV1""" -ForegroundColor White
+    Write-Message "Usage Examples:" -ForegroundColor Yellow
+    Write-Message "  # Dot-source to load functions:" -ForegroundColor Gray
+    Write-Message "  . .\scripts\integration\Setup-TestScenario.ps1" -ForegroundColor White
+    Write-Message "  # List available scenarios:" -ForegroundColor Gray
+    Write-Message "  Show-AllScenarios" -ForegroundColor White
+    Write-Message "  # Apply a scenario:" -ForegroundColor Gray
+    Write-Message "  Set-TestScenario -ScenarioName ""FirstRelease""" -ForegroundColor White
+    Write-Message "  # Validate current state:" -ForegroundColor Gray
+    Write-Message "  Test-ScenarioState -ScenarioName ""MajorBumpV0ToV1""" -ForegroundColor White
 
-    Write-Message -Message "Available Scenarios:" -ForegroundColor Yellow
+    Write-Message "Available Scenarios:" -ForegroundColor Yellow
     foreach ($scenarioName in (Get-ScenarioNames)) {
-        Write-Message -Type "Scenario" -Message "  $scenarioName"
+        Write-Message -Type "Scenario" "  $scenarioName"
     }
 
-    Write-Message -Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Message -Message ""
+    Write-Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Message ""
 }
 
 

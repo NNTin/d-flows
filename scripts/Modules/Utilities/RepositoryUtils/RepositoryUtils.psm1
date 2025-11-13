@@ -27,11 +27,11 @@ function Get-RepositoryRoot {
     )
 
     while ($Path -ne (Split-Path $Path)) {
-        Write-Message -Type "Debug" -Message "Searching for .git in: $Path"
+        Write-Message -Type "Debug" "Searching for .git in: $Path"
 
         $gitPath = Join-Path $Path ".git"
         if (Test-Path $gitPath) {
-            Write-Message -Type "Debug" -Message "Found repository root: $Path"
+            Write-Message -Type "Debug" "Found repository root: $Path"
             return $Path
         }
         

@@ -16,7 +16,7 @@ function Validate-TagExists {
     $existingTag = git tag -l $Tag 2>$null
     $exists = -not [string]::IsNullOrEmpty($existingTag)
     
-    Write-Message -Type "Validation" -Message "Tag '$Tag' exists: $exists"
+    Write-Message -Type "Validation" "Tag '$Tag' exists: $exists"
     
     return @{
         Success = $exists
@@ -41,7 +41,7 @@ function Validate-TagNotExists {
     $existingTag = git tag -l $Tag 2>$null
     $notExists = [string]::IsNullOrEmpty($existingTag)
     
-    Write-Message -Type "Validation" -Message "Tag '$Tag' does not exist: $notExists"
+    Write-Message -Type "Validation" "Tag '$Tag' does not exist: $notExists"
     
     return @{
         Success = $notExists
@@ -75,7 +75,7 @@ function Validate-TagPointsTo {
         
         $matches = ($tagSha -eq $targetSha)
         
-        Write-Message -Type "Validation" -Message "Tag '$Tag' points to '$Target': $matches"
+        Write-Message -Type "Validation" "Tag '$Tag' points to '$Target': $matches"
         
         return @{
             Success = $matches
@@ -110,7 +110,7 @@ function Validate-TagAccessible {
         
         $accessible = (-not [string]::IsNullOrEmpty($existingTag)) -and (-not [string]::IsNullOrEmpty($sha))
         
-        Write-Message -Type "Validation" -Message "Tag '$Tag' accessible: $accessible"
+        Write-Message -Type "Validation" "Tag '$Tag' accessible: $accessible"
         
         return @{
             Success = $accessible
@@ -144,7 +144,7 @@ function Validate-TagCount {
     
     $matches = ($actual -eq $Expected)
     
-    Write-Message -Type "Validation" -Message "Tag count: $actual (expected: $Expected)"
+    Write-Message -Type "Validation" "Tag count: $actual (expected: $Expected)"
     
     return @{
         Success = $matches
@@ -169,7 +169,7 @@ function Validate-BranchExists {
     $existingBranch = git branch -l $Branch 2>$null
     $exists = -not [string]::IsNullOrEmpty($existingBranch)
     
-    Write-Message -Type "Validation" -Message "Branch '$Branch' exists: $exists"
+    Write-Message -Type "Validation" "Branch '$Branch' exists: $exists"
     
     return @{
         Success = $exists
@@ -203,7 +203,7 @@ function Validate-BranchPointsToTag {
         
         $matches = ($branchSha -eq $tagSha)
         
-        Write-Message -Type "Validation" -Message "Branch '$Branch' points to tag '$Tag': $matches"
+        Write-Message -Type "Validation" "Branch '$Branch' points to tag '$Tag': $matches"
         
         return @{
             Success = $matches
@@ -237,7 +237,7 @@ function Validate-BranchCount {
     
     $matches = ($actual -eq $Expected)
     
-    Write-Message -Type "Validation" -Message "Branch count: $actual (expected: $Expected)"
+    Write-Message -Type "Validation" "Branch count: $actual (expected: $Expected)"
     
     return @{
         Success = $matches
@@ -262,7 +262,7 @@ function Validate-CurrentBranch {
     $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
     $matches = ($currentBranch -eq $Branch)
     
-    Write-Message -Type "Validation" -Message "Current branch is '$Branch': $matches"
+    Write-Message -Type "Validation" "Current branch is '$Branch': $matches"
     
     return @{
         Success = $matches
@@ -310,7 +310,7 @@ function Validate-VersionGreater {
             }
         }
         
-        Write-Message -Type "Validation" -Message "Version '$New' > '$Current': $greater"
+        Write-Message -Type "Validation" "Version '$New' > '$Current': $greater"
         
         return @{
             Success = $greater
@@ -375,7 +375,7 @@ function Validate-VersionProgression {
             }
         }
         
-        Write-Message -Type "Validation" -Message "Version progression '$From' -> '$To' ($BumpType): $valid"
+        Write-Message -Type "Validation" "Version progression '$From' -> '$To' ($BumpType): $valid"
         
         return @{
             Success = $valid
@@ -412,7 +412,7 @@ function Validate-MajorIncrement {
     
     $valid = ($To -eq ($From + 1))
     
-    Write-Message -Type "Validation" -Message "Major increment $From -> ${To}: $valid"
+    Write-Message -Type "Validation" "Major increment $From -> ${To}: $valid"
     
     return @{
         Success = $valid
@@ -446,7 +446,7 @@ function Validate-MajorTagCoexistence {
         }
     }
     
-    Write-Message -Type "Validation" -Message "Major tags coexist ($($Tags -join ', ')): $allExist"
+    Write-Message -Type "Validation" "Major tags coexist ($($Tags -join ', ')): $allExist"
     
     return @{
         Success = $allExist
@@ -489,7 +489,7 @@ function Validate-MajorTagProgression {
         }
     }
     
-    Write-Message -Type "Validation" -Message "Major tag progression ($($Tags -join ', ')): $valid"
+    Write-Message -Type "Validation" "Major tag progression ($($Tags -join ', ')): $valid"
     
     return @{
         Success = $valid
@@ -526,7 +526,7 @@ function Validate-NoCrossContamination {
         
         $valid = (-not [string]::IsNullOrEmpty($v1Sha)) -and (-not [string]::IsNullOrEmpty($v2Sha)) -and ($v1Sha -ne $v2Sha)
         
-        Write-Message -Type "Validation" -Message "No cross-contamination between '$V1' and '$V2': $valid"
+        Write-Message -Type "Validation" "No cross-contamination between '$V1' and '$V2': $valid"
         
         return @{
             Success = $valid
@@ -559,7 +559,7 @@ function Validate-NoTagConflicts {
     $uniqueTags = $tags | Select-Object -Unique
     $noDuplicates = ($tags.Count -eq $uniqueTags.Count)
     
-    Write-Message -Type "Validation" -Message "No tag conflicts: $noDuplicates"
+    Write-Message -Type "Validation" "No tag conflicts: $noDuplicates"
     
     return @{
         Success = $noDuplicates
@@ -589,7 +589,7 @@ function Validate-WorkflowSuccess {
     
     $success = $ActResult.Success -and ($ActResult.ExitCode -eq 0)
     
-    Write-Message -Type "Validation" -Message "Workflow '$Workflow' success: $success"
+    Write-Message -Type "Validation" "Workflow '$Workflow' success: $success"
     
     return @{
         Success = $success
@@ -619,7 +619,7 @@ function Validate-WorkflowFailure {
 
     $success = -not $ActResult.Success -and ($ActResult.ExitCode -ne 0)
 
-    Write-Message -Type "Validation" -Message "Workflow '$Workflow' failure: $success"
+    Write-Message -Type "Validation" "Workflow '$Workflow' failure: $success"
 
     return @{
         Success = $success
@@ -639,7 +639,7 @@ function Validate-WorkflowFailure {
     Placeholder for future implementation.
 #>
 function Validate-IdempotencyVerified {
-    Write-Message -Type "Validation" -Message "Idempotency check (placeholder)"
+    Write-Message -Type "Validation" "Idempotency check (placeholder)"
     
     return @{
         Success = $true

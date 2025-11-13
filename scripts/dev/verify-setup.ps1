@@ -48,18 +48,18 @@ Add-ToPSModulePath $projectModules
 Add-ToPSModulePath $testModules
 
 # --- Start d-flows Act Setup Verification ---
-Write-Message -Message "`nd-flows Act Setup Verification"
-Write-Message -Message "================================="
+Write-Message "`nd-flows Act Setup Verification"
+Write-Message "================================="
 
 # Check prerequisites
-Write-Message -Message "`nChecking Prerequisites..."
+Write-Message "`nChecking Prerequisites..."
 
 # Check Docker
 try {
     $dockerVersion = docker --version
-    Write-Message -Type Success -Message "Docker: $dockerVersion"
+    Write-Message -Type Success "Docker: $dockerVersion"
 } catch {
-    Write-Message -Type Error -Message "Docker not found. Please install Docker Desktop."
+    Write-Message -Type Error "Docker not found. Please install Docker Desktop."
     exit 1
 }
 
@@ -69,53 +69,53 @@ try {
     if (Test-Path $actPath) {
         Set-Alias -Name act -Value $actPath -Scope Global
         $actVersion = & $actPath --version
-        Write-Message -Type Success -Message "Act: $actVersion"
+        Write-Message -Type Success "Act: $actVersion"
     } else {
-        Write-Message -Type Error -Message "Act not found. Please install with: winget install nektos.act"
+        Write-Message -Type Error "Act not found. Please install with: winget install nektos.act"
     }
 } catch {
-    Write-Message -Type Error -Message "Act not working properly."
+    Write-Message -Type Error "Act not working properly."
 }
 
 # Check repository
 if (Test-Path ".github/workflows") {
-    Write-Message -Type Success -Message "GitHub workflows directory found"
+    Write-Message -Type Success "GitHub workflows directory found"
 } else {
-    Write-Message -Type Error -Message "Not in a GitHub Actions repository root"
+    Write-Message -Type Error "Not in a GitHub Actions repository root"
     exit 1
 }
 
 # Check configuration
 if (Test-Path ".actrc") {
-    Write-Message -Type Success -Message "Act configuration found"
+    Write-Message -Type Success "Act configuration found"
 } else {
-    Write-Message -Type Warning -Message "Act configuration not found. Using defaults."
+    Write-Message -Type Warning "Act configuration not found. Using defaults."
 }
 
-Write-Message -Message "`nRunning Test Workflow..."
+Write-Message "`nRunning Test Workflow..."
 
 # Test basic workflow
 try {
-    Write-Message -Type Info -Message "Testing step-summary workflow..."
+    Write-Message -Type Info "Testing step-summary workflow..."
     & $actPath workflow_dispatch --job set-summary --input title="Setup Test" --input markdown="Act is working correctly!" --input overwrite=true --quiet
-    Write-Message -Type Success -Message "Basic workflow test passed"
+    Write-Message -Type Success "Basic workflow test passed"
 } catch {
-    Write-Message -Type Error -Message "Workflow test failed"
+    Write-Message -Type Error "Workflow test failed"
 }
 
 # --- Test ---
-Write-Message -Type Test -Message "Total Tests: " -NoNewline
-Write-Message -Type Note -Message "50 passed, 2 failed."
-Write-Message -Type Test -Message "Passed Tests: " -NoNewline
-Write-Message -Message "50" -ForegroundColor Green
-Write-Message -Type Test -Message "Failed Tests: " -NoNewline
-Write-Message -Message "2" -ForegroundColor Red
+Write-Message -Type Test "Total Tests: " -NoNewline
+Write-Message -Type Note "50 passed, 2 failed."
+Write-Message -Type Test "Passed Tests: " -NoNewline
+Write-Message "50" -ForegroundColor Green
+Write-Message -Type Test "Failed Tests: " -NoNewline
+Write-Message "2" -ForegroundColor Red
 
-Write-Message -Type Debug -Message "Calling ValidationSuite for deeper checks..."
-Write-Message -Type Debug -Message "Validating tag existence for v0.1.0 $((Validate-TagExists -Tag 'v0.1.0').Success)"
-Write-Message -Type Debug -Message "Validating tag existence for v1.0.0 $((Validate-TagExists -Tag 'v1.0.0').Success)"
-Write-Message -Type Debug -Message "Validating tag existence for v1.7.0 $((Validate-TagExists -Tag 'v1.7.0').Success)"
-Write-Message -Type Debug -Message "Validating tag existence for v99.99.99 $((Validate-TagExists -Tag 'v99.99.99').Success)"
+Write-Message -Type Debug "Calling ValidationSuite for deeper checks..."
+Write-Message -Type Debug "Validating tag existence for v0.1.0 $((Validate-TagExists -Tag 'v0.1.0').Success)"
+Write-Message -Type Debug "Validating tag existence for v1.0.0 $((Validate-TagExists -Tag 'v1.0.0').Success)"
+Write-Message -Type Debug "Validating tag existence for v1.7.0 $((Validate-TagExists -Tag 'v1.7.0').Success)"
+Write-Message -Type Debug "Validating tag existence for v99.99.99 $((Validate-TagExists -Tag 'v99.99.99').Success)"
 
-Write-Message -Type Success -Message "Setup Verification Complete. Current Modules Loaded:"
+Write-Message -Type Success "Setup Verification Complete. Current Modules Loaded:"
 Get-Module
