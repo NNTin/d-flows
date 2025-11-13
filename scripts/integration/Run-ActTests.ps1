@@ -193,70 +193,15 @@ Add-ToPSModulePath $testModules
 
 # PowerShell will auto-load them when their functions are called!
 # Import-Module -Name (Join-Path $PSScriptRoot "../Modules/Utilities/MessageUtils") -ErrorAction Stop
-# Import-Module -Name (Join-Path $PSScriptRoot "../Modules/Utilities/RepositoryUtils") -ErrorAction Stop
 
-# ============================================================================
-# Global Variables and Configuration
-# ============================================================================
-
-$TestStateDirectory = Get-TestStateBasePath
-$TestLogsDirectory = Join-Path (Get-TestStateBasePath) "logs"
-$IntegrationTestsDirectory = "tests/integration"
-
-# Use built-in $DebugPreference and $VerbosePreference for output control
-# Callers can use -Debug and -Verbose common parameters to control this
+# Import module explicitely because auto-load does not work for variables
+Import-Module TestArtifacts -ErrorAction Stop
 
 $ActCommand = Get-Command "act" | Select-Object -ExpandProperty Source
 
 # ============================================================================
 # Helper Functions
 # ============================================================================
-
-<#
-.SYNOPSIS
-    Create test state directories if they don't exist.
-
-.DESCRIPTION
-    Creates test state and logs directories in system temp location with unique GUID-based naming.
-    Each script execution generates a unique GUID-based subdirectory (d-flows-test-state-<guid>)
-    to ensure test isolation and prevent conflicts between concurrent test runs.
-
-.EXAMPLE
-    $testStateDir = New-TestStateDirectory
-    Write-Message -Type "Info" "Test state directory: $testStateDir"
-
-.NOTES
-    Returns the full path to the test state directory in temp.
-    
-    Directory is automatically cleaned up at script end unless -SkipCleanup is specified.
-    
-    Cross-platform temp path resolution:
-    - Windows: Uses %TEMP% environment variable
-    - Linux: Uses /tmp directory
-    - Resolved via [System.IO.Path]::GetTempPath()
-#>
-function New-TestStateDirectory {
-    $testStatePath = Get-TestStateBasePath
-    $testLogsPath = $TestLogsDirectory
-    
-    if (-not (Test-Path $testStatePath)) {
-        Write-Message -Type "Debug" "Creating temp test state directory: $testStatePath"
-        New-Item -ItemType Directory -Path $testStatePath -Force | Out-Null
-        Write-Message -Type "Debug" "Test state directory created"
-    } else {
-        Write-Message -Type "Debug" "Test state directory already exists: $testStatePath"
-    }
-    
-    if (-not (Test-Path $testLogsPath)) {
-        Write-Message -Type "Debug" "Creating temp test logs directory: $testLogsPath"
-        New-Item -ItemType Directory -Path $testLogsPath -Force | Out-Null
-        Write-Message -Type "Debug" "Test logs directory created"
-    } else {
-        Write-Message -Type "Debug" "Test logs directory already exists: $testLogsPath"
-    }
-
-    return $testStatePath
-}
 
 <#
 .SYNOPSIS
@@ -1251,7 +1196,7 @@ function Invoke-RunWorkflow {
         
         # Export commit bundle to test-commits.bundle (only commits referenced by test tags and branches)
         try {
-            $bundleOutputPath = Export-TestCommitsBundle -Tags $testTags -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory "test-commits.bundle")
+            $bundleOutputPath = Export-TestCommitsBundle -Tags $testTags -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory $TestCommitsBundle)
             Write-Message -Type "Debug" "Test commits bundle updated: $bundleOutputPath"
         } catch {
             Write-Message -Type "Warning" "Failed to update test-commits.bundle: $_"
@@ -1499,7 +1444,7 @@ function Invoke-ExecuteCommand {
         
         # Export commit bundle to test-commits.bundle (only commits referenced by test tags and branches)
         try {
-            $bundleOutputPath = Export-TestCommitsBundle -Tags $testTags -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory "test-commits.bundle")
+            $bundleOutputPath = Export-TestCommitsBundle -Tags $testTags -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory $TestCommitsBundle)
             Write-Message -Type "Debug" "Test commits bundle updated: $bundleOutputPath"
         } catch {
             Write-Message -Type "Warning" "Failed to update test-commits.bundle: $_"
@@ -1986,81 +1931,6 @@ function Write-TestSummary {
     }
     
     Write-Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-}
-
-<#
-.SYNOPSIS
-    Export test results to JSON file.
-
-.DESCRIPTION
-    Saves test report to system temp logs directory.
-
-.PARAMETER TestResults
-    Array of test result objects
-
-.PARAMETER OutputPath
-    Optional output path (defaults to timestamped file)
-
-.EXAMPLE
-    $reportPath = Export-TestReport -TestResults $results
-
-.NOTES
-    Returns path to exported report file.
-#>
-function Export-TestReport {
-    param(
-        [Parameter(Mandatory = $true)]
-        [array]$TestResults,
-        
-        [Parameter(Mandatory = $false)]
-        [string]$OutputPath
-    )
-
-    # Generate output path if not provided
-    if (-not $OutputPath) {
-        $logsDir = $TestLogsDirectory
-        New-TestStateDirectory | Out-Null
-        
-        $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-        $OutputPath = Join-Path $logsDir "test-report-$timestamp.json"
-    }
-    
-    # Calculate statistics
-    $totalTests = $TestResults.Count
-    $passedTests = @($TestResults | Where-Object { $_.Success }).Count
-    $failedTests = $totalTests - $passedTests
-    # Convert Duration to seconds (or milliseconds) before summing
-    $totalDuration = ($TestResults | ForEach-Object {
-        # If Duration is a string, convert to TimeSpan first
-        if ($_ -and $_.Duration -is [string]) {
-            [TimeSpan]::Parse($_.Duration).TotalSeconds
-        } elseif ($_ -and $_.Duration -is [TimeSpan]) {
-            $_.Duration.TotalSeconds
-        } else {
-            0
-        }
-    } | Measure-Object -Sum).Sum
-
-    
-    # Create report object
-    $report = @{
-        timestamp     = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
-        totalTests    = $totalTests
-        passedTests   = $passedTests
-        failedTests   = $failedTests
-        totalDuration = $totalDuration.TotalSeconds
-        tests         = $TestResults
-    }
-    
-    # Export to JSON
-    try {
-        $report | ConvertTo-Json -Depth 10 | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
-        Write-Message -Type "Info" "Test report exported to: $OutputPath"
-        return $OutputPath
-    } catch {
-        Write-Message -Type "Warning" "Failed to export test report: $_"
-        return $null
-    }
 }
 
 # ============================================================================

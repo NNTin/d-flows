@@ -102,14 +102,6 @@
 #>
 
 # ============================================================================
-# Global Variables and Configuration
-# ============================================================================
-
-$TestStateDirectory = Get-TestStateBasePath
-$TestTagsFile = "test-tags.txt"
-$DebugPreference = "Continue"
-
-# ============================================================================
 # Scenario Definition Mapping
 # ============================================================================
 
@@ -131,33 +123,6 @@ $ScenarioDefinitions = @{
         CurrentBranch    = "main"
         Notes            = "Used for testing v0 → v1 promotion (major-bump-main.json, v0-to-v1-release-cycle.json)"
     }
-}
-
-<#
-.SYNOPSIS
-    Create the test state directory if it doesn't exist.
-
-.DESCRIPTION
-    Creates test state directory in system temp location.
-
-.EXAMPLE
-    $testStateDir = New-TestStateDirectory
-
-.NOTES
-    Returns the full path to the test state directory in temp.
-#>
-function New-TestStateDirectory {
-    $fullTestStatePath = Get-TestStateBasePath
-    
-    if (-not (Test-Path $fullTestStatePath)) {
-        Write-Message -Type "Debug" "Creating temp test state directory: $fullTestStatePath"
-        New-Item -ItemType Directory -Path $fullTestStatePath -Force | Out-Null
-        Write-Message -Type "Debug" "Test state directory created"
-    } else {
-        Write-Message -Type "Debug" "Test state directory already exists: $fullTestStatePath"
-    }
-
-    return $fullTestStatePath
 }
 
 <#
@@ -753,99 +718,6 @@ function Set-GitBranch {
     } catch {
         Write-Message -Type "Error" "Failed to checkout branch '$BranchName': $_"
         return $false
-    }
-}
-
-# ============================================================================
-# Test Tags File Generation
-# ============================================================================
-
-<#
-.SYNOPSIS
-    Generate test-tags.txt file for bump-version.yml workflow.
-
-.DESCRIPTION
-    Creates a test-tags.txt file in the format expected by the bump-version.yml
-    workflow. The file contains all test tags in "tag_name commit_sha" format.
-
-.PARAMETER OutputPath
-    Path to write the test-tags.txt file. Defaults to .test-state/test-tags.txt.
-
-.PARAMETER Tags
-    Array of tag names to export. If not provided, exports all tags in repository.
-
-.EXAMPLE
-    Export-TestTagsFile -Tags @("v0.2.1", "v1.0.0")
-
-.EXAMPLE
-    Export-TestTagsFile -OutputPath "custom/path/test-tags.txt" -Tags @("v1.0.0")
-
-.NOTES
-    Output format matches bump-version.yml lines 58-79 expectations:
-    - Plain text file with "tag_name commit_sha" format
-    - One tag per line
-    - Comments starting with # are allowed
-    - File is used by workflow at lines 41-79 for tag restoration
-#>
-function Export-TestTagsFile {
-    param(
-        [string]$OutputPath,
-        [string[]]$Tags
-    )
-
-    try {
-        # Default output path if not provided
-        if (-not $OutputPath) {
-            $testStateDir = New-TestStateDirectory
-            $OutputPath = Join-Path $testStateDir $TestTagsFile
-        }
-
-        Write-Message -Type "Info" "Generating test-tags.txt file"
-        Write-Message -Type "Debug" "Output path: $OutputPath"
-
-        # Only export tags that were explicitly passed
-        if (-not $Tags -or $Tags.Count -eq 0) {
-            Write-Message -Type "Debug" "No tags specified, will write header only"
-            $Tags = @()
-        }
-
-        # Build file content (no header - direct tag entries only)
-        $fileContent = @()
-
-        foreach ($tag in $Tags) {
-            try {
-                $sha = git rev-list -n 1 $tag 2>$null
-                
-                if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($sha)) {
-                    $fileContent += "$tag $sha"
-                    Write-Message -Type "Tag" "Exporting tag: $tag -> $sha"
-                } else {
-                    Write-Message -Type "Warning" "Failed to get SHA for tag: $tag"
-                }
-            } catch {
-                Write-Message -Type "Warning" "Error exporting tag '$tag': $_"
-                continue
-            }
-        }
-
-        # Ensure output directory exists
-        $outputDir = Split-Path $OutputPath -Parent
-        if (-not (Test-Path $outputDir)) {
-            New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-            Write-Message -Type "Debug" "Created output directory: $outputDir"
-        }
-
-        # Write to file
-        $fileContent | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
-        
-        $tagCount = $fileContent.Count
-        Write-Message -Type "Success" "Test-tags.txt generated with $tagCount tags"
-        Write-Message -Type "Debug" "File path: $OutputPath"
-
-        return $OutputPath
-    } catch {
-        Write-Message -Type "Error" "Failed to export test tags file: $_"
-        throw $_
     }
 }
 

@@ -119,3 +119,10 @@ Write-Message -Type Debug "Validating tag existence for v99.99.99 $((Validate-Ta
 
 Write-Message -Type Success "Setup Verification Complete. Current Modules Loaded:"
 Get-Module
+
+Write-Message -Type Info "From RepositoryUtils: $(New-TestStateDirectory)"
+
+Write-Message -Type Info "Test Modules: $testModules"
+Import-Module TestArtifacts -ErrorAction Stop
+Write-Message -Type Info "TestArtifacts Module Imported. Test State Directory: $TestStateDirectory"
+Write-Message -Type Info "Test Tags File: $TestTagsFile"

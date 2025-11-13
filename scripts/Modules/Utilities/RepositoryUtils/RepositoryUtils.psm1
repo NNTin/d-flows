@@ -1,7 +1,7 @@
 # RepositoryUtils.psm1
 
 # Module-scoped variable
-$module:TestStateGuid = [guid]::NewGuid().ToString('N')
+$script:TestStateGuid = [guid]::NewGuid().ToString('N')
 
 function Get-TestStateBasePath {
     <#
@@ -15,7 +15,7 @@ function Get-TestStateBasePath {
     Get-TestStateBasePath
     #>
     $tempPath = [System.IO.Path]::GetTempPath()
-    $testStateDirName = "d-flows-test-state-$($module:TestStateGuid)"
+    $testStateDirName = "d-flows-test-state-$($script:TestStateGuid)"
     return Join-Path $tempPath $testStateDirName
 }
 
@@ -31,7 +31,7 @@ function Get-BackupBasePath {
     Get-BackupBasePath
     #>
     $tempPath = [System.IO.Path]::GetTempPath()
-    $testStateDirName = "d-flows-test-state-$($module:TestStateGuid)"
+    $testStateDirName = "d-flows-test-state-$($script:TestStateGuid)"
     $backupSubDir = Join-Path $testStateDirName "backup"
     return Join-Path $tempPath $backupSubDir
 }
@@ -75,4 +75,52 @@ function Get-RepositoryRoot {
     }
 
     throw "❌ Not in a git repository. Please navigate to the repository root and try again."
+}
+
+
+<#
+.SYNOPSIS
+    Create test state directories if they don't exist.
+
+.DESCRIPTION
+    Creates test state and logs directories in system temp location with unique GUID-based naming.
+    Each script execution generates a unique GUID-based subdirectory (d-flows-test-state-<guid>)
+    to ensure test isolation and prevent conflicts between concurrent test runs.
+
+.EXAMPLE
+    $testStateDir = New-TestStateDirectory
+    Write-Message -Type "Info" "Test state directory: $testStateDir"
+
+.NOTES
+    Returns the full path to the test state directory in temp.
+    
+    Directory is automatically cleaned up at script end unless -SkipCleanup is specified.
+    
+    Cross-platform temp path resolution:
+    - Windows: Uses %TEMP% environment variable
+    - Linux: Uses /tmp directory
+    - Resolved via [System.IO.Path]::GetTempPath()
+#>
+
+function New-TestStateDirectory {
+    $testStatePath = Get-TestStateBasePath
+    $testLogsPath = Join-Path (Get-TestStateBasePath) "logs"
+    
+    if (-not (Test-Path $testStatePath)) {
+        Write-Message -Type "Debug" "Creating temp test state directory: $testStatePath"
+        New-Item -ItemType Directory -Path $testStatePath -Force | Out-Null
+        Write-Message -Type "Debug" "Test state directory created"
+    } else {
+        Write-Message -Type "Debug" "Test state directory already exists: $testStatePath"
+    }
+    
+    if (-not (Test-Path $testLogsPath)) {
+        Write-Message -Type "Debug" "Creating temp test logs directory: $testLogsPath"
+        New-Item -ItemType Directory -Path $testLogsPath -Force | Out-Null
+        Write-Message -Type "Debug" "Test logs directory created"
+    } else {
+        Write-Message -Type "Debug" "Test logs directory already exists: $testLogsPath"
+    }
+
+    return $testStatePath
 }
