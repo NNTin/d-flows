@@ -69,6 +69,12 @@
 #>
 
 # ============================================================================
+# Module Imports
+# ============================================================================
+
+Import-Module -Name (Join-Path $PSScriptRoot "../Modules/Utilities/MessageUtils") -ErrorAction Stop
+
+# ============================================================================
 # Global Variables and Configuration
 # ============================================================================
 
@@ -85,27 +91,6 @@ function Get-BackupBasePath {
 
 $BackupDirectory = Get-BackupBasePath
 $DebugPreference = "Continue"
-
-# Color constants (matching style from verify-act-setup.ps1)
-$Colors = @{
-    Success = [System.ConsoleColor]::Green
-    Warning = [System.ConsoleColor]::Yellow
-    Error   = [System.ConsoleColor]::Red
-    Info    = [System.ConsoleColor]::Cyan
-    Debug   = [System.ConsoleColor]::DarkGray
-}
-
-$Emojis = @{
-    Success = "✅"
-    Warning = "⚠️"
-    Error   = "❌"
-    Info    = "ℹ️"
-    Debug   = "🔍"
-    Tag     = "🏷️"
-    Branch  = "🌿"
-    Backup  = "💾"
-    Restore = "♻️"
-}
 
 # ============================================================================
 # Helper Functions
@@ -204,29 +189,9 @@ function Get-BackupTimestamp {
     The message text to display
 
 .EXAMPLE
-    Write-DebugMessage -Type "INFO" -Message "Starting backup process"
-    Write-DebugMessage -Type "SUCCESS" -Message "Backup completed"
+    Write-Message -Type "Info" -Message "Starting backup process"
+    Write-Message -Type "Success" -Message "Backup completed"
 #>
-function Write-DebugMessage {
-    param(
-        [ValidateSet("INFO", "SUCCESS", "WARNING", "ERROR")]
-        [string]$Type,
-        
-        [string]$Message
-    )
-
-    $emoji = switch ($Type) {
-        "INFO"    { $Emojis.Info }
-        "SUCCESS" { $Emojis.Success }
-        "WARNING" { $Emojis.Warning }
-        "ERROR"   { $Emojis.Error }
-        default   { "ℹ️" }
-    }
-
-    $color = $Colors[$Type.ToLower()]
-    
-    Write-Host "$emoji $Message" -ForegroundColor $color
-}
 
 # ============================================================================
 # Core Backup Functions
@@ -263,7 +228,7 @@ function Backup-GitTags {
         [bool]$IncludeAnnotatedInfo = $false
     )
 
-    Write-DebugMessage -Type "INFO" -Message "Starting git tags backup"
+    Write-Message -Type "Info" -Message "Starting git tags backup"
     
     try {
         Write-Debug "$($Emojis.Debug) Backing up git tags"
@@ -283,7 +248,7 @@ function Backup-GitTags {
 
         if ($tags.Count -eq 0) {
             $tagContent += "# No tags found"
-            Write-DebugMessage -Type "INFO" -Message "No tags found in repository"
+            Write-Message -Type "Info" -Message "No tags found in repository"
         } else {
             foreach ($tag in $tags) {
                 try {
@@ -291,14 +256,14 @@ function Backup-GitTags {
                     $sha = git rev-list -n 1 $tag
                     
                     if ($LASTEXITCODE -ne 0) {
-                        Write-DebugMessage -Type "WARNING" -Message "Failed to get SHA for tag: $tag"
+                        Write-Message -Type "Warning" -Message "Failed to get SHA for tag: $tag"
                         continue
                     }
 
                     $tagContent += "$tag $sha"
                     Write-Debug "$($Emojis.Tag) Backing up tag: $tag -> $sha"
                 } catch {
-                    Write-DebugMessage -Type "WARNING" -Message "Error processing tag '$tag': $_"
+                    Write-Message -Type "Warning" -Message "Error processing tag '$tag': $_"
                     continue
                 }
             }
@@ -306,11 +271,11 @@ function Backup-GitTags {
 
         # Write to backup file
         $tagContent | Out-File -FilePath $BackupPath -Encoding UTF8 -Force
-        Write-DebugMessage -Type "INFO" -Message "Backed up $($tags.Count) tags to $BackupPath"
+        Write-Message -Type "Info" -Message "Backed up $($tags.Count) tags to $BackupPath"
 
         return $BackupPath
     } catch {
-        Write-DebugMessage -Type "ERROR" -Message "Failed to backup git tags: $_"
+        Write-Message -Type "Error" -Message "Failed to backup git tags: $_"
         throw $_
     }
 }
@@ -346,7 +311,7 @@ function Backup-GitBranches {
         [bool]$IncludeRemote = $true
     )
 
-    Write-DebugMessage -Type "INFO" -Message "Starting git branches backup"
+    Write-Message -Type "Info" -Message "Starting git branches backup"
     
     try {
         Write-Debug "$($Emojis.Debug) Backing up git branches"
@@ -396,7 +361,7 @@ function Backup-GitBranches {
                 $sha = git rev-parse $branchName 2>$null
                 
                 if ($LASTEXITCODE -ne 0) {
-                    Write-DebugMessage -Type "WARNING" -Message "Failed to get SHA for branch: $branchName"
+                    Write-Message -Type "Warning" -Message "Failed to get SHA for branch: $branchName"
                     continue
                 }
 
@@ -408,7 +373,7 @@ function Backup-GitBranches {
 
                 Write-Debug "$($Emojis.Branch) Backing up branch: $branchName -> $sha"
             } catch {
-                Write-DebugMessage -Type "WARNING" -Message "Error processing branch '$branchName': $_"
+                Write-Message -Type "Warning" -Message "Error processing branch '$branchName': $_"
                 continue
             }
         }
@@ -421,11 +386,11 @@ function Backup-GitBranches {
 
         # Write to backup file
         $backupData | Out-File -FilePath $BackupPath -Encoding UTF8 -Force
-        Write-DebugMessage -Type "INFO" -Message "Backed up $($branches.Count) branches to $BackupPath"
+        Write-Message -Type "Info" -Message "Backed up $($branches.Count) branches to $BackupPath"
 
         return $BackupPath
     } catch {
-        Write-DebugMessage -Type "ERROR" -Message "Failed to backup git branches: $_"
+        Write-Message -Type "Error" -Message "Failed to backup git branches: $_"
         throw $_
     }
 }
@@ -475,7 +440,7 @@ function Backup-GitCommits {
         
         # Handle empty repository (no refs to bundle)
         if ($allRefs.Count -eq 0) {
-            Write-DebugMessage -Type "WARNING" -Message "No refs found to bundle (empty repository or no tags/branches)"
+            Write-Message -Type "Warning" -Message "No refs found to bundle (empty repository or no tags/branches)"
             # Create an empty file to maintain backup structure
             "" | Out-File -FilePath $BackupPath -Encoding UTF8 -Force
             return $BackupPath
@@ -492,10 +457,10 @@ function Backup-GitCommits {
             throw "Git bundle create failed with exit code: $LASTEXITCODE"
         }
 
-        Write-DebugMessage -Type "INFO" -Message "Backed up $($allRefs.Count) refs to bundle: $BackupPath"
+        Write-Message -Type "Info" -Message "Backed up $($allRefs.Count) refs to bundle: $BackupPath"
         return $BackupPath
     } catch {
-        Write-DebugMessage -Type "ERROR" -Message "Failed to backup git commits: $_"
+        Write-Message -Type "Error" -Message "Failed to backup git commits: $_"
         throw $_
     }
 }
@@ -534,14 +499,14 @@ function Restore-GitCommits {
     try {
         # Validate bundle file exists
         if (-not (Test-Path $BackupPath)) {
-            Write-DebugMessage -Type "WARNING" -Message "Bundle file not found: $BackupPath (skipping for backward compatibility)"
+            Write-Message -Type "Warning" -Message "Bundle file not found: $BackupPath (skipping for backward compatibility)"
             return 0
         }
 
         # Check if file is empty (created for empty repositories)
         $fileInfo = Get-Item $BackupPath
         if ($fileInfo.Length -eq 0) {
-            Write-DebugMessage -Type "INFO" -Message "Bundle file is empty (no commits to restore)"
+            Write-Message -Type "Info" -Message "Bundle file is empty (no commits to restore)"
             return 0
         }
 
@@ -549,7 +514,7 @@ function Restore-GitCommits {
         Write-Debug "$($Emojis.Debug) Verifying bundle integrity"
         $verifyResult = git bundle verify $BackupPath 2>&1
         if ($LASTEXITCODE -ne 0) {
-            Write-DebugMessage -Type "WARNING" -Message "Bundle verification failed, attempting unbundle anyway: $verifyResult"
+            Write-Message -Type "Warning" -Message "Bundle verification failed, attempting unbundle anyway: $verifyResult"
         }
 
         # Unbundle commits to restore commit objects
@@ -563,10 +528,10 @@ function Restore-GitCommits {
         # Count refs from unbundle output
         $refCount = ($unbundleOutput | Where-Object { $_ -match '^\s*[a-f0-9]{40}\s' }).Count
         
-        Write-DebugMessage -Type "SUCCESS" -Message "Restored commits from bundle: $refCount refs unbundled"
+        Write-Message -Type "Success" -Message "Restored commits from bundle: $refCount refs unbundled"
         return $refCount
     } catch {
-        Write-DebugMessage -Type "ERROR" -Message "Failed to restore git commits: $_"
+        Write-Message -Type "Error" -Message "Failed to restore git commits: $_"
         throw $_
     }
 }
@@ -607,7 +572,7 @@ function Restore-GitTags {
         [bool]$DeleteExisting = $false
     )
 
-    Write-DebugMessage -Type "INFO" -Message "Starting git tags restore from $BackupPath"
+    Write-Message -Type "Info" -Message "Starting git tags restore from $BackupPath"
     
     try {
         # Validate backup file exists
@@ -641,7 +606,7 @@ function Restore-GitTags {
             # Parse "tag_name commit_sha" format
             $parts = $line -split '\s+', 2
             if ($parts.Count -ne 2) {
-                Write-DebugMessage -Type "WARNING" -Message "Invalid tag line format: $line"
+                Write-Message -Type "Warning" -Message "Invalid tag line format: $line"
                 continue
             }
 
@@ -652,7 +617,7 @@ function Restore-GitTags {
                 # Check if tag already exists
                 $existingTag = git tag -l $tagName
                 if ($existingTag -and -not $Force) {
-                    Write-DebugMessage -Type "WARNING" -Message "Tag already exists and Force not set: $tagName"
+                    Write-Message -Type "Warning" -Message "Tag already exists and Force not set: $tagName"
                     continue
                 }
 
@@ -668,18 +633,18 @@ function Restore-GitTags {
                     Write-Debug "$($Emojis.Tag) Restored tag: $tagName -> $sha"
                     $restoredCount++
                 } else {
-                    Write-DebugMessage -Type "WARNING" -Message "Failed to create tag: $tagName"
+                    Write-Message -Type "Warning" -Message "Failed to create tag: $tagName"
                 }
             } catch {
-                Write-DebugMessage -Type "WARNING" -Message "Error restoring tag '$tagName': $_"
+                Write-Message -Type "Warning" -Message "Error restoring tag '$tagName': $_"
                 continue
             }
         }
 
-        Write-DebugMessage -Type "SUCCESS" -Message "Restored $restoredCount tags from $BackupPath"
+        Write-Message -Type "Success" -Message "Restored $restoredCount tags from $BackupPath"
         return $restoredCount
     } catch {
-        Write-DebugMessage -Type "ERROR" -Message "Failed to restore git tags: $_"
+        Write-Message -Type "Error" -Message "Failed to restore git tags: $_"
         throw $_
     }
 }
@@ -720,7 +685,7 @@ function Restore-GitBranches {
         [bool]$Force = $false
     )
 
-    Write-DebugMessage -Type "INFO" -Message "Starting git branches restore from $BackupPath"
+    Write-Message -Type "Info" -Message "Starting git branches restore from $BackupPath"
     
     try {
         # Validate backup file exists
@@ -753,10 +718,10 @@ function Restore-GitBranches {
                     Write-Debug "$($Emojis.Debug) Created and checked out temporary branch: $tempBranchName"
                     $tempBranchCreated = $true
                 } else {
-                    Write-DebugMessage -Type "WARNING" -Message "Failed to create temporary branch, continuing without switching"
+                    Write-Message -Type "Warning" -Message "Failed to create temporary branch, continuing without switching"
                 }
             } catch {
-                Write-DebugMessage -Type "WARNING" -Message "Error creating temporary branch: $_"
+                Write-Message -Type "Warning" -Message "Error creating temporary branch: $_"
             }
         }
 
@@ -776,7 +741,7 @@ function Restore-GitBranches {
                 # Check if branch already exists
                 $existingBranch = git branch -l $branchName
                 if ($existingBranch -and -not $Force) {
-                    Write-DebugMessage -Type "WARNING" -Message "Branch already exists and Force not set: $branchName"
+                    Write-Message -Type "Warning" -Message "Branch already exists and Force not set: $branchName"
                     continue
                 }
 
@@ -794,10 +759,10 @@ function Restore-GitBranches {
                     Write-Debug "$($Emojis.Branch) Restored branch: $branchName -> $sha"
                     $restoredCount++
                 } else {
-                    Write-DebugMessage -Type "WARNING" -Message "Failed to create branch: $branchName"
+                    Write-Message -Type "Warning" -Message "Failed to create branch: $branchName"
                 }
             } catch {
-                Write-DebugMessage -Type "WARNING" -Message "Error restoring branch '$($branch.name)': $_"
+                Write-Message -Type "Warning" -Message "Error restoring branch '$($branch.name)': $_"
                 continue
             }
         }
@@ -814,10 +779,10 @@ function Restore-GitBranches {
                 if ($LASTEXITCODE -eq 0) {
                     Write-Debug "$($Emojis.Debug) Deleted temporary branch: $tempBranchName"
                 } else {
-                    Write-DebugMessage -Type "WARNING" -Message "Failed to delete temporary branch: $tempBranchName"
+                    Write-Message -Type "Warning" -Message "Failed to delete temporary branch: $tempBranchName"
                 }
             } catch {
-                Write-DebugMessage -Type "WARNING" -Message "Error deleting temporary branch: $_"
+                Write-Message -Type "Warning" -Message "Error deleting temporary branch: $_"
             }
         }
 
@@ -828,17 +793,17 @@ function Restore-GitBranches {
                 if ($LASTEXITCODE -eq 0) {
                     Write-Debug "$($Emojis.Branch) Checked out original branch: $currentBranch"
                 } else {
-                    Write-DebugMessage -Type "WARNING" -Message "Failed to checkout original branch '$currentBranch'. Check for uncommitted changes."
+                    Write-Message -Type "Warning" -Message "Failed to checkout original branch '$currentBranch'. Check for uncommitted changes."
                 }
             } catch {
-                Write-DebugMessage -Type "WARNING" -Message "Error checking out branch '$currentBranch': $_"
+                Write-Message -Type "Warning" -Message "Error checking out branch '$currentBranch': $_"
             }
         }
 
-        Write-DebugMessage -Type "SUCCESS" -Message "Restored $restoredCount branches from $BackupPath"
+        Write-Message -Type "Success" -Message "Restored $restoredCount branches from $BackupPath"
         return $restoredCount
     } catch {
-        Write-DebugMessage -Type "ERROR" -Message "Failed to restore git branches: $_"
+        Write-Message -Type "Error" -Message "Failed to restore git branches: $_"
         throw $_
     }
 }
@@ -882,7 +847,7 @@ function Backup-GitState {
         [bool]$IncludeRemoteBranches = $true
     )
 
-    Write-DebugMessage -Type "INFO" -Message "Starting complete git state backup"
+    Write-Message -Type "Info" -Message "Starting complete git state backup"
     
     try {
         $backupDir = New-BackupDirectory
@@ -933,7 +898,7 @@ function Backup-GitState {
         $manifest | Out-File -FilePath $manifestPath -Encoding UTF8 -Force
         Write-Debug "$($Emojis.Debug) Manifest created: $manifestPath"
 
-        Write-DebugMessage -Type "SUCCESS" -Message "Git state backed up successfully to $backupDir"
+        Write-Message -Type "Success" -Message "Git state backed up successfully to $backupDir"
 
         return @{
             BackupName      = $BackupName
@@ -944,7 +909,7 @@ function Backup-GitState {
             ManifestFile    = $manifestPath
         }
     } catch {
-        Write-DebugMessage -Type "ERROR" -Message "Failed to backup git state: $_"
+        Write-Message -Type "Error" -Message "Failed to backup git state: $_"
         throw $_
     }
 }
@@ -988,7 +953,7 @@ function Restore-GitState {
         [bool]$DeleteExistingTags = $false
     )
 
-    Write-DebugMessage -Type "INFO" -Message "Starting complete git state restore"
+    Write-Message -Type "Info" -Message "Starting complete git state restore"
     
     try {
         $backupDir = New-BackupDirectory
@@ -1058,7 +1023,7 @@ function Restore-GitState {
         # Restore branches
         $branchesRestored = Restore-GitBranches -BackupPath $branchesPath -RestoreCurrentBranch $true -Force $Force
 
-        Write-DebugMessage -Type "SUCCESS" -Message "Git state restored successfully from $BackupName"
+        Write-Message -Type "Success" -Message "Git state restored successfully from $BackupName"
 
         return @{
             BackupName        = $BackupName
@@ -1068,7 +1033,7 @@ function Restore-GitState {
             RestoreTimestamp  = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
         }
     } catch {
-        Write-DebugMessage -Type "ERROR" -Message "Failed to restore git state: $_"
+        Write-Message -Type "Error" -Message "Failed to restore git state: $_"
         throw $_
     }
 }
@@ -1090,7 +1055,7 @@ function Restore-GitState {
     Returns array of backup metadata objects
 #>
 function Get-AvailableBackups {
-    Write-DebugMessage -Type "INFO" -Message "Listing available backups"
+    Write-Message -Type "Info" -Message "Listing available backups"
     
     try {
         $backupDir = New-BackupDirectory
@@ -1119,20 +1084,20 @@ function Get-AvailableBackups {
                 
                 $backups += $backupInfo
             } catch {
-                Write-DebugMessage -Type "WARNING" -Message "Error reading manifest: $($manifestFile.Name)"
+                Write-Message -Type "Warning" -Message "Error reading manifest: $($manifestFile.Name)"
                 continue
             }
         }
 
         if ($backups.Count -gt 0) {
-            Write-DebugMessage -Type "SUCCESS" -Message "Found $($backups.Count) available backups"
+            Write-Message -Type "Success" -Message "Found $($backups.Count) available backups"
         } else {
-            Write-DebugMessage -Type "INFO" -Message "No backups found"
+            Write-Message -Type "Info" -Message "No backups found"
         }
 
         return $backups
     } catch {
-        Write-DebugMessage -Type "ERROR" -Message "Failed to list available backups: $_"
+        Write-Message -Type "Error" -Message "Failed to list available backups: $_"
         throw $_
     }
 }
@@ -1176,3 +1141,4 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-Host "==============================================================================" -ForegroundColor Cyan
     Write-Host ""
 }
+
