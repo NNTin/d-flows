@@ -1070,29 +1070,29 @@ function Get-AvailableBackups {
 # Check if script is being dot-sourced or executed directly
 if ($MyInvocation.InvocationName -ne ".") {
     # Script is being executed directly
-    Write-Message -Type "Info" -Message "==============================================================================" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "  Git State Backup/Restore Script" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "==============================================================================" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "This script provides functions for backing up and restoring git repository state." -ForegroundColor Gray
-    Write-Message -Type "Info" -Message "Available Functions:" -ForegroundColor Yellow
-    Write-Message -Type "Info" -Message "  Backup-GitState                   - Backup all tags and branches" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "  Restore-GitState [-BackupName]    - Restore tags and branches from backup" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "  Get-AvailableBackups              - List all available backups" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "  Backup-GitTags                    - Backup tags only" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "  Backup-GitBranches                - Backup branches only" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "  Restore-GitTags [-BackupPath]     - Restore tags only" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "  Restore-GitBranches [-BackupPath] - Restore branches only" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "Usage Examples:" -ForegroundColor Yellow
-    Write-Message -Type "Info" -Message "  # Dot-source to load functions:" -ForegroundColor Gray
-    Write-Message -Type "Info" -Message "  . .\scripts\integration\Backup-GitState.ps1" -ForegroundColor White
-    Write-Message -Type "Info" -Message "  # Backup current state:" -ForegroundColor Gray
-    Write-Message -Type "Info" -Message "  \$backup = Backup-GitState" -ForegroundColor White
-    Write-Message -Type "Info" -Message "  # List available backups:" -ForegroundColor Gray
-    Write-Message -Type "Info" -Message "  Get-AvailableBackups" -ForegroundColor White
-    Write-Message -Type "Info" -Message "  # Restore from backup:" -ForegroundColor Gray
-    Write-Message -Type "Info" -Message "  Restore-GitState -BackupName \$backup.BackupName" -ForegroundColor White
-    Write-Message -Type "Info" -Message "==============================================================================" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message ""
+    Write-Message -Message "==============================================================================" -ForegroundColor Cyan
+    Write-Message -Message "  Git State Backup/Restore Script" -ForegroundColor Cyan
+    Write-Message -Message "==============================================================================" -ForegroundColor Cyan
+    Write-Message -Message "This script provides functions for backing up and restoring git repository state." -ForegroundColor Gray
+    Write-Message -Message "Available Functions:" -ForegroundColor Yellow
+    Write-Message -Message "  Backup-GitState                   - Backup all tags and branches" -ForegroundColor Cyan
+    Write-Message -Message "  Restore-GitState [-BackupName]    - Restore tags and branches from backup" -ForegroundColor Cyan
+    Write-Message -Message "  Get-AvailableBackups              - List all available backups" -ForegroundColor Cyan
+    Write-Message -Message "  Backup-GitTags                    - Backup tags only" -ForegroundColor Cyan
+    Write-Message -Message "  Backup-GitBranches                - Backup branches only" -ForegroundColor Cyan
+    Write-Message -Message "  Restore-GitTags [-BackupPath]     - Restore tags only" -ForegroundColor Cyan
+    Write-Message -Message "  Restore-GitBranches [-BackupPath] - Restore branches only" -ForegroundColor Cyan
+    Write-Message -Message "Usage Examples:" -ForegroundColor Yellow
+    Write-Message -Message "  # Dot-source to load functions:" -ForegroundColor Gray
+    Write-Message -Message "  . .\scripts\integration\Backup-GitState.ps1" -ForegroundColor White
+    Write-Message -Message "  # Backup current state:" -ForegroundColor Gray
+    Write-Message -Message "  \$backup = Backup-GitState" -ForegroundColor White
+    Write-Message -Message "  # List available backups:" -ForegroundColor Gray
+    Write-Message -Message "  Get-AvailableBackups" -ForegroundColor White
+    Write-Message -Message "  # Restore from backup:" -ForegroundColor Gray
+    Write-Message -Message "  Restore-GitState -BackupName \$backup.BackupName" -ForegroundColor White
+    Write-Message -Message "==============================================================================" -ForegroundColor Cyan
+    Write-Message -Message ""
 }
 
 

@@ -461,14 +461,14 @@ function Write-TestHeader {
         [string]$TestDescription
     )
 
-    Write-Message -Type "Test" -Message ""
-    Write-Message -Type "Test" -Message "═══════════════════════════════════════════════════════════════════════"
+    Write-Message -Message ""
+    Write-Message -Message "═══════════════════════════════════════════════════════════════════════"
     Write-Message -Type "Test" -Message "$TestName"
     if ($TestDescription) {
         Write-Message -Type "Info" -Message "   $TestDescription"
     }
-    Write-Message -Type "Test" -Message "═══════════════════════════════════════════════════════════════════════"
-    Write-Message -Type "Test" -Message ""
+    Write-Message -Message "═══════════════════════════════════════════════════════════════════════"
+    Write-Message -Message ""
     
     Write-Message -Type "Debug" -Message "Starting test: $TestName"
 }
@@ -515,14 +515,14 @@ function Write-TestResult {
     
     $durationText = "{0:N2}s" -f $Duration.TotalSeconds
     
-    Write-Message -Type $type -Message ""
-    Write-Message -Type $type -Message "Test ${status}: $TestName ($durationText)"
+    Write-Message -Message ""
+    Write-Message -Message "Test ${status}: $TestName ($durationText)"
     
     if ($Message) {
         Write-Message -Type "Info" -Message "   $Message"
     }
     
-    Write-Message -Type $type -Message ""
+    Write-Message -Message ""
 }
 
 # ============================================================================
@@ -2622,26 +2622,26 @@ function Write-TestSummary {
     $avgDuration = if ($totalTests -gt 0) { $totalDuration.TotalSeconds / $totalTests } else { 0 }
     
     # Display header
-    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "  Test Execution Summary" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Message -Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Message -Message "  Test Execution Summary" -ForegroundColor Cyan
+    Write-Message -Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
 
     # Display statistics
-    Write-Message -Type "Info" -Message "Total Tests:     $totalTests" -ForegroundColor Gray
-    Write-Message -Type "Info" -Message "Passed Tests:    " -NoNewline -ForegroundColor Gray
-    Write-Message -Type "Info" -Message "$passedTests" -ForegroundColor Green
-    Write-Message -Type "Info" -Message "Failed Tests:    " -NoNewline -ForegroundColor Gray
+    Write-Message -Message "Total Tests:     $totalTests" -ForegroundColor Gray
+    Write-Message -Message "Passed Tests:    " -NoNewline -ForegroundColor Gray
+    Write-Message -Message "$passedTests" -ForegroundColor Green
+    Write-Message -Message "Failed Tests:    " -NoNewline -ForegroundColor Gray
     if ($failedTests -gt 0) {
-        Write-Message -Type "Info" -Message "$failedTests" -ForegroundColor Red
+        Write-Message -Message "$failedTests" -ForegroundColor Red
     } else {
-        Write-Message -Type "Info" -Message "$failedTests" -ForegroundColor Green
+        Write-Message -Message "$failedTests" -ForegroundColor Green
     }
-    Write-Message -Type "Info" -Message "Total Duration:  $("{0:N2}s" -f $totalDuration.TotalSeconds)" -ForegroundColor Gray
-    Write-Message -Type "Info" -Message "Average Duration: $("{0:N2}s" -f $avgDuration)" -ForegroundColor Gray
+    Write-Message -Message "Total Duration:  $("{0:N2}s" -f $totalDuration.TotalSeconds)" -ForegroundColor Gray
+    Write-Message -Message "Average Duration: $("{0:N2}s" -f $avgDuration)" -ForegroundColor Gray
 
     # List failed tests
     if ($failedTests -gt 0) {
-        Write-Message -Type "Info" -Message "Failed Tests:" -ForegroundColor Red
+        Write-Message -Message "Failed Tests:" -ForegroundColor Red
         foreach ($result in $TestResults) {
             if (-not $result.Success) {
                 Write-Message -Type "Error" -Message "  $($result.TestName)"
@@ -2657,7 +2657,7 @@ function Write-TestSummary {
         Write-Message -Type "Error" -Message "SOME TESTS FAILED"
     }
     
-    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Message -Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
 }
 
 <#
@@ -2742,9 +2742,9 @@ function Export-TestReport {
 # Check if script is being dot-sourced or executed directly
 if ($MyInvocation.InvocationName -ne ".") {
     # Script is being executed directly
-    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "  Act Integration Test Runner" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Message -Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Message -Message "  Act Integration Test Runner" -ForegroundColor Cyan
+    Write-Message -Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
     Write-Message -Type "Info" -Message "Purpose: Orchestrate integration tests for d-flows workflows using act" -ForegroundColor Gray
 
     # Validate prerequisites

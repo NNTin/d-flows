@@ -68,11 +68,12 @@ Write-Message -Message "Debugging phase initiated"
 Write-Message -Type Debug -Message "Verbose log output." -ForegroundColor Yellow
 
 # --- Test ---
-Write-Message -Type Test -Message "Running unit tests."
-Write-Message -Type Test -Message "Running unit tests." -ForegroundColor Orange
-Write-Message -Type Test -Message ""  # Empty message, just the emoji
-Write-Message -Message "Testing phase: No type"
-Write-Message -Type Test -Message "Test case passed!" -ForegroundColor Cyan
+Write-Message -Type Test -Message "Total Tests: " -NoNewline
+Write-Message -Type Note -Message "50 passed, 2 failed."
+Write-Message -Type Test -Message "Passed Tests: " -NoNewline
+Write-Message -Message "50" -ForegroundColor Green
+Write-Message -Type Test -Message "Failed Tests: " -NoNewline
+Write-Message -Message "2" -ForegroundColor Red
 
 # --- Scenario ---
 Write-Message -Type Scenario -Message "Test scenario executed."

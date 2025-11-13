@@ -52,13 +52,17 @@ function Write-Message {
     .PARAMETER ForegroundColor
         Optional color to override the default color from the Colors module
 
+    .PARAMETER NoNewline
+        If specified, the message will not end with a newline.
+
     .EXAMPLE
         Write-Message -Type "INFO" -Message "Starting scenario application" -ForegroundColor Cyan
     #>
     param(
-        [string]$Type = "Unknown",
+        [string]$Type = "None",
         [string]$Message,
-        [string]$ForegroundColor
+        [string]$ForegroundColor,
+        [switch]$NoNewline
     )
 
     # Lazy-load module variables
@@ -72,5 +76,19 @@ function Write-Message {
     $emoji = Get-Emoji $Type
     $color = if ($ForegroundColor) { Convert-ColorNameToConsoleColor $ForegroundColor } else { Get-Color $Type }
 
-    Write-Host "$emoji $Message" -ForegroundColor $color
+    if ($Type -eq "None") {
+        if ($NoNewline) {
+            Write-Host "$Message" -ForegroundColor $color -NoNewline
+        } else {
+            Write-Host "$Message" -ForegroundColor $color
+        }
+    }
+    else {
+        $emoji = Get-Emoji $Type
+        if ($NoNewline) {
+            Write-Host "$emoji $Message" -ForegroundColor $color -NoNewline
+        } else {
+            Write-Host "$emoji $Message" -ForegroundColor $color
+        }
+    }
 }

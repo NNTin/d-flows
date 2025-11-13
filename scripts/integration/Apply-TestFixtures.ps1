@@ -1426,19 +1426,19 @@ if ($MyInvocation.InvocationName -ne ".") {
         Write-Message -Type "Info" -Message "      $($scenario.Description)" -ForegroundColor Gray
     }
 
-    Write-Message -Type "Info" -Message "Usage Examples:" -ForegroundColor Yellow
-    Write-Message -Type "Info" -Message "  # Dot-source to load functions:" -ForegroundColor Gray
-    Write-Message -Type "Info" -Message "  . .\scripts\integration\Apply-TestFixtures.ps1" -ForegroundColor White
-    Write-Message -Type "Info" -Message "  # Apply fixture by file path:" -ForegroundColor Gray
-    Write-Message -Type "Info" -Message "  Apply-TestFixtures -FixturePath 'tests/bump-version/major-bump-main.json'" -ForegroundColor White
-    Write-Message -Type "Info" -Message "  # Apply scenario directly:" -ForegroundColor Gray
-    Write-Message -Type "Info" -Message "  Apply-TestFixtures -Scenario 'MajorBumpV0ToV1'" -ForegroundColor White
-    Write-Message -Type "Info" -Message "  # List available scenarios:" -ForegroundColor Gray
-    Write-Message -Type "Info" -Message "  Get-FixtureScenarios" -ForegroundColor White
-    Write-Message -Type "Info" -Message "  # Validate current state:" -ForegroundColor Gray
-    Write-Message -Type "Info" -Message "  Test-ScenarioState -ScenarioName 'MajorBumpV0ToV1'" -ForegroundColor White
-    Write-Message -Type "Info" -Message "==============================================================================" -ForegroundColor Cyan
-    Write-Message -Type "Info" -Message ""
+    Write-Message -Message "Usage Examples:" -ForegroundColor Yellow
+    Write-Message -Message "  # Dot-source to load functions:" -ForegroundColor Gray
+    Write-Message -Message "  . .\scripts\integration\Apply-TestFixtures.ps1" -ForegroundColor White
+    Write-Message -Message "  # Apply fixture by file path:" -ForegroundColor Gray
+    Write-Message -Message "  Apply-TestFixtures -FixturePath 'tests/bump-version/major-bump-main.json'" -ForegroundColor White
+    Write-Message -Message "  # Apply scenario directly:" -ForegroundColor Gray
+    Write-Message -Message "  Apply-TestFixtures -Scenario 'MajorBumpV0ToV1'" -ForegroundColor White
+    Write-Message -Message "  # List available scenarios:" -ForegroundColor Gray
+    Write-Message -Message "  Get-FixtureScenarios" -ForegroundColor White
+    Write-Message -Message "  # Validate current state:" -ForegroundColor Gray
+    Write-Message -Message "  Test-ScenarioState -ScenarioName 'MajorBumpV0ToV1'" -ForegroundColor White
+    Write-Message -Message "==============================================================================" -ForegroundColor Cyan
+    Write-Message -Message ""
 }
 
 
