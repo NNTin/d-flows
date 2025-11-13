@@ -95,7 +95,7 @@
     - Each script execution gets unique GUID-based subdirectory for isolation
     - Directory is mounted to /tmp/test-state in Docker containers
 
-    Compatibility with Backup-GitState.ps1:
+    Compatibility with GitSnapshot Module:
     - Can backup git state before applying fixtures: Backup-GitState
     - Can restore after testing: Restore-GitState -BackupName <name>
     - Recommended workflow: Backup → Apply Fixture → Run Tests → Restore

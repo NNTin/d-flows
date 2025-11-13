@@ -28,7 +28,7 @@
 
     This script is designed to be:
     - Dot-sourceable for use by other integration testing scripts
-    - Compatible with Apply-TestFixtures.ps1 and Backup-GitState.ps1
+    - Compatible with Apply-TestFixtures.ps1 and GitSnapshot module
     - Integrated with bump-version.yml workflow (line 58)
     - Exporting test-tags.txt file to system temp directory for bump-version.yml workflow access
 
@@ -88,7 +88,7 @@
 
     Compatibility:
     - Works with Apply-TestFixtures.ps1 for fixture application
-    - Works with Backup-GitState.ps1 for state backup/restore
+    - Works with GitSnapshot module for state backup/restore
     - Can be dot-sourced by Run-ActTests.ps1 and other test runners
 
     Edge Cases Handled:
