@@ -517,20 +517,19 @@ function Write-TestResult {
         [string]$Message
     )
 
-    $emoji = if ($Success) { $Emojis.Success } else { $Emojis.Error }
-    $color = if ($Success) { $Colors.Success } else { $Colors.Error }
+    $type = if ($Success) { "Success" } else { "Error" }
     $status = if ($Success) { "PASSED" } else { "FAILED" }
     
     $durationText = "{0:N2}s" -f $Duration.TotalSeconds
     
-    Write-Host ""
-    Write-Host "$emoji Test ${status}: $TestName ($durationText)" -ForegroundColor $color
+    Write-Message -Type $type -Message ""
+    Write-Message -Type $type -Message "Test ${status}: $TestName ($durationText)"
     
     if ($Message) {
-        Write-Host "   $Message" -ForegroundColor Gray
+        Write-Message -Type "Info" -Message "   $Message"
     }
     
-    Write-Host ""
+    Write-Message -Type $type -Message ""
 }
 
 # ============================================================================
@@ -799,7 +798,7 @@ function Invoke-ActWorkflow {
         [bool]$CaptureOutput = $true
     )
 
-    Write-Debug "$($Emojis.Workflow) Preparing to run workflow: $WorkflowFile"
+    Write-Message -Type "Workflow" -Message "Preparing to run workflow: $WorkflowFile"
     
     # Build act command
     $actArgs = @(
@@ -969,7 +968,7 @@ function Invoke-ValidationCheck {
     )
 
     $checkType = $Check.type
-    Write-Debug "$($Emojis.Validation) Executing validation: $checkType"
+    Write-Message -Type "Validation" -Message "Executing validation: $checkType"
     
     try {
         switch ($checkType) {
@@ -1085,7 +1084,7 @@ function Validate-TagExists {
     $existingTag = git tag -l $Tag 2>$null
     $exists = -not [string]::IsNullOrEmpty($existingTag)
     
-    Write-Debug "$($Emojis.Validation) Tag '$Tag' exists: $exists"
+    Write-Message -Type "Validation" -Message "Tag '$Tag' exists: $exists"
     
     return @{
         Success = $exists
@@ -1110,7 +1109,7 @@ function Validate-TagNotExists {
     $existingTag = git tag -l $Tag 2>$null
     $notExists = [string]::IsNullOrEmpty($existingTag)
     
-    Write-Debug "$($Emojis.Validation) Tag '$Tag' does not exist: $notExists"
+    Write-Message -Type "Validation" -Message "Tag '$Tag' does not exist: $notExists"
     
     return @{
         Success = $notExists
@@ -1144,7 +1143,7 @@ function Validate-TagPointsTo {
         
         $matches = ($tagSha -eq $targetSha)
         
-        Write-Debug "$($Emojis.Validation) Tag '$Tag' points to '$Target': $matches"
+        Write-Message -Type "Validation" -Message "Tag '$Tag' points to '$Target': $matches"
         
         return @{
             Success = $matches
@@ -1179,7 +1178,7 @@ function Validate-TagAccessible {
         
         $accessible = (-not [string]::IsNullOrEmpty($existingTag)) -and (-not [string]::IsNullOrEmpty($sha))
         
-        Write-Debug "$($Emojis.Validation) Tag '$Tag' accessible: $accessible"
+        Write-Message -Type "Validation" -Message "Tag '$Tag' accessible: $accessible"
         
         return @{
             Success = $accessible
@@ -1213,7 +1212,7 @@ function Validate-TagCount {
     
     $matches = ($actual -eq $Expected)
     
-    Write-Debug "$($Emojis.Validation) Tag count: $actual (expected: $Expected)"
+    Write-Message -Type "Validation" -Message "Tag count: $actual (expected: $Expected)"
     
     return @{
         Success = $matches
@@ -1238,7 +1237,7 @@ function Validate-BranchExists {
     $existingBranch = git branch -l $Branch 2>$null
     $exists = -not [string]::IsNullOrEmpty($existingBranch)
     
-    Write-Debug "$($Emojis.Validation) Branch '$Branch' exists: $exists"
+    Write-Message -Type "Validation" -Message "Branch '$Branch' exists: $exists"
     
     return @{
         Success = $exists
@@ -1272,7 +1271,7 @@ function Validate-BranchPointsToTag {
         
         $matches = ($branchSha -eq $tagSha)
         
-        Write-Debug "$($Emojis.Validation) Branch '$Branch' points to tag '$Tag': $matches"
+        Write-Message -Type "Validation" -Message "Branch '$Branch' points to tag '$Tag': $matches"
         
         return @{
             Success = $matches
@@ -1306,7 +1305,7 @@ function Validate-BranchCount {
     
     $matches = ($actual -eq $Expected)
     
-    Write-Debug "$($Emojis.Validation) Branch count: $actual (expected: $Expected)"
+    Write-Message -Type "Validation" -Message "Branch count: $actual (expected: $Expected)"
     
     return @{
         Success = $matches
@@ -1331,7 +1330,7 @@ function Validate-CurrentBranch {
     $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
     $matches = ($currentBranch -eq $Branch)
     
-    Write-Debug "$($Emojis.Validation) Current branch is '$Branch': $matches"
+    Write-Message -Type "Validation" -Message "Current branch is '$Branch': $matches"
     
     return @{
         Success = $matches
@@ -1379,7 +1378,7 @@ function Validate-VersionGreater {
             }
         }
         
-        Write-Debug "$($Emojis.Validation) Version '$New' > '$Current': $greater"
+        Write-Message -Type "Validation" -Message "Version '$New' > '$Current': $greater"
         
         return @{
             Success = $greater
@@ -1444,7 +1443,7 @@ function Validate-VersionProgression {
             }
         }
         
-        Write-Debug "$($Emojis.Validation) Version progression '$From' -> '$To' ($BumpType): $valid"
+        Write-Message -Type "Validation" -Message "Version progression '$From' -> '$To' ($BumpType): $valid"
         
         return @{
             Success = $valid
@@ -1481,7 +1480,7 @@ function Validate-MajorIncrement {
     
     $valid = ($To -eq ($From + 1))
     
-    Write-Debug "$($Emojis.Validation) Major increment $From -> ${To}: $valid"
+    Write-Message -Type "Validation" -Message "Major increment $From -> ${To}: $valid"
     
     return @{
         Success = $valid
@@ -1515,7 +1514,7 @@ function Validate-MajorTagCoexistence {
         }
     }
     
-    Write-Debug "$($Emojis.Validation) Major tags coexist ($($Tags -join ', ')): $allExist"
+    Write-Message -Type "Validation" -Message "Major tags coexist ($($Tags -join ', ')): $allExist"
     
     return @{
         Success = $allExist
@@ -1558,7 +1557,7 @@ function Validate-MajorTagProgression {
         }
     }
     
-    Write-Debug "$($Emojis.Validation) Major tag progression ($($Tags -join ', ')): $valid"
+    Write-Message -Type "Validation" -Message "Major tag progression ($($Tags -join ', ')): $valid"
     
     return @{
         Success = $valid
@@ -1595,7 +1594,7 @@ function Validate-NoCrossContamination {
         
         $valid = (-not [string]::IsNullOrEmpty($v1Sha)) -and (-not [string]::IsNullOrEmpty($v2Sha)) -and ($v1Sha -ne $v2Sha)
         
-        Write-Debug "$($Emojis.Validation) No cross-contamination between '$V1' and '$V2': $valid"
+        Write-Message -Type "Validation" -Message "No cross-contamination between '$V1' and '$V2': $valid"
         
         return @{
             Success = $valid
@@ -1628,7 +1627,7 @@ function Validate-NoTagConflicts {
     $uniqueTags = $tags | Select-Object -Unique
     $noDuplicates = ($tags.Count -eq $uniqueTags.Count)
     
-    Write-Debug "$($Emojis.Validation) No tag conflicts: $noDuplicates"
+    Write-Message -Type "Validation" -Message "No tag conflicts: $noDuplicates"
     
     return @{
         Success = $noDuplicates
@@ -1658,7 +1657,7 @@ function Validate-WorkflowSuccess {
     
     $success = $ActResult.Success -and ($ActResult.ExitCode -eq 0)
     
-    Write-Debug "$($Emojis.Validation) Workflow '$Workflow' success: $success"
+    Write-Message -Type "Validation" -Message "Workflow '$Workflow' success: $success"
     
     return @{
         Success = $success
@@ -1688,7 +1687,7 @@ function Validate-WorkflowFailure {
 
     $success = -not $ActResult.Success -and ($ActResult.ExitCode -ne 0)
 
-    Write-Debug "$($Emojis.Validation) Workflow '$Workflow' failure: $success"
+    Write-Message -Type "Validation" -Message "Workflow '$Workflow' failure: $success"
 
     return @{
         Success = $success
@@ -1708,7 +1707,7 @@ function Validate-WorkflowFailure {
     Placeholder for future implementation.
 #>
 function Validate-IdempotencyVerified {
-    Write-Debug "$($Emojis.Validation) Idempotency check (placeholder)"
+    Write-Message -Type "Validation" -Message "Idempotency check (placeholder)"
     
     return @{
         Success = $true
@@ -1733,7 +1732,7 @@ function Validate-IdempotencyVerified {
 function Validate-UserPinnedToVersion {
     param([Parameter(Mandatory = $true)][string]$Expectation)
     
-    Write-Debug "$($Emojis.Validation) User pinning check: $Expectation (placeholder)"
+    Write-Message -Type "Validation" -Message "User pinning check: $Expectation (placeholder)"
     
     return @{
         Success = $true
@@ -1837,7 +1836,7 @@ function Invoke-RunWorkflow {
     $expectedFailure = if ($Step.expectedFailure) { $Step.expectedFailure } else { $false }
     $expectedErrorMessage = $Step.expectedErrorMessage
     
-    Write-Debug "$($Emojis.Workflow) Running workflow: $workflow with fixture: $fixture"
+    Write-Message -Type "Workflow" -Message "Running workflow: $workflow with fixture: $fixture"
     
     try {
         # Call Invoke-ActWorkflow
@@ -1991,7 +1990,7 @@ function Invoke-ValidateState {
     
     $checks = $Step.checks
     
-    Write-Debug "$($Emojis.Validation) Performing $($checks.Count) validation checks"
+    Write-Message -Type "Validation" -Message "Performing $($checks.Count) validation checks"
     
     # Extract ActResult from test context if available
     $lastActResult = $null
@@ -2879,6 +2878,7 @@ if ($MyInvocation.InvocationName -ne ".") {
     $failedTests = @($testResults | Where-Object { -not $_.Success }).Count
     exit $(if ($failedTests -eq 0) { 0 } else { 1 })
 }
+
 
 
 
