@@ -1,5 +1,41 @@
 # RepositoryUtils.psm1
 
+# Module-scoped variable
+$module:TestStateGuid = [guid]::NewGuid().ToString('N')
+
+function Get-TestStateBasePath {
+    <#
+    .SYNOPSIS
+    Returns the temporary test state base path unique to this module import.
+
+    .DESCRIPTION
+    Generates a temporary directory path using the module-scoped GUID. Useful for isolating test state between module imports.
+
+    .EXAMPLE
+    Get-TestStateBasePath
+    #>
+    $tempPath = [System.IO.Path]::GetTempPath()
+    $testStateDirName = "d-flows-test-state-$($module:TestStateGuid)"
+    return Join-Path $tempPath $testStateDirName
+}
+
+function Get-BackupBasePath {
+    <#
+    .SYNOPSIS
+    Returns the backup subdirectory under the module's test state directory.
+
+    .DESCRIPTION
+    Builds a path for backup data under the module-scoped test state directory.
+
+    .EXAMPLE
+    Get-BackupBasePath
+    #>
+    $tempPath = [System.IO.Path]::GetTempPath()
+    $testStateDirName = "d-flows-test-state-$($module:TestStateGuid)"
+    $backupSubDir = Join-Path $testStateDirName "backup"
+    return Join-Path $tempPath $backupSubDir
+}
+
 function Get-RepositoryRoot {
     <#
     .SYNOPSIS

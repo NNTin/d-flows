@@ -72,17 +72,6 @@
 # Global Variables and Configuration
 # ============================================================================
 
-# Generate a unique GUID for this script execution to ensure consistent temp directory naming
-$script:BackupStateGuid = [guid]::NewGuid().ToString('N')
-
-# Get temp-based backup directory path
-function Get-BackupBasePath {
-    $tempPath = [System.IO.Path]::GetTempPath()
-    $testStateDirName = "d-flows-test-state-$($script:BackupStateGuid)"
-    $backupSubDir = Join-Path $testStateDirName "backup"
-    return Join-Path $tempPath $backupSubDir
-}
-
 $BackupDirectory = Get-BackupBasePath
 $DebugPreference = "Continue"
 

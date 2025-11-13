@@ -199,24 +199,9 @@ Add-ToPSModulePath $testModules
 # Global Variables and Configuration
 # ============================================================================
 
-# Generate a unique GUID for this script execution to ensure consistent temp directory naming
-$script:TestStateGuid = [guid]::NewGuid().ToString('N')
-
-# Get temp-based test state directory path
-function Get-TestStateBasePath {
-    $tempPath = [System.IO.Path]::GetTempPath()
-    $testStateDirName = "d-flows-test-state-$($script:TestStateGuid)"
-    return Join-Path $tempPath $testStateDirName
-}
-
 $TestStateDirectory = Get-TestStateBasePath
 $TestLogsDirectory = Join-Path (Get-TestStateBasePath) "logs"
 $IntegrationTestsDirectory = "tests/integration"
-
-# Set shared environment variable for test state directory used by dot-sourced scripts
-# This ensures Setup-TestScenario.ps1 and Apply-TestFixtures.ps1 use the same directory
-# instead of generating their own unique GUIDs, preventing test state GUID mismatch
-$env:DFLOWS_TEST_STATE_BASE = $TestStateDirectory
 
 # Use built-in $DebugPreference and $VerbosePreference for output control
 # Callers can use -Debug and -Verbose common parameters to control this

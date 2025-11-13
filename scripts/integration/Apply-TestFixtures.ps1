@@ -105,24 +105,6 @@
 # Global Variables and Configuration
 # ============================================================================
 
-# Generate a unique GUID for this script execution to ensure consistent temp directory naming
-$script:TestStateGuid = [guid]::NewGuid().ToString('N')
-
-# Get temp-based test state directory path
-# If Run-ActTests.ps1 has set $env:DFLOWS_TEST_STATE_BASE, use that to ensure unified test state
-# Otherwise, generate a new GUID-based path for standalone use
-function Get-TestStateBasePath {
-    # Check if shared environment variable is set (when called from Run-ActTests.ps1)
-    if ($env:DFLOWS_TEST_STATE_BASE) {
-        return $env:DFLOWS_TEST_STATE_BASE
-    }
-    
-    # Fall back to GUID-based path for standalone use
-    $tempPath = [System.IO.Path]::GetTempPath()
-    $testStateDirName = "d-flows-test-state-$($script:TestStateGuid)"
-    return Join-Path $tempPath $testStateDirName
-}
-
 $TestStateDirectory = Get-TestStateBasePath
 $TestTagsFile = "test-tags.txt"
 $DebugPreference = "Continue"

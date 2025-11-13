@@ -16,7 +16,7 @@
     # ──────────────────────────────
     # Export definitions
     # ──────────────────────────────
-    FunctionsToExport = @('Get-RepositoryRoot')
+    FunctionsToExport = @('Get-RepositoryRoot', 'Get-TestStateBasePath', 'Get-BackupBasePath')
     VariablesToExport = @()  # TODO: provide variables to export
 
     # ──────────────────────────────
