@@ -1,7 +1,6 @@
 # Emojis.psm1
 # Provides emoji constants and lookup functions for consistent script output.
 
-# region Emoji definitions
 $script:Emojis = [ordered]@{
     # --- Status / Severity ---
     Success    = "✅"
@@ -31,9 +30,6 @@ $script:Emojis = [ordered]@{
     Folder     = "📁"
     Config     = "⚙️"
 }
-# endregion
-
-# region Public function
 
 function Get-Emoji {
     <#
@@ -64,9 +60,3 @@ function Get-Emoji {
         return "❔"
     }
 }
-
-# endregion
-
-# region Exports
-Export-ModuleMember -Variable Emojis -Function Get-Emoji
-# endregion

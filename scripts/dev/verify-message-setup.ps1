@@ -1,27 +1,10 @@
-function Get-RepositoryRoot {
-    $currentPath = Get-Location
-    $searchPath = $currentPath
-
-    while ($searchPath.Path -ne (Split-Path $searchPath.Path)) {
-        Write-Debug "$($Emojis.Debug) Searching for .git in: $searchPath"
-        
-        $gitPath = Join-Path $searchPath.Path ".git"
-        if (Test-Path $gitPath) {
-            Write-Debug "$($Emojis.Debug) Found repository root: $($searchPath.Path)"
-            return $searchPath.Path
-        }
-        
-        $searchPath = Split-Path $searchPath.Path -Parent
-    }
-
-    throw "❌ Not in a git repository. Please navigate to the repository root and try again."
-}
-
 # Clear old module versions before bootstrapping
-Get-Module | Where-Object { $_.Name -in 'MessageUtils','Emojis','Colors' } | Remove-Module -Force
+Get-Module | Where-Object { $_.Name -in 'RepositoryUtils', 'MessageUtils','Emojis','Colors' } | Remove-Module -Force
 Remove-Variable -Name Emojis,Colors -Scope Global -ErrorAction SilentlyContinue
 
-$root = Get-RepositoryRoot
+$scriptDir = $PSScriptRoot
+$devDir = Split-Path -Parent $scriptDir
+$root = Split-Path -Parent $devDir
 
 # Add to PSModulePath only if not already present
 $projectModules = Join-Path $root 'scripts\Modules'
@@ -40,10 +23,12 @@ Add-ToPSModulePath $utilitiesModules
 Add-ToPSModulePath $projectModules
 
 
-# Import modules
-Import-Module Emojis
-Import-Module Colors
-Import-Module MessageUtils
+# Import modules: Modules do not need to be imported in a specific order due to dependency declarations in their .psd1 files
+# Furthermore they do not need to be imported because PowerShell will auto-load them when their functions are called!
+# Import-Module Emojis
+# Import-Module Colors
+# Import-Module MessageUtils
+# Import-Module RepositoryUtils
 
 # --- Success ---
 Write-Message -Type Success -Message "Operation completed successfully."
@@ -125,3 +110,9 @@ Write-Message -Type Success  # Message is empty by default
 Write-Message -Message "Message in Green" -ForegroundColor Green
 Write-Message -Message "Message in Blue" -ForegroundColor Blue
 Write-Message -Message "Message in Yellow" -ForegroundColor Yellow
+Write-Message
+Write-Message
+Write-Message -Type Success -Message "Showcasing autoload of RepositoryUtils."
+Get-Module
+Write-Message -Message "root path is $(Get-RepositoryRoot)" -Type Info
+Get-Module

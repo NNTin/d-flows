@@ -69,12 +69,6 @@
 #>
 
 # ============================================================================
-# Module Imports
-# ============================================================================
-
-Import-Module -Name (Join-Path $PSScriptRoot "../Modules/Utilities/MessageUtils") -ErrorAction Stop
-
-# ============================================================================
 # Global Variables and Configuration
 # ============================================================================
 
@@ -95,39 +89,6 @@ $DebugPreference = "Continue"
 # ============================================================================
 # Helper Functions
 # ============================================================================
-
-<#
-.SYNOPSIS
-    Detect the git repository root directory.
-
-.DESCRIPTION
-    Walks up the directory tree from the current location until finding a .git directory.
-
-.EXAMPLE
-    $repoRoot = Get-RepositoryRoot
-    Write-Message -Type "Info" -Message "Repository root: $repoRoot"
-
-.NOTES
-    Throws an error if not in a git repository.
-#>
-function Get-RepositoryRoot {
-    $currentPath = Get-Location
-    $searchPath = $currentPath
-
-    while ($searchPath.Path -ne (Split-Path $searchPath.Path)) {
-        Write-Message -Type "Debug" -Message "Searching for .git in: $searchPath"
-        
-        $gitPath = Join-Path $searchPath.Path ".git"
-        if (Test-Path $gitPath) {
-            Write-Message -Type "Debug" -Message "Found repository root: $($searchPath.Path)"
-            return $searchPath.Path
-        }
-        
-        $searchPath = Split-Path $searchPath.Path -Parent
-    }
-
-    throw "❌ Not in a git repository. Please navigate to the repository root and try again."
-}
 
 <#
 .SYNOPSIS

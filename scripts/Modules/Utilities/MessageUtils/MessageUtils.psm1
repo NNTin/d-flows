@@ -1,10 +1,6 @@
 # MessageUtils.psm1
 # Function for consistent debug output with emoji and color support.
 
-# Import required modules
-Import-Module -Name Emojis -ErrorAction Stop
-Import-Module -Name Colors -ErrorAction Stop
-
 function Convert-ColorNameToConsoleColor {
     param (
         [string]$colorName
@@ -78,7 +74,3 @@ function Write-Message {
 
     Write-Host "$emoji $Message" -ForegroundColor $color
 }
-
-
-# Export the function
-Export-ModuleMember -Function Write-Message
