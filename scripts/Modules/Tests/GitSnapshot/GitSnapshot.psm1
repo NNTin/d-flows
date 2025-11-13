@@ -1,72 +1,5 @@
-<#
-.SYNOPSIS
-    Backup and restore git state (tags and branches) for act integration testing.
-
-.DESCRIPTION
-    This script provides functions to backup and restore git repository state, including all tags
-    and branches. Backups are stored with timestamp-based filenames in a system temp directory
-    for later restoration. This is essential for integration testing with act, where
-    tests may modify the git repository state.
-
-    The script includes functions for:
-    - Backing up tags in "tag_name commit_sha" format (compatible with bump-version.yml)
-    - Backing up branches in JSON format with current branch indicator
-    - Restoring tags with optional force overwrite and delete existing
-    - Restoring branches with optional checkout of original branch
-    - Orchestrating complete backup/restore operations
-    - Listing available backups
-
-.EXAMPLE
-    # Dot-source the script to load functions
-    . .\scripts\integration\Backup-GitState.ps1
-
-    # Backup current git state
-    $backup = Backup-GitState
-    Write-Message -Type "Success" "Backup created: $($backup.BackupName)"
-
-    # ... run tests that modify git state ...
-
-    # Restore git state
-    Restore-GitState -BackupName $backup.BackupName
-
-.EXAMPLE
-    # Backup with custom name
-    $backup = Backup-GitState -BackupName "before-release-test"
-    
-    # Restore from backup
-    Restore-GitState -BackupName "before-release-test" -Force
-
-.EXAMPLE
-    # List available backups
-    Get-AvailableBackups
-
-.NOTES
-    Backup Format:
-    - Tags: Plain text file "tags-<name>.txt" with format "tag_name commit_sha" (one per line)
-    - Branches: JSON file "branches-<name>.json" with structure containing currentBranch and branches array
-    - Commits: Bundle file "commits-<name>.bundle" with all commit objects referenced by tags and branches
-    - Manifest: JSON file "manifest-<name>.json" with backup metadata
-
-    Storage Location: System temp directory (Windows: %TEMP%, Linux: /tmp) in subdirectory d-flows-test-state-<guid>/backup/
-    Each script execution generates a unique GUID for isolation. The temp directory is managed by the calling script (e.g., Run-ActTests.ps1).
-
-    Restoration Order:
-    - Commits are restored first (unbundled) to ensure all commit objects exist
-    - Tags are restored second (now referencing valid commit SHAs)
-    - Branches are restored last
-
-    Edge Cases Handled:
-    - Empty repositories (no tags/branches)
-    - Detached HEAD state
-    - Uncommitted changes blocking checkout
-    - Invalid commit SHAs
-    - Missing or corrupt backup files
-    - Permission issues
-
-    Compatibility:
-    - Tag format matches .github/workflows/bump-version.yml line 58 format
-    - Integrates with test-tags.txt in temp directory, mounted to /tmp/test-state in Docker containers
-#>
+# GitSnapshot.psm1
+# Provides functions for backing up and restoring git repository state including tags, branches, and commits for integration testing.
 
 # ============================================================================
 # Helper Functions
@@ -117,24 +50,6 @@ function Get-BackupTimestamp {
     Write-Message -Type "Debug" "Generated backup timestamp: $timestamp"
     return $timestamp
 }
-
-<#
-.SYNOPSIS
-    Write debug messages with consistent formatting.
-
-.DESCRIPTION
-    Wrapper function for consistent debug output with emoji prefixes and colors.
-
-.PARAMETER Type
-    Message type: INFO, SUCCESS, WARNING, ERROR
-
-.PARAMETER Message
-    The message text to display
-
-.EXAMPLE
-    Write-Message -Type "Info" "Starting backup process"
-    Write-Message -Type "Success" "Backup completed"
-#>
 
 # ============================================================================
 # Core Backup Functions
@@ -981,6 +896,10 @@ function Restore-GitState {
     }
 }
 
+# ============================================================================
+# Utility Functions
+# ============================================================================
+
 <#
 .SYNOPSIS
     List all available backups in the repository.
@@ -1046,38 +965,17 @@ function Get-AvailableBackups {
 }
 
 # ============================================================================
-# Main Script Execution Block
+# Module Exports
 # ============================================================================
 
-# Check if script is being dot-sourced or executed directly
-if ($MyInvocation.InvocationName -ne ".") {
-    # Script is being executed directly
-    Write-Message "==============================================================================" -ForegroundColor Cyan
-    Write-Message "  Git State Backup/Restore Script" -ForegroundColor Cyan
-    Write-Message "==============================================================================" -ForegroundColor Cyan
-    Write-Message "This script provides functions for backing up and restoring git repository state." -ForegroundColor Gray
-    Write-Message "Available Functions:" -ForegroundColor Yellow
-    Write-Message "  Backup-GitState                   - Backup all tags and branches" -ForegroundColor Cyan
-    Write-Message "  Restore-GitState [-BackupName]    - Restore tags and branches from backup" -ForegroundColor Cyan
-    Write-Message "  Get-AvailableBackups              - List all available backups" -ForegroundColor Cyan
-    Write-Message "  Backup-GitTags                    - Backup tags only" -ForegroundColor Cyan
-    Write-Message "  Backup-GitBranches                - Backup branches only" -ForegroundColor Cyan
-    Write-Message "  Restore-GitTags [-BackupPath]     - Restore tags only" -ForegroundColor Cyan
-    Write-Message "  Restore-GitBranches [-BackupPath] - Restore branches only" -ForegroundColor Cyan
-    Write-Message "Usage Examples:" -ForegroundColor Yellow
-    Write-Message "  # Dot-source to load functions:" -ForegroundColor Gray
-    Write-Message "  . .\scripts\integration\Backup-GitState.ps1" -ForegroundColor White
-    Write-Message "  # Backup current state:" -ForegroundColor Gray
-    Write-Message "  \$backup = Backup-GitState" -ForegroundColor White
-    Write-Message "  # List available backups:" -ForegroundColor Gray
-    Write-Message "  Get-AvailableBackups" -ForegroundColor White
-    Write-Message "  # Restore from backup:" -ForegroundColor Gray
-    Write-Message "  Restore-GitState -BackupName \$backup.BackupName" -ForegroundColor White
-    Write-Message "==============================================================================" -ForegroundColor Cyan
-    Write-Message ""
-}
-
-
-
-
-
+Export-ModuleMember -Function @(
+    'Backup-GitTags',
+    'Backup-GitBranches',
+    'Backup-GitCommits',
+    'Backup-GitState',
+    'Restore-GitTags',
+    'Restore-GitBranches',
+    'Restore-GitCommits',
+    'Restore-GitState',
+    'Get-AvailableBackups'
+)

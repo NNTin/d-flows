@@ -17,7 +17,7 @@
     - Handling errors gracefully with rollback capabilities
     
     Integration with existing scripts:
-    - Uses Backup-GitState.ps1 for git state backup/restore
+    - Uses GitSnapshot module for git state backup/restore
     - Uses Setup-TestScenario.ps1 for scenario management
     - Uses Apply-TestFixtures.ps1 for fixture parsing patterns
     
@@ -365,25 +365,6 @@ function ConvertTo-DockerMountPath {
         throw $_
     }
 }
-
-<#
-.SYNOPSIS
-    Write debug messages with consistent formatting.
-
-.DESCRIPTION
-    Wrapper function for consistent debug output with emoji prefixes and colors.
-    Reused from Backup-GitState.ps1 lines 199-218.
-
-.PARAMETER Type
-    Message type: INFO, SUCCESS, WARNING, ERROR, TEST
-
-.PARAMETER Message
-    The message text to display
-
-.EXAMPLE
-    Write-Message -Type "Info" "Starting test execution"
-    Write-Message -Type "Success" "Test passed"
-#>
 
 <#
 .SYNOPSIS
@@ -1637,7 +1618,7 @@ function Invoke-TestCleanup {
 
 .DESCRIPTION
     Orchestrates complete test execution: backup, apply scenario, run steps, validate, cleanup, restore.
-    Integration: Uses Backup-GitState for state preservation, Setup-TestScenario for scenario application.
+    Integration: Uses GitSnapshot module for state preservation, Setup-TestScenario for scenario application.
     Test isolation: Each test runs in clean state. Backup/restore ensures no cross-test contamination.
 
 .PARAMETER FixturePath
@@ -1691,7 +1672,7 @@ function Invoke-IntegrationTest {
         Write-Message -Type "Debug" "Initialized test execution context (tracking production tags)"
         
         # Backup git state
-        # Integration with Backup-GitState.ps1: Call Backup-GitState before each test
+        # Integration with GitSnapshot module: Call Backup-GitState before each test
         if (-not $SkipBackup) {
             Write-Message -Type "Debug" "Backing up git state"
             $backup = Backup-GitState
@@ -1772,7 +1753,7 @@ function Invoke-IntegrationTest {
         }
     } finally {
         # Restore git state
-        # Integration with Backup-GitState.ps1: Call Restore-GitState after each test
+        # Integration with GitSnapshot module: Call Restore-GitState after each test
         if (-not $SkipBackup -and $backupName) {
             Write-Message -Type "Restore" "Restoring git state from backup: $backupName"
             try {
@@ -1973,14 +1954,12 @@ if ($MyInvocation.InvocationName -ne ".") {
     New-TestStateDirectory | Out-Null
     
     # Dot-source required scripts
-    # Integration with Backup-GitState.ps1 and Setup-TestScenario.ps1
+    # Integration with GitSnapshot module and Setup-TestScenario.ps1
     Write-Message -Type "Debug" "Loading required scripts"
     
     try {
-        $backupScriptPath = Join-Path $repoRoot "scripts\integration\Backup-GitState.ps1"
         $scenarioScriptPath = Join-Path $repoRoot "scripts\integration\Setup-TestScenario.ps1"
         
-        . $backupScriptPath
         . $scenarioScriptPath
         
         Write-Message -Type "Debug" "Required scripts loaded"
@@ -2058,11 +2037,3 @@ if ($MyInvocation.InvocationName -ne ".") {
     $failedTests = @($testResults | Where-Object { -not $_.Success }).Count
     exit $(if ($failedTests -eq 0) { 0 } else { 1 })
 }
-
-
-
-
-
-
-
-
