@@ -11,7 +11,7 @@
     Description       = 'Provides git state management functions for creating and manipulating tags, branches, and commits during integration testing.'
 
     # Dependencies
-    RequiredModules = @('MessageUtils', 'RepositoryUtils')
+    RequiredModules = @('MessageUtils')
 
     # ──────────────────────────────
     # Export definitions

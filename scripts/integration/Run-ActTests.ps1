@@ -2037,11 +2037,3 @@ if ($MyInvocation.InvocationName -ne ".") {
     $failedTests = @($testResults | Where-Object { -not $_.Success }).Count
     exit $(if ($failedTests -eq 0) { 0 } else { 1 })
 }
-
-
-
-
-
-
-
-
