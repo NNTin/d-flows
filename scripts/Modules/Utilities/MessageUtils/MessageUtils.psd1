@@ -13,12 +13,10 @@
     # Dependencies
     RequiredModules   = @('Emojis', 'Colors')
 
-
     # ──────────────────────────────
     # Export definitions
     # ──────────────────────────────
     FunctionsToExport = @('Write-Message')
-
 
     # ──────────────────────────────
     # PowerShell compatibility

@@ -13,12 +13,11 @@
     # Dependencies
     RequiredModules   = @('MessageUtils')
 
-
     # ──────────────────────────────
     # Export definitions
     # ──────────────────────────────
     FunctionsToExport = @('Get-RepositoryRoot')
-
+    VariablesToExport = @()  # TODO: provide variables to export
 
     # ──────────────────────────────
     # PowerShell compatibility
