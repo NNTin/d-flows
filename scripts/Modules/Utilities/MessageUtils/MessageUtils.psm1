@@ -19,12 +19,16 @@ function Write-Message {
     .PARAMETER Message
         The message text to display
 
+    .PARAMETER ForegroundColor
+        Optional color to override the default color from the Colors module
+
     .EXAMPLE
-        Write-DebugMessage -Type "INFO" -Message "Starting scenario application"
+        Write-Message -Type "INFO" -Message "Starting scenario application" -ForegroundColor Cyan
     #>
     param(
         [string]$Type = "Unknown",
-        [string]$Message
+        [string]$Message,
+        [System.ConsoleColor]$ForegroundColor
     )
 
     # Lazy-load module variables
@@ -34,12 +38,13 @@ function Write-Message {
     if (-not $script:Colors) {
         $script:Colors = (Import-Module Colors -PassThru).ExportedVariables["Colors"]
     }
-    
+
     $emoji = Get-Emoji $Type
-    $color = Get-Color $Type
+    $color = if ($ForegroundColor) { $ForegroundColor } else { Get-Color $Type }
 
     Write-Host "$emoji $Message" -ForegroundColor $color
 }
+
 
 # Export the function
 Export-ModuleMember -Function Write-Message

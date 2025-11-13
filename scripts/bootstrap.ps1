@@ -58,3 +58,6 @@ Write-Message
 Write-Message -Message ""
 Write-Message -Message "Only message"
 
+Write-Message -Type Warning -Message "Warning Message" -ForegroundColor Magenta
+Write-Message -Type Warning -Message "Warning Message" -ForegroundColor Cyan
+Write-Message -Type Warning -Message "Warning Message"

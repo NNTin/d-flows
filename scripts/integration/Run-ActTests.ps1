@@ -2651,30 +2651,30 @@ function Write-TestSummary {
     $avgDuration = if ($totalTests -gt 0) { $totalDuration.TotalSeconds / $totalTests } else { 0 }
     
     # Display header
-    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "  Test Execution Summary" # Was ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Test Execution Summary" -ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
 
     # Display statistics
-    Write-Message -Type "Info" -Message "Total Tests:     $totalTests" # Was ForegroundColor Gray
-    Write-Message -Type "Info" -Message "Passed Tests:    " -NoNewline # Was ForegroundColor Gray
-    Write-Message -Type "Info" -Message "$passedTests" # Was ForegroundColor Green
-    Write-Message -Type "Info" -Message "Failed Tests:    " -NoNewline # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "Total Tests:     $totalTests" -ForegroundColor Gray
+    Write-Message -Type "Info" -Message "Passed Tests:    " -NoNewline -ForegroundColor Gray
+    Write-Message -Type "Info" -Message "$passedTests" -ForegroundColor Green
+    Write-Message -Type "Info" -Message "Failed Tests:    " -NoNewline -ForegroundColor Gray
     if ($failedTests -gt 0) {
-        Write-Message -Type "Info" -Message "$failedTests" # Was ForegroundColor Red
+        Write-Message -Type "Info" -Message "$failedTests" -ForegroundColor Red
     } else {
-        Write-Message -Type "Info" -Message "$failedTests" # Was ForegroundColor Green
+        Write-Message -Type "Info" -Message "$failedTests" -ForegroundColor Green
     }
-    Write-Message -Type "Info" -Message "Total Duration:  $("{0:N2}s" -f $totalDuration.TotalSeconds)" # Was ForegroundColor Gray
-    Write-Message -Type "Info" -Message "Average Duration: $("{0:N2}s" -f $avgDuration)" # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "Total Duration:  $("{0:N2}s" -f $totalDuration.TotalSeconds)" -ForegroundColor Gray
+    Write-Message -Type "Info" -Message "Average Duration: $("{0:N2}s" -f $avgDuration)" -ForegroundColor Gray
 
     # List failed tests
     if ($failedTests -gt 0) {
-        Write-Message -Type "Info" -Message "Failed Tests:" # Was ForegroundColor Red
+        Write-Message -Type "Info" -Message "Failed Tests:" -ForegroundColor Red
         foreach ($result in $TestResults) {
             if (-not $result.Success) {
                 Write-Message -Type "Error" -Message "  $($result.TestName)"
-                Write-Message -Type "Info" -Message "     $($result.Message)" # Was ForegroundColor Gray
+                Write-Message -Type "Info" -Message "     $($result.Message)" -ForegroundColor Gray
             }
         }
     }
@@ -2686,7 +2686,7 @@ function Write-TestSummary {
         Write-Message -Type "Error" -Message "SOME TESTS FAILED"
     }
     
-    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
 }
 
 <#
@@ -2771,10 +2771,10 @@ function Export-TestReport {
 # Check if script is being dot-sourced or executed directly
 if ($MyInvocation.InvocationName -ne ".") {
     # Script is being executed directly
-    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "  Act Integration Test Runner" # Was ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" # Was ForegroundColor Cyan
-    Write-Message -Type "Info" -Message "Purpose: Orchestrate integration tests for d-flows workflows using act" # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "  Act Integration Test Runner" -ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
+    Write-Message -Type "Info" -Message "Purpose: Orchestrate integration tests for d-flows workflows using act" -ForegroundColor Gray
 
     # Validate prerequisites
     Write-Message -Type "Info" -Message "Validating prerequisites..."
@@ -2821,10 +2821,10 @@ if ($MyInvocation.InvocationName -ne ".") {
     }
     
     # Display configuration
-    Write-Message -Type "Info" -Message "Configuration:" # Was ForegroundColor Yellow
-    Write-Message -Type "Info" -Message "  Skip Backup:   $SkipBackup" # Was ForegroundColor Gray
-    Write-Message -Type "Info" -Message "  Skip Cleanup:  $SkipCleanup" # Was ForegroundColor Gray
-    Write-Message -Type "Info" -Message "  Stop On Failure: $StopOnFailure" # Was ForegroundColor Gray
+    Write-Message -Type "Info" -Message "Configuration:" -ForegroundColor Yellow
+    Write-Message -Type "Info" -Message "  Skip Backup:   $SkipBackup" -ForegroundColor Gray
+    Write-Message -Type "Info" -Message "  Skip Cleanup:  $SkipCleanup" -ForegroundColor Gray
+    Write-Message -Type "Info" -Message "  Stop On Failure: $StopOnFailure" -ForegroundColor Gray
 
     # Determine execution mode and run tests
     $testResults = @()
@@ -2854,10 +2854,10 @@ if ($MyInvocation.InvocationName -ne ".") {
         else {
             # No execution mode specified
             Write-Message -Type "Warning" -Message "No test execution mode specified. Use -RunAll to run all tests, -TestFixturePath for a specific test, or -TestName to search for a test."
-                Write-Message -Type "Info" -Message "Usage:" # Was ForegroundColor Yellow
-            Write-Message -Type "Info" -Message "  .\scripts\integration\Run-ActTests.ps1 -RunAll                                                      # Run all tests" # Was ForegroundColor Gray
-            Write-Message -Type "Info" -Message "  .\scripts\integration\Run-ActTests.ps1 -TestFixturePath 'tests/integration/v0-to-v1-release-cycle.json'  # Run specific test" # Was ForegroundColor Gray
-            Write-Message -Type "Info" -Message "  .\scripts\integration\Run-ActTests.ps1 -TestName 'Test Name'                                       # Search for and run test" # Was ForegroundColor Gray
+                Write-Message -Type "Info" -Message "Usage:" -ForegroundColor Yellow
+            Write-Message -Type "Info" -Message "  .\scripts\integration\Run-ActTests.ps1 -RunAll                                                      # Run all tests" -ForegroundColor Gray
+            Write-Message -Type "Info" -Message "  .\scripts\integration\Run-ActTests.ps1 -TestFixturePath 'tests/integration/v0-to-v1-release-cycle.json'  # Run specific test" -ForegroundColor Gray
+            Write-Message -Type "Info" -Message "  .\scripts\integration\Run-ActTests.ps1 -TestName 'Test Name'                                       # Search for and run test" -ForegroundColor Gray
                 exit 0
         }
     } catch {
