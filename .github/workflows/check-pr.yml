@@ -22,6 +22,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           persist-credentials: true
+          ref: main
           fetch-depth: 0
     
       - name: Configure Git Identity
@@ -29,21 +30,16 @@ jobs:
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
 
-      - name: Attach HEAD to the pull request
+      - name: Fetch PR branch
         if: ${{ github.event_name == 'pull_request' }}
         run: |
-          # Fetch the main branch and update refs
-          git fetch origin main:main
-
-          echo "Attaching HEAD to PR: #${{ github.event.pull_request.number }}"
-
-          # Create a local branch named "pull/<number>/merge" pointing at HEAD
-          git branch "pull/${{ github.event.pull_request.number }}/merge" HEAD
-
-          # Switch to it (reattach HEAD)
-          git checkout "pull/${{ github.event.pull_request.number }}/merge"
-
-          echo "HEAD attached to: $(git branch --show-current)"
+          # Fetch the PR branch from origin
+          git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-${{ github.event.pull_request.number }}
+          
+          # Switch to the PR branch
+          git switch pr-${{ github.event.pull_request.number }}
+          
+          echo "Current branch: $(git branch --show-current)"
           echo "Commit: $(git rev-parse HEAD)"
 
       - name: Set up Docker
