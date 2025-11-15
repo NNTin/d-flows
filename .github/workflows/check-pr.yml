@@ -28,6 +28,20 @@ jobs:
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
 
+      - name: Checkout PR branch (attach HEAD)
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'pull_request_target' }}
+        run: |
+          echo "Restoring PR branch $GITHUB_HEAD_REF"
+
+          # Fetch the PR source branch
+          git fetch origin "$GITHUB_HEAD_REF:$GITHUB_HEAD_REF"
+
+          # Check it out
+          git checkout "$GITHUB_HEAD_REF"
+
+          echo "HEAD reattached to branch: $(git branch --show-current)"
+          echo "Commit: $(git rev-parse HEAD)"
+
       - name: Set up Docker
         uses: docker/setup-buildx-action@v2
 
