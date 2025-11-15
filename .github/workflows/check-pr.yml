@@ -24,6 +24,7 @@ jobs:
 
       - name: Install nektos/act
         run: |
+          export BINDIR=/usr/local/bin
           curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
 
       - name: Run Integration Tests
