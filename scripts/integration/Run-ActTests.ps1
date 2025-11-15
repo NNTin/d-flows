@@ -181,8 +181,10 @@ Get-Module | ForEach-Object {
 # Function to prepend a path if missing
 function Add-ToPSModulePath {
     param([string]$Path)
-    if (-not ($env:PSModulePath -split ';' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ieq $Path })) {
-        $env:PSModulePath = "$Path;$env:PSModulePath"
+    $separator = [System.IO.Path]::PathSeparator  # ✅ Cross-platform: ; on Windows, : on Linux
+    
+    if (-not ($env:PSModulePath -split $separator | ForEach-Object { $_.Trim() } | Where-Object { $_ -ieq $Path })) {
+        $env:PSModulePath = "$Path$separator$env:PSModulePath"
     }
 }
 
