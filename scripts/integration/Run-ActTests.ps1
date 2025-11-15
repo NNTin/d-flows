@@ -1900,7 +1900,7 @@ function Write-TestSummary {
     } | Measure-Object -Sum).Sum
 
 
-    $avgDuration = if ($totalTests -gt 0) { $totalDuration.TotalSeconds / $totalTests } else { 0 }
+    $avgDuration = if ($totalTests -gt 0) { $totalDuration / $totalTests } else { 0 }
     
     # Display header
     Write-Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
@@ -1917,7 +1917,7 @@ function Write-TestSummary {
     } else {
         Write-Message "$failedTests" -ForegroundColor Green
     }
-    Write-Message "Total Duration:  $("{0:N2}s" -f $totalDuration.TotalSeconds)" -ForegroundColor Gray
+    Write-Message "Total Duration:  $("{0:N2}s" -f $totalDuration)" -ForegroundColor Gray
     Write-Message "Average Duration: $("{0:N2}s" -f $avgDuration)" -ForegroundColor Gray
 
     # List failed tests
