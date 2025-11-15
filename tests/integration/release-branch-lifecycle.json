@@ -3,6 +3,11 @@
   "description": "Focus: Releasing older major versions after newer major versions have been released.",
   "steps": [
     {
+      "name": "Making sure we are on main branch",
+      "action": "execute-command",
+      "command": "git checkout main"
+    },
+    {
       "name": "Setup complete release history",
       "action": "setup-git-state",
       "scenario": "FirstRelease",

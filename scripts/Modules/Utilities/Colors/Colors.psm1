@@ -1,4 +1,4 @@
-# Colors.psm1
+﻿# Colors.psm1
 # Provides reusable color mappings and lookup functions for consistent script output.
 
 $script:Colors = [ordered]@{

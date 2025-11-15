@@ -3,6 +3,11 @@
   "description": "Focus: v0 points to latest v0.x.y release after v1.0.0 release, ensuring backward compatibility for v0 users.",
   "steps": [
     {
+      "name": "Making sure we are on main branch",
+      "action": "execute-command",
+      "command": "git checkout main"
+    },
+    {
       "name": "Setup complete release history",
       "action": "setup-git-state",
       "scenario": "FirstRelease",
