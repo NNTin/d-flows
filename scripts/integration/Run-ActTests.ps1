@@ -765,6 +765,23 @@ function Invoke-ActWorkflow {
     # Bind current directory, this will write to git repository
     $actArgs += "--bind"
     
+    # Detect if running on Linux
+    $isOnLinux = $IsLinux -or ($env:OS -ne "Windows_NT")
+
+    if ($isOnLinux) {
+        try {
+            $hostUid = & id -u
+            $hostGid = & id -g
+            Write-Message -Type "Debug" "Running on Linux. Setting container user: $($hostUid):$($hostGid)"
+            $actArgs += "--user"
+            $actArgs += "$($hostUid):$($hostGid)"
+        } catch {
+            Write-Message -Type "Warning" "Failed to determine host UID/GID. Container may run as root."
+        }
+    } else {
+        Write-Message -Type "Debug" "Running on Windows. Skipping --user option."
+    }
+
     # Mount test state directory into container for test tag access
     try {
         $dockerTestStatePath = ConvertTo-DockerMountPath -Path $TestStateDirectory

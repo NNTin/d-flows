@@ -1,7 +1,6 @@
 # Act configuration for d-flows repository
 # Use catthehacker images for better GitHub Actions compatibility
 -P ubuntu-latest=catthehacker/ubuntu:act-latest
---user $(id -u):$(id -g)
 
 # Enable container architecture specification for better compatibility
 --container-architecture=linux/amd64
