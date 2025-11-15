@@ -83,7 +83,7 @@ jobs:
         run: |
           FILES=$(find . -name "*.json")
           LOGFILE="json-prettier.log"
-          if ! prettier --check $FILES | tee $LOGFILE; then
+          if ! prettier --check $FILES | tee "$LOGFILE"; then
             echo "Some JSON files are not properly formatted."
             exit 1
           fi
