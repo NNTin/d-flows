@@ -1,0 +1,83 @@
+name: CI Check - Pull Request
+
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  ##################################################################
+  ####        Verifying bump-version.yml and release.yml        ####
+  ##################################################################
+  # TODO: run integration tests with scripts/integration/Run-ActTests.ps1 -RunAll
+
+  ##################################################################
+  #### Verifying v0, v1 discord-notify.yml and step-summary.yml ####
+  ##################################################################
+  test-step-summary:
+    uses: ./.github/workflows/step-summary.yml
+    if: always()
+    with:
+      title: "Mock Test Results"
+      markdown: |
+        ### Test Results
+        
+        - ✅ Test 1 passed
+        - ✅ Test 2 passed
+        - ✅ All validations completed
+        
+        ```bash
+        Mock output from test execution
+        ```
+        
+        **Summary**: All tests completed successfully.
+      overwrite: false
+
+  build-discord-fields-completion:
+    runs-on: ubuntu-latest
+    needs: [test-step-summary]
+    if: always()
+    outputs:
+      discord_fields: ${{ steps.discord_fields.outputs.fields }}
+    
+    steps:
+      - name: Build Discord Fields
+        id: discord_fields
+        run: |
+          SUMMARY_STATUS="${{ needs['test-step-summary'].result }}"
+          
+          # Build JSON fields with readable formatting
+          FIELDS=$(jq -n \
+            --arg summary_status "$SUMMARY_STATUS" \
+            --arg pr_number "${{ github.event.pull_request.number }}" \
+            --arg pr_url "${{ github.event.pull_request.html_url }}" \
+            --arg actor "${{ github.actor }}" \
+            --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '[
+              {"name": "Step Summary Test", "value": (($summary_status == "success" and "✅ Passed" or "❌ Failed")), "inline": true},
+              {"name": "PR Details", "value": ("[#" + $pr_number + "](" + $pr_url + ") by @" + $actor), "inline": false},
+              {"name": "Run Details", "value": ("[View Full Run](" + $run_url + ")"), "inline": false}
+            ]')
+          
+          # Use delimiter to safely output the multiline JSON
+          delimiter="$(openssl rand -hex 8)"
+          {
+            echo "fields<<${delimiter}"
+            echo "$FIELDS"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
+
+  notify-completion:
+    uses: ./.github/workflows/discord-notify.yml
+    needs: [test-step-summary, build-discord-fields-completion]
+    if: always()
+    secrets:
+      webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+    with:
+      message_type: "embed"
+      title: ${{ needs['test-step-summary'].result == 'success' && '✅ PR CI Workflow Completed Successfully' || '⚠️ PR CI Workflow Completed with Issues' }}
+      description: ${{ needs['test-step-summary'].result == 'success' && 'All validation checks and tests passed successfully. The pull request is ready for review.' || 'The workflow completed but some checks failed. Please review the results and address any issues.' }}
+      color: ${{  needs['test-step-summary'].result == 'success' && '3066993' || '16776960' }}
+      fields: ${{ needs.build-discord-fields-completion.outputs.discord_fields }}
