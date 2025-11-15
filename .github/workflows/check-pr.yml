@@ -11,7 +11,29 @@ jobs:
   ##################################################################
   ####        Verifying bump-version.yml and release.yml        ####
   ##################################################################
-  # TODO: run integration tests with scripts/integration/Run-ActTests.ps1 -RunAll
+  run-integration-tests:
+    name: Run Integration Tests with Act
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Install nektos/act
+        run: |
+          curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+
+      - name: Run Integration Tests
+        run: |
+          # Make sure Docker daemon is running
+          docker info
+
+          # Run integration test script
+          pwsh ./scripts/integration/Run-ActTests.ps1 -RunAll
+        shell: pwsh
 
   ##################################################################
   #### Verifying v0, v1 discord-notify.yml and step-summary.yml ####

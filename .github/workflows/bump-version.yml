@@ -59,7 +59,8 @@ jobs:
           # Fallback: if test-commits.bundle doesn't exist, try to find timestamped bundle
           if [[ ! -f "$BUNDLE_FILE" ]]; then
             echo "⚠️ test-commits.bundle not found, checking for timestamped bundles..."
-            TIMESTAMPED_BUNDLE=$(ls -t "${TEST_STATE_PATH:-/tmp/test-state}"/commits-*.bundle 2>/dev/null | head -n 1 || echo "")
+            TIMESTAMPED_BUNDLE=$(find "${TEST_STATE_PATH:-/tmp/test-state}" -maxdepth 1 -type f -name 'commits-*.bundle' -printf '%T@ %p\n' 2>/dev/null \
+              | sort -rn | head -n1 | cut -d' ' -f2-)
             if [[ -n "$TIMESTAMPED_BUNDLE" && -f "$TIMESTAMPED_BUNDLE" ]]; then
               BUNDLE_FILE="$TIMESTAMPED_BUNDLE"
               echo "📦 Found timestamped bundle: $BUNDLE_FILE"
