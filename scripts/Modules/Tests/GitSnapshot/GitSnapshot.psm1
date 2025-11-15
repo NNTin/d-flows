@@ -595,6 +595,12 @@ function Restore-GitBranches {
                 continue
             }
 
+            # Skip pull request branches
+            if ($branch.name -like 'pull/*') {
+                Write-Message -Type "Debug" "Skipping pull request branch: $($branch.name)"
+                continue
+            }
+
             try {
                 $branchName = $branch.name
                 $sha = $branch.sha
