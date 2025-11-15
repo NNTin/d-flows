@@ -1,3 +1,3 @@
-@{
+﻿@{
     ExcludeRules = @("PSAvoidUsingWriteHost", "PSUseSingularNouns", "PSAvoidUsingPositionalParameters")
 }

@@ -1,4 +1,4 @@
-# GitManager.psm1
+﻿# GitManager.psm1
 # Provides git state management functions for creating and manipulating tags, branches, and commits during integration testing.
 
 <#

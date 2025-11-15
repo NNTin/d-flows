@@ -1,4 +1,4 @@
-# RepositoryUtils.psm1
+﻿# RepositoryUtils.psm1
 
 # Module-scoped variable
 $script:TestStateGuid = [guid]::NewGuid().ToString('N')

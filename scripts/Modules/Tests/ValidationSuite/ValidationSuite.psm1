@@ -1,4 +1,4 @@
-# ValidationSuite.psm1
+﻿# ValidationSuite.psm1
 
 <#
 .SYNOPSIS

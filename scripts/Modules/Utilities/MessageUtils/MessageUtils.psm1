@@ -1,4 +1,4 @@
-# MessageUtils.psm1
+﻿# MessageUtils.psm1
 # Function for consistent debug output with emoji and color support.
 
 function Convert-ColorNameToConsoleColor {

@@ -1,4 +1,4 @@
-# GitSnapshot.psm1
+﻿# GitSnapshot.psm1
 # Provides functions for backing up and restoring git repository state including tags, branches, and commits for integration testing.
 
 # ============================================================================
