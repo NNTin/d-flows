@@ -1387,7 +1387,7 @@ function Invoke-ExecuteCommand {
     Write-Message -Type "Debug" "Executing command: $command"
     
     try {
-        $result = Run-Command $command
+        $result = Run-Command $command -VerboseOutput
 
         $output = $($result.Output)
         $exitCode = $($result.ExitCode)

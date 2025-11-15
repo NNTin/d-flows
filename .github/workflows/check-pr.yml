@@ -12,7 +12,7 @@ jobs:
   ####        Verifying bump-version.yml and release.yml        ####
   ##################################################################
   run-integration-tests:
-    name: Run Integration Tests with Act
+    name: Run Integration Tests
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -48,6 +48,7 @@ jobs:
   #### Verifying v0, v1 discord-notify.yml and step-summary.yml ####
   ##################################################################
   test-step-summary:
+    name: Test Step Summary
     uses: ./.github/workflows/step-summary.yml
     if: always()
     with:
@@ -67,6 +68,7 @@ jobs:
       overwrite: false
 
   build-discord-fields-completion:
+    name: Build Discord Fields
     runs-on: ubuntu-latest
     needs: [test-step-summary]
     if: always()
@@ -101,6 +103,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   notify-completion:
+    name: Notify Discord
     uses: ./.github/workflows/discord-notify.yml
     needs: [test-step-summary, build-discord-fields-completion]
     if: always()
