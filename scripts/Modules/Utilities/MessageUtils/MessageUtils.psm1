@@ -5,31 +5,32 @@ function Convert-ColorNameToConsoleColor {
     param (
         [string]$colorName
     )
-    
+
     # Define a hashtable to map valid color names to ConsoleColor enum values
     $validColors = @{
-        "Black"      = [System.ConsoleColor]::Black
-        "DarkBlue"   = [System.ConsoleColor]::DarkBlue
-        "DarkGreen"  = [System.ConsoleColor]::DarkGreen
-        "DarkCyan"   = [System.ConsoleColor]::DarkCyan
-        "DarkRed"    = [System.ConsoleColor]::DarkRed
-        "DarkMagenta"= [System.ConsoleColor]::DarkMagenta
-        "DarkYellow" = [System.ConsoleColor]::DarkYellow
-        "Gray"       = [System.ConsoleColor]::Gray
-        "DarkGray"   = [System.ConsoleColor]::DarkGray
-        "Blue"       = [System.ConsoleColor]::Blue
-        "Green"      = [System.ConsoleColor]::Green
-        "Cyan"       = [System.ConsoleColor]::Cyan
-        "Red"        = [System.ConsoleColor]::Red
-        "Magenta"    = [System.ConsoleColor]::Magenta
-        "Yellow"     = [System.ConsoleColor]::Yellow
-        "White"      = [System.ConsoleColor]::White
+        "Black"       = [System.ConsoleColor]::Black
+        "DarkBlue"    = [System.ConsoleColor]::DarkBlue
+        "DarkGreen"   = [System.ConsoleColor]::DarkGreen
+        "DarkCyan"    = [System.ConsoleColor]::DarkCyan
+        "DarkRed"     = [System.ConsoleColor]::DarkRed
+        "DarkMagenta" = [System.ConsoleColor]::DarkMagenta
+        "DarkYellow"  = [System.ConsoleColor]::DarkYellow
+        "Gray"        = [System.ConsoleColor]::Gray
+        "DarkGray"    = [System.ConsoleColor]::DarkGray
+        "Blue"        = [System.ConsoleColor]::Blue
+        "Green"       = [System.ConsoleColor]::Green
+        "Cyan"        = [System.ConsoleColor]::Cyan
+        "Red"         = [System.ConsoleColor]::Red
+        "Magenta"     = [System.ConsoleColor]::Magenta
+        "Yellow"      = [System.ConsoleColor]::Yellow
+        "White"       = [System.ConsoleColor]::White
     }
-    
+
     # Check if the color name is in the hashtable, if not return a default color
     if ($validColors.ContainsKey($colorName)) {
         return $validColors[$colorName]
-    } else {
+    }
+    else {
         Write-Host "$(Get-Emoji "Error") Invalid color name '$colorName'. Using default 'White'." -ForegroundColor Red -BackgroundColor Yellow
         return [System.ConsoleColor]::White  # Default to White if invalid
     }
@@ -80,7 +81,8 @@ function Write-Message {
     if ($Type -eq "None") {
         if ($NoNewline) {
             Write-Host "$Message" -ForegroundColor $color -NoNewline
-        } else {
+        }
+        else {
             Write-Host "$Message" -ForegroundColor $color
         }
     }
@@ -88,7 +90,8 @@ function Write-Message {
         $emoji = Get-Emoji $Type
         if ($NoNewline) {
             Write-Host "$emoji $Message" -ForegroundColor $color -NoNewline
-        } else {
+        }
+        else {
             Write-Host "$emoji $Message" -ForegroundColor $color
         }
     }

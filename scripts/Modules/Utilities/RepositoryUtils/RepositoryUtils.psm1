@@ -70,7 +70,7 @@ function Get-RepositoryRoot {
             Write-Message -Type "Debug" "Found repository root: $Path"
             return $Path
         }
-        
+
         $Path = Split-Path $Path -Parent
     }
 
@@ -93,9 +93,9 @@ function Get-RepositoryRoot {
 
 .NOTES
     Returns the full path to the test state directory in temp.
-    
+
     Directory is automatically cleaned up at script end unless -SkipCleanup is specified.
-    
+
     Cross-platform temp path resolution:
     - Windows: Uses %TEMP% environment variable
     - Linux: Uses /tmp directory
@@ -105,20 +105,22 @@ function Get-RepositoryRoot {
 function New-TestStateDirectory {
     $testStatePath = Get-TestStateBasePath
     $testLogsPath = Join-Path (Get-TestStateBasePath) "logs"
-    
+
     if (-not (Test-Path $testStatePath)) {
         Write-Message -Type "Debug" "Creating temp test state directory: $testStatePath"
         New-Item -ItemType Directory -Path $testStatePath -Force | Out-Null
         Write-Message -Type "Debug" "Test state directory created"
-    } else {
+    }
+    else {
         Write-Message -Type "Debug" "Test state directory already exists: $testStatePath"
     }
-    
+
     if (-not (Test-Path $testLogsPath)) {
         Write-Message -Type "Debug" "Creating temp test logs directory: $testLogsPath"
         New-Item -ItemType Directory -Path $testLogsPath -Force | Out-Null
         Write-Message -Type "Debug" "Test logs directory created"
-    } else {
+    }
+    else {
         Write-Message -Type "Debug" "Test logs directory already exists: $testLogsPath"
     }
 

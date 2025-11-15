@@ -26,10 +26,12 @@ function Get-CurrentCommitSha {
         if ($LASTEXITCODE -eq 0) {
             Write-Message -Type "Debug" -Message "Current commit SHA: $sha"
             return $sha
-        } else {
+        }
+        else {
             throw "Failed to get current commit SHA"
         }
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" -Message "Error getting current commit: $_"
         throw $_
     }
@@ -62,7 +64,7 @@ function Test-GitTagExists {
 
     $existingTag = git tag -l $TagName 2>$null
     $exists = -not [string]::IsNullOrWhiteSpace($existingTag)
-    
+
     Write-Message -Type "Debug" -Message "Tag exists check '$TagName': $exists"
     return $exists
 }
@@ -94,7 +96,7 @@ function Test-GitBranchExists {
 
     $existingBranch = git branch -l $BranchName 2>$null
     $exists = -not [string]::IsNullOrWhiteSpace($existingBranch)
-    
+
     Write-Message -Type "Debug" -Message "Branch exists check '$BranchName': $exists"
     return $exists
 }
@@ -133,7 +135,7 @@ function New-GitCommit {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Message,
-        
+
         [bool]$AllowEmpty = $true
     )
 
@@ -145,18 +147,19 @@ function New-GitCommit {
         $args += @("-m", $Message)
 
         Write-Message -Type "Debug" -Message "Creating commit: $Message"
-        
+
         git @args 2>&1 | Out-Null
-        
+
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to create commit"
         }
         Write-Message -Type "Tag" -Message "Commit created: $sha"
 
         $sha = Get-CurrentCommitSha
-        
+
         return $sha
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" -Message "Failed to create commit: $_"
         throw $_
     }
@@ -201,9 +204,9 @@ function New-GitTag {
     param(
         [Parameter(Mandatory = $true)]
         [string]$TagName,
-        
+
         [string]$CommitSha,
-        
+
         [bool]$Force = $false
     )
 
@@ -229,14 +232,15 @@ function New-GitTag {
 
         # Create tag
         git tag $TagName $CommitSha 2>&1 | Out-Null
-        
+
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to create tag"
         }
 
         Write-Message -Type "Tag" -Message "Tag created successfully: $TagName"
         return $true
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" -Message "Failed to create tag '$TagName': $_"
         throw $_
     }
@@ -282,9 +286,9 @@ function New-GitBranch {
     param(
         [Parameter(Mandatory = $true)]
         [string]$BranchName,
-        
+
         [string]$CommitSha,
-        
+
         [bool]$Force = $false
     )
 
@@ -317,14 +321,15 @@ function New-GitBranch {
 
         # Create branch
         git branch $BranchName $CommitSha 2>&1 | Out-Null
-        
+
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to create branch"
         }
 
         Write-Message -Type "Branch" -Message "Branch created successfully: $BranchName"
         return $true
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" -Message "Failed to create branch '$BranchName': $_"
         throw $_
     }
@@ -364,16 +369,17 @@ function Set-GitBranch {
 
     try {
         Write-Message -Type "Branch" "Checking out branch: $BranchName"
-        
+
         git checkout $BranchName 2>&1 | Out-Null
-        
+
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to checkout branch - check for uncommitted changes"
         }
 
         Write-Message -Type "Branch" "Branch checked out: $BranchName"
         return $true
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" "Failed to checkout branch '$BranchName': $_"
         return $false
     }
@@ -423,7 +429,7 @@ function Clear-GitState {
             $existingTags = @(git tag -l)
             if ($existingTags.Count -gt 0) {
                 Write-Message -Type "Warning" -Message "Deleting $($existingTags.Count) existing tags"
-                
+
                 foreach ($tag in $existingTags) {
                     git tag -d $tag 2>&1 | Out-Null
                     Write-Message -Type "Debug" -Message "Deleted tag: $tag"
@@ -434,16 +440,16 @@ function Clear-GitState {
         if ($DeleteBranches) {
             $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
             $existingBranches = @(git branch -l | Where-Object { $_ -notlike "*$currentBranch*" } )
-            
+
             if ($existingBranches.Count -gt 0) {
                 Write-Message -Type "Warning" -Message "Deleting $($existingBranches.Count) existing branches (excluding current)"
-                
+
                 foreach ($branchLine in $existingBranches) {
                     $branch = $branchLine.Trim()
                     if ($branch.StartsWith("* ")) {
                         $branch = $branch.Substring(2).Trim()
                     }
-                    
+
                     if ($branch -and $branch -ne $currentBranch) {
                         git branch -D $branch 2>&1 | Out-Null
                         Write-Message -Type "Debug" -Message "Deleted branch: $branch"
@@ -451,7 +457,8 @@ function Clear-GitState {
                 }
             }
         }
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" -Message "Error during state cleanup: $_"
         throw $_
     }

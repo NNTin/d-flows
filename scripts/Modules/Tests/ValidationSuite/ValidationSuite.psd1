@@ -2,21 +2,21 @@
     # ──────────────────────────────
     # Module metadata
     # ──────────────────────────────
-    RootModule        = 'ValidationSuite.psm1'
-    ModuleVersion     = '0.0.1' # TODO: Make this update via CI/CD
-    GUID              = 'f26debd5-0e23-4ccd-b4f9-935492d99ec1'
-    Author            = 'Tin Nguyen'
-    CompanyName       = 'N/A'
-    Copyright         = '(c) 2025 Tin Nguyen. All rights reserved.'
-    Description       = 'A suite of validation functions for various processes.'
-    
+    RootModule           = 'ValidationSuite.psm1'
+    ModuleVersion        = '0.0.1' # TODO: Make this update via CI/CD
+    GUID                 = 'f26debd5-0e23-4ccd-b4f9-935492d99ec1'
+    Author               = 'Tin Nguyen'
+    CompanyName          = 'N/A'
+    Copyright            = '(c) 2025 Tin Nguyen. All rights reserved.'
+    Description          = 'A suite of validation functions for various processes.'
+
     # Dependencies
-    RequiredModules = @('MessageUtils')
+    RequiredModules      = @('MessageUtils')
 
     # ──────────────────────────────
     # Export definitions
     # ──────────────────────────────
-    FunctionsToExport = @(
+    FunctionsToExport    = @(
         'Validate-TagExists',
         'Validate-TagNotExists',
         'Validate-TagPointsTo',
@@ -41,15 +41,15 @@
     # ──────────────────────────────
     # PowerShell compatibility
     # ──────────────────────────────
-    PowerShellVersion = '5.1'
+    PowerShellVersion    = '5.1'
     CompatiblePSEditions = @('Desktop', 'Core')
 
     # ──────────────────────────────
     # Private data
     # ──────────────────────────────
-    PrivateData = @{
+    PrivateData          = @{
         PSData = @{
-            Tags = @('Validation', 'Tools', 'Workflow', 'Git', 'CI/CD')
+            Tags       = @('Validation', 'Tools', 'Workflow', 'Git', 'CI/CD')
             ProjectUri = 'https://github.com/nntin/d-flows'
             LicenseUri = 'https://opensource.org/licenses/MIT'
             License    = 'MIT'

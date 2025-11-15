@@ -12,12 +12,12 @@
 #>
 function Validate-TagExists {
     param([Parameter(Mandatory = $true)][string]$Tag)
-    
+
     $existingTag = git tag -l $Tag 2>$null
     $exists = -not [string]::IsNullOrEmpty($existingTag)
-    
+
     Write-Message -Type "Validation" "Tag '$Tag' exists: $exists"
-    
+
     return @{
         Success = $exists
         Message = if ($exists) { "Tag '$Tag' exists" } else { "Tag '$Tag' does not exist" }
@@ -37,12 +37,12 @@ function Validate-TagExists {
 #>
 function Validate-TagNotExists {
     param([Parameter(Mandatory = $true)][string]$Tag)
-    
+
     $existingTag = git tag -l $Tag 2>$null
     $notExists = [string]::IsNullOrEmpty($existingTag)
-    
+
     Write-Message -Type "Validation" "Tag '$Tag' does not exist: $notExists"
-    
+
     return @{
         Success = $notExists
         Message = if ($notExists) { "Tag '$Tag' does not exist (as expected)" } else { "Tag '$Tag' exists (unexpected)" }
@@ -68,21 +68,22 @@ function Validate-TagPointsTo {
         [Parameter(Mandatory = $true)][string]$Tag,
         [Parameter(Mandatory = $true)][string]$Target
     )
-    
+
     try {
         $tagSha = git rev-parse "$Tag^{commit}" 2>$null
         $targetSha = git rev-parse "$Target^{commit}" 2>$null
-        
+
         $matches = ($tagSha -eq $targetSha)
-        
+
         Write-Message -Type "Validation" "Tag '$Tag' points to '$Target': $matches"
-        
+
         return @{
             Success = $matches
             Message = if ($matches) { "Tag '$Tag' points to '$Target'" } else { "Tag '$Tag' does not point to '$Target'" }
             Type    = "tag-points-to"
         }
-    } catch {
+    }
+    catch {
         return @{
             Success = $false
             Message = "Failed to compare tags: $_"
@@ -103,21 +104,22 @@ function Validate-TagPointsTo {
 #>
 function Validate-TagAccessible {
     param([Parameter(Mandatory = $true)][string]$Tag)
-    
+
     try {
         $existingTag = git tag -l $Tag 2>$null
         $sha = git rev-parse $Tag 2>$null
-        
+
         $accessible = (-not [string]::IsNullOrEmpty($existingTag)) -and (-not [string]::IsNullOrEmpty($sha))
-        
+
         Write-Message -Type "Validation" "Tag '$Tag' accessible: $accessible"
-        
+
         return @{
             Success = $accessible
             Message = if ($accessible) { "Tag '$Tag' is accessible" } else { "Tag '$Tag' is not accessible" }
             Type    = "tag-accessible"
         }
-    } catch {
+    }
+    catch {
         return @{
             Success = $false
             Message = "Failed to check tag accessibility: $_"
@@ -138,14 +140,14 @@ function Validate-TagAccessible {
 #>
 function Validate-TagCount {
     param([Parameter(Mandatory = $true)][int]$Expected)
-    
+
     $tags = @(git tag -l)
     $actual = $tags.Count
-    
+
     $matches = ($actual -eq $Expected)
-    
+
     Write-Message -Type "Validation" "Tag count: $actual (expected: $Expected)"
-    
+
     return @{
         Success = $matches
         Message = if ($matches) { "Tag count matches: $actual" } else { "Tag count mismatch: expected $Expected, got $actual" }
@@ -165,12 +167,12 @@ function Validate-TagCount {
 #>
 function Validate-BranchExists {
     param([Parameter(Mandatory = $true)][string]$Branch)
-    
+
     $existingBranch = git branch -l $Branch 2>$null
     $exists = -not [string]::IsNullOrEmpty($existingBranch)
-    
+
     Write-Message -Type "Validation" "Branch '$Branch' exists: $exists"
-    
+
     return @{
         Success = $exists
         Message = if ($exists) { "Branch '$Branch' exists" } else { "Branch '$Branch' does not exist" }
@@ -196,21 +198,22 @@ function Validate-BranchPointsToTag {
         [Parameter(Mandatory = $true)][string]$Branch,
         [Parameter(Mandatory = $true)][string]$Tag
     )
-    
+
     try {
         $branchSha = git rev-parse $Branch 2>$null
         $tagSha = git rev-parse $Tag 2>$null
-        
+
         $matches = ($branchSha -eq $tagSha)
-        
+
         Write-Message -Type "Validation" "Branch '$Branch' points to tag '$Tag': $matches"
-        
+
         return @{
             Success = $matches
             Message = if ($matches) { "Branch '$Branch' points to tag '$Tag'" } else { "Branch '$Branch' does not point to tag '$Tag'" }
             Type    = "branch-points-to-tag"
         }
-    } catch {
+    }
+    catch {
         return @{
             Success = $false
             Message = "Failed to compare branch and tag: $_"
@@ -231,14 +234,14 @@ function Validate-BranchPointsToTag {
 #>
 function Validate-BranchCount {
     param([Parameter(Mandatory = $true)][int]$Expected)
-    
+
     $branches = @(git branch -l)
     $actual = $branches.Count
-    
+
     $matches = ($actual -eq $Expected)
-    
+
     Write-Message -Type "Validation" "Branch count: $actual (expected: $Expected)"
-    
+
     return @{
         Success = $matches
         Message = if ($matches) { "Branch count matches: $actual" } else { "Branch count mismatch: expected $Expected, got $actual" }
@@ -258,12 +261,12 @@ function Validate-BranchCount {
 #>
 function Validate-CurrentBranch {
     param([Parameter(Mandatory = $true)][string]$Branch)
-    
+
     $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
     $matches = ($currentBranch -eq $Branch)
-    
+
     Write-Message -Type "Validation" "Current branch is '$Branch': $matches"
-    
+
     return @{
         Success = $matches
         Message = if ($matches) { "Current branch is '$Branch'" } else { "Current branch is '$currentBranch', expected '$Branch'" }
@@ -289,35 +292,37 @@ function Validate-VersionGreater {
         [Parameter(Mandatory = $true)][string]$Current,
         [Parameter(Mandatory = $true)][string]$New
     )
-    
+
     try {
         # Remove 'v' prefix if present
         $currentClean = $Current -replace '^v', ''
         $newClean = $New -replace '^v', ''
-        
+
         # Parse version parts
         $currentParts = $currentClean -split '\.' | ForEach-Object { [int]$_ }
         $newParts = $newClean -split '\.' | ForEach-Object { [int]$_ }
-        
+
         # Compare major, minor, patch
         $greater = $false
         for ($i = 0; $i -lt 3; $i++) {
             if ($newParts[$i] -gt $currentParts[$i]) {
                 $greater = $true
                 break
-            } elseif ($newParts[$i] -lt $currentParts[$i]) {
+            }
+            elseif ($newParts[$i] -lt $currentParts[$i]) {
                 break
             }
         }
-        
+
         Write-Message -Type "Validation" "Version '$New' > '$Current': $greater"
-        
+
         return @{
             Success = $greater
             Message = if ($greater) { "Version '$New' is greater than '$Current'" } else { "Version '$New' is not greater than '$Current'" }
             Type    = "version-greater"
         }
-    } catch {
+    }
+    catch {
         return @{
             Success = $false
             Message = "Failed to compare versions: $_"
@@ -348,18 +353,18 @@ function Validate-VersionProgression {
         [Parameter(Mandatory = $true)][string]$To,
         [Parameter(Mandatory = $true)][string]$BumpType
     )
-    
+
     try {
         # Remove 'v' prefix if present
         $fromClean = $From -replace '^v', ''
         $toClean = $To -replace '^v', ''
-        
+
         # Parse version parts
         $fromParts = $fromClean -split '\.' | ForEach-Object { [int]$_ }
         $toParts = $toClean -split '\.' | ForEach-Object { [int]$_ }
-        
+
         $valid = $false
-        
+
         switch ($BumpType) {
             "major" {
                 # Major incremented, minor/patch reset to 0
@@ -374,15 +379,16 @@ function Validate-VersionProgression {
                 $valid = ($toParts[0] -eq $fromParts[0]) -and ($toParts[1] -eq $fromParts[1]) -and ($toParts[2] -eq ($fromParts[2] + 1))
             }
         }
-        
+
         Write-Message -Type "Validation" "Version progression '$From' -> '$To' ($BumpType): $valid"
-        
+
         return @{
             Success = $valid
             Message = if ($valid) { "Version progression '$From' -> '$To' follows $BumpType bump" } else { "Version progression '$From' -> '$To' does not follow $BumpType bump" }
             Type    = "version-progression"
         }
-    } catch {
+    }
+    catch {
         return @{
             Success = $false
             Message = "Failed to validate version progression: $_"
@@ -409,11 +415,11 @@ function Validate-MajorIncrement {
         [Parameter(Mandatory = $true)][int]$From,
         [Parameter(Mandatory = $true)][int]$To
     )
-    
+
     $valid = ($To -eq ($From + 1))
-    
+
     Write-Message -Type "Validation" "Major increment $From -> ${To}: $valid"
-    
+
     return @{
         Success = $valid
         Message = if ($valid) { "Major version incremented from $From to $To" } else { "Major version increment invalid: $From -> $To (expected $($From + 1))" }
@@ -433,21 +439,22 @@ function Validate-MajorIncrement {
 #>
 function Validate-MajorTagCoexistence {
     param([Parameter(Mandatory = $true)][array]$Tags)
-    
+
     $allExist = $true
     $existingTags = @()
-    
+
     foreach ($tag in $Tags) {
         $exists = git tag -l $tag 2>$null
         if ([string]::IsNullOrEmpty($exists)) {
             $allExist = $false
-        } else {
+        }
+        else {
             $existingTags += $tag
         }
     }
-    
+
     Write-Message -Type "Validation" "Major tags coexist ($($Tags -join ', ')): $allExist"
-    
+
     return @{
         Success = $allExist
         Message = if ($allExist) { "All major tags exist: $($Tags -join ', ')" } else { "Not all major tags exist. Found: $($existingTags -join ', ')" }
@@ -467,18 +474,18 @@ function Validate-MajorTagCoexistence {
 #>
 function Validate-MajorTagProgression {
     param([Parameter(Mandatory = $true)][array]$Tags)
-    
+
     $valid = $true
-    
+
     for ($i = 0; $i -lt $Tags.Count; $i++) {
         $tag = $Tags[$i]
         $exists = git tag -l $tag 2>$null
-        
+
         if ([string]::IsNullOrEmpty($exists)) {
             $valid = $false
             break
         }
-        
+
         # Check if version number matches index
         if ($tag -match '^v(\d+)$') {
             $version = [int]$matches[1]
@@ -488,9 +495,9 @@ function Validate-MajorTagProgression {
             }
         }
     }
-    
+
     Write-Message -Type "Validation" "Major tag progression ($($Tags -join ', ')): $valid"
-    
+
     return @{
         Success = $valid
         Message = if ($valid) { "Major tags progress correctly: $($Tags -join ', ')" } else { "Major tag progression invalid" }
@@ -519,21 +526,22 @@ function Validate-NoCrossContamination {
         [Parameter(Mandatory = $true)][string]$V1,
         [Parameter(Mandatory = $true)][string]$V2
     )
-    
+
     try {
         $v1Sha = git rev-parse $V1 2>$null
         $v2Sha = git rev-parse $V2 2>$null
-        
+
         $valid = (-not [string]::IsNullOrEmpty($v1Sha)) -and (-not [string]::IsNullOrEmpty($v2Sha)) -and ($v1Sha -ne $v2Sha)
-        
+
         Write-Message -Type "Validation" "No cross-contamination between '$V1' and '$V2': $valid"
-        
+
         return @{
             Success = $valid
             Message = if ($valid) { "No cross-contamination between '$V1' and '$V2'" } else { "Cross-contamination detected or invalid tags" }
             Type    = "no-cross-contamination"
         }
-    } catch {
+    }
+    catch {
         return @{
             Success = $false
             Message = "Failed to check cross-contamination: $_"
@@ -554,13 +562,13 @@ function Validate-NoCrossContamination {
 #>
 function Validate-NoTagConflicts {
     $tags = @(git tag -l)
-    
+
     # Check for duplicates (shouldn't happen but validate)
     $uniqueTags = $tags | Select-Object -Unique
     $noDuplicates = ($tags.Count -eq $uniqueTags.Count)
-    
+
     Write-Message -Type "Validation" "No tag conflicts: $noDuplicates"
-    
+
     return @{
         Success = $noDuplicates
         Message = if ($noDuplicates) { "No tag conflicts detected" } else { "Tag conflicts detected" }
@@ -586,11 +594,11 @@ function Validate-WorkflowSuccess {
         [Parameter(Mandatory = $true)][string]$Workflow,
         [Parameter(Mandatory = $true)][object]$ActResult
     )
-    
+
     $success = $ActResult.Success -and ($ActResult.ExitCode -eq 0)
-    
+
     Write-Message -Type "Validation" "Workflow '$Workflow' success: $success"
-    
+
     return @{
         Success = $success
         Message = if ($success) { "Workflow '$Workflow' succeeded" } else { "Workflow '$Workflow' failed with exit code: $($ActResult.ExitCode)" }
@@ -640,7 +648,7 @@ function Validate-WorkflowFailure {
 #>
 function Validate-IdempotencyVerified {
     Write-Message -Type "Validation" "Idempotency check (placeholder)"
-    
+
     return @{
         Success = $true
         Message = "Idempotency verification placeholder"
