@@ -3,6 +3,11 @@
   "description": "Focus: accidental release branch with unknown name is handled gracefully",
   "steps": [
     {
+      "name": "Making sure we are on main branch",
+      "action": "execute-command",
+      "command": "git checkout main"
+    },
+    {
       "name": "Setup complete release history",
       "action": "setup-git-state",
       "scenario": "FirstRelease",

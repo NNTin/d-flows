@@ -3,6 +3,11 @@
   "description": "Focus: Releasing on main (= latest) should always be possible, only looking from v0 to v1.",
   "steps": [
     {
+      "name": "Making sure we are on main branch",
+      "action": "execute-command",
+      "command": "git checkout main"
+    },
+    {
       "name": "Setup initial state",
       "action": "setup-git-state",
       "scenario": "MajorBumpV0ToV1",

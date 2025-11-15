@@ -28,18 +28,18 @@ jobs:
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
 
-      - name: Checkout PR branch (attach HEAD)
-        if: ${{ github.event_name == 'pull_request' || github.event_name == 'pull_request_target' }}
+      - name: Attach HEAD to the pull request
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
-          echo "Restoring PR branch $GITHUB_HEAD_REF"
+          echo "Attaching HEAD to PR: #${{ github.event.pull_request.number }}"
 
-          # Fetch the PR source branch
-          git fetch origin "$GITHUB_HEAD_REF:$GITHUB_HEAD_REF"
+          # Create a local branch named "pull/<number>/merge" pointing at HEAD
+          git branch "pull/${{ github.event.pull_request.number }}/merge" HEAD
 
-          # Check it out
-          git checkout "$GITHUB_HEAD_REF"
+          # Switch to it (reattach HEAD)
+          git checkout "pull/${{ github.event.pull_request.number }}/merge"
 
-          echo "HEAD reattached to branch: $(git branch --show-current)"
+          echo "HEAD attached to: $(git branch --show-current)"
           echo "Commit: $(git rev-parse HEAD)"
 
       - name: Set up Docker
@@ -64,6 +64,7 @@ jobs:
   test-step-summary:
     name: Test Step Summary
     uses: ./.github/workflows/step-summary.yml
+    needs: [run-integration-tests]
     if: always()
     with:
       title: "Mock Test Results"
@@ -84,7 +85,7 @@ jobs:
   build-discord-fields-completion:
     name: Build Discord Fields
     runs-on: ubuntu-latest
-    needs: [test-step-summary]
+    needs: [run-integration-tests]
     if: always()
     outputs:
       discord_fields: ${{ steps.discord_fields.outputs.fields }}
@@ -93,7 +94,7 @@ jobs:
       - name: Build Discord Fields
         id: discord_fields
         run: |
-          SUMMARY_STATUS="${{ needs['test-step-summary'].result }}"
+          SUMMARY_STATUS="${{ needs['run-integration-tests'].result }}"
           
           # Build JSON fields with readable formatting
           FIELDS=$(jq -n \
@@ -119,13 +120,13 @@ jobs:
   notify-completion:
     name: Notify Discord
     uses: ./.github/workflows/discord-notify.yml
-    needs: [test-step-summary, build-discord-fields-completion]
+    needs: [build-discord-fields-completion, run-integration-tests]
     if: always()
     secrets:
       webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
     with:
       message_type: "embed"
-      title: ${{ needs['test-step-summary'].result == 'success' && '✅ PR CI Workflow Completed Successfully' || '⚠️ PR CI Workflow Completed with Issues' }}
-      description: ${{ needs['test-step-summary'].result == 'success' && 'All validation checks and tests passed successfully. The pull request is ready for review.' || 'The workflow completed but some checks failed. Please review the results and address any issues.' }}
-      color: ${{  needs['test-step-summary'].result == 'success' && '3066993' || '16776960' }}
+      title: ${{ needs['run-integration-tests'].result == 'success' && '✅ PR CI Workflow Completed Successfully' || '⚠️ PR CI Workflow Completed with Issues' }}
+      description: ${{ needs['run-integration-tests'].result == 'success' && 'All validation checks and tests passed successfully. The pull request is ready for review.' || 'The workflow completed but some checks failed. Please review the results and address any issues.' }}
+      color: ${{ needs['run-integration-tests'].result == 'success' && '3066993' || '16776960' }}
       fields: ${{ needs.build-discord-fields-completion.outputs.discord_fields }}
