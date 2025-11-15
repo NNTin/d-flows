@@ -463,13 +463,12 @@ function Apply-Scenario {
             Clear-GitState -DeleteTags $true
         }
 
-        $repoRoot = Get-RepositoryRoot
-
         # Check if repository is empty
         $hasCommits = $false
         $firstSha = $null
         try {
             $firstSha = Get-CurrentCommitSha
+            Write-Message -Type "Debug" "Repository has existing commits, starting from SHA: $firstSha"
             $hasCommits = $true
         }
         catch {

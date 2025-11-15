@@ -140,15 +140,15 @@ function New-GitCommit {
     )
 
     try {
-        $args = @("commit")
+        $argsGit = @("commit")
         if ($AllowEmpty) {
-            $args += "--allow-empty"
+            $argsGit += "--allow-empty"
         }
-        $args += @("-m", $Message)
+        $argsGit += @("-m", $Message)
 
         Write-Message -Type "Debug" -Message "Creating commit: $Message"
 
-        git @args 2>&1 | Out-Null
+        git @argsGit 2>&1 | Out-Null
 
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to create commit"

@@ -1374,17 +1374,17 @@ function Run-Command {
     if ($tokens.Count -eq 0) { throw "Command string is empty." }
 
     $exe = $tokens[0].Content
-    $args = @()
+    $argsCommand = @()
     if ($tokens.Count -gt 1) {
-        $args = $tokens[1..($tokens.Count - 1)] | ForEach-Object { $_.Content }
+        $argsCommand = $tokens[1..($tokens.Count - 1)] | ForEach-Object { $_.Content }
     }
 
     if ($VerboseOutput) {
-        Write-Message -Type "Debug" "Executing: $exe $($args -join ' ')"
+        Write-Message -Type "Debug" "Executing: $exe $($argsCommand -join ' ')"
     }
 
     # Execute command, capture stdout + stderr
-    $output = & $exe @args 2>&1 | Out-String
+    $output = & $exe @argsCommand 2>&1 | Out-String
     $exitCode = $LASTEXITCODE
 
     if ($VerboseOutput) {
@@ -2134,7 +2134,7 @@ if ($MyInvocation.InvocationName -ne ".") {
 
     # Export report
     # How to view test logs: Check system temp directory for d-flows-test-state-*/logs/ directory
-    $reportPath = Export-TestReport -TestResults $testResults
+    Export-TestReport -TestResults $testResults
 
     # Cleanup test state directory
     if (-not $SkipCleanup) {
