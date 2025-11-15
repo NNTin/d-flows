@@ -53,7 +53,7 @@ jobs:
         shell: pwsh
         run: |
           $logFile = "psscriptanalyzer.log"
-          $results = Invoke-ScriptAnalyzer -Path . -Recurse
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Settings .\scripts\Modules\Utilities\PSScriptAnalyzerSettings.psd1
           if ($results) {
             $results | Out-File $logFile
             $results | Format-Table -AutoSize
