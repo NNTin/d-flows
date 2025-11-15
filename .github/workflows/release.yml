@@ -32,7 +32,7 @@ jobs:
           ref: ${{ inputs.target_branch }}
           fetch-depth: 0
           fetch-tags: false  # Disabled to prevent remote tag fetching during act tests
-          token: ${{ secrets.GITHUB_TOKEN != '' && secrets.GITHUB_TOKEN || env.GITHUB_TOKEN != '' && env.GITHUB_TOKEN || env.TOKEN_FALLBACK }}
+          token: ${{ secrets.TOKEN != '' && secrets.TOKEN || env.GITHUB_TOKEN != '' && env.GITHUB_TOKEN || env.TOKEN_FALLBACK }}
 
       # Restore commit objects from bundle before restoring tags. This ensures all commit
       # SHAs referenced by tags exist in the repository. The bundle is created by

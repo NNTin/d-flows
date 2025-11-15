@@ -40,7 +40,7 @@ jobs:
           # may still fetch tags in some scenarios. Test isolation is ensured by filtering
           # production tags during test state export in Run-ActTests.ps1.
           fetch-tags: false  # Disabled to prevent remote tag fetching during act tests
-          token: ${{ secrets.GITHUB_TOKEN != '' && secrets.GITHUB_TOKEN || env.GITHUB_TOKEN != '' && env.GITHUB_TOKEN || env.TOKEN_FALLBACK }}
+          token: ${{ secrets.TOKEN != '' && secrets.TOKEN || env.GITHUB_TOKEN != '' && env.GITHUB_TOKEN || env.TOKEN_FALLBACK }}
 
       # Restore commit objects from bundle before restoring tags. This ensures all commit
       # SHAs referenced by tags exist in the repository. The bundle is created by
