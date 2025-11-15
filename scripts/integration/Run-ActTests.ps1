@@ -781,8 +781,7 @@ function Invoke-ActWorkflow {
                 $hostUid = & id -u
                 $hostGid = & id -g
                 Write-Message -Type "Debug" "Running on Linux. Setting container user: $($hostUid):$($hostGid)"
-                $mountOption += "--user"
-                $mountOption += "$($hostUid):$($hostGid)"
+                $mountOption += " --user $($hostUid):$($hostGid)"
             } catch {
                 Write-Message -Type "Warning" "Failed to determine host UID/GID. Container may run as root."
             }
