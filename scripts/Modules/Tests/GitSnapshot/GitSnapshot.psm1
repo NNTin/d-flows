@@ -309,10 +309,13 @@ function Backup-GitCommits {
         # Create git bundle with explicit ref list
         $bundleArgs = @('bundle', 'create', $BackupPath) + $allRefs
         
-        & git @bundleArgs 2>&1 | Out-Null
-        
-        if ($LASTEXITCODE -ne 0) {
-            throw "Git bundle create failed with exit code: $LASTEXITCODE"
+        $gitOutput = & git @bundleArgs 2>&1
+        $exitCode = $LASTEXITCODE
+
+        if ($exitCode -ne 0) {
+            # If failed, write the captured output to the console
+            $gitOutput | ForEach-Object { Write-Host $_ }
+            throw "Git bundle create failed with exit code: $exitCode"
         }
 
         Write-Message -Type "Info" "Backed up $($allRefs.Count) refs to bundle: $BackupPath"

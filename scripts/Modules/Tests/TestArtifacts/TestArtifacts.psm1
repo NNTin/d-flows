@@ -370,10 +370,13 @@ function Export-TestCommitsBundle {
         # Create git bundle with explicit ref list
         $bundleArgs = @('bundle', 'create', $OutputPath) + $allRefs
         
-        & git @bundleArgs 2>&1 | Out-Null
-        
-        if ($LASTEXITCODE -ne 0) {
-            throw "Git bundle create failed with exit code: $LASTEXITCODE"
+        $gitOutput = & git @bundleArgs 2>&1
+        $exitCode = $LASTEXITCODE
+
+        if ($exitCode -ne 0) {
+            # If failed, write the captured output to the console
+            $gitOutput | ForEach-Object { Write-Host $_ }
+            throw "Git bundle create failed with exit code: $exitCode"
         }
 
         Write-Message -Type "Success" "Test-commits.bundle generated with $($allRefs.Count) refs"
