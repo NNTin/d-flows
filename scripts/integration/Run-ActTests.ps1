@@ -745,7 +745,7 @@ function Invoke-ActWorkflow {
     # }
     
     $actArgs += "--env"
-    $actArgs += "TOKEN_FALLBACK=${env:GITHUB_TOKEN}"
+    $actArgs += "TOKEN_FALLBACK=${env:ACT_GITHUB_TOKEN}"
     
     $containerTestStatePath = "/tmp/test-state"
     $testStateEnvPath = if ($containerTestStatePath.EndsWith("/")) {

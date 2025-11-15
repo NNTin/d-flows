@@ -71,7 +71,7 @@ Create a `.secrets` file in the repository root (use `.secrets.template` as refe
 cp .secrets.template .secrets
 
 # Edit .secrets file with your actual values
-# GITHUB_TOKEN=your_github_token_here
+# ACT_GITHUB_TOKEN=your_github_token_here
 # DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your_webhook_url_here
 ```
 
@@ -137,10 +137,10 @@ act workflow_dispatch --job create-release --input version=1.0.0 -W .github/work
 act pull_request --secret-file .secrets -e pr-event.json
 
 # Using environment variables
-act pull_request -s GITHUB_TOKEN="$env:GITHUB_TOKEN" -e pr-event.json
+act pull_request -s TOKEN_FALLBACK="$env:ACT_GITHUB_TOKEN" -e pr-event.json
 
 # Interactive secret input
-act pull_request -s GITHUB_TOKEN -e pr-event.json
+act pull_request -s TOKEN_FALLBACK -e pr-event.json
 ```
 
 ### Advanced Usage
