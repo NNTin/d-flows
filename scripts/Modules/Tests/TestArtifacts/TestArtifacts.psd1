@@ -29,7 +29,8 @@
         'BackupDirectory',
         'TestLogsDirectory',
         'IntegrationTestsDirectory',
-        'TestBranchesFile'
+        'TestBranchesFile',
+        'TestCommitsBundle'
     )
 
     # ──────────────────────────────

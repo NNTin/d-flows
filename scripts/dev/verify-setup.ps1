@@ -128,3 +128,5 @@ Write-Message -Type Info "Test Modules: $testModules"
 Import-Module TestArtifacts -ErrorAction Stop
 Write-Message -Type Info "TestArtifacts Module Imported. Test State Directory: $TestStateDirectory"
 Write-Message -Type Info "Test Tags File: $TestTagsFile"
+
+Write-Message -Type Info "Test Commits Bundle: $TestCommitsBundle"
