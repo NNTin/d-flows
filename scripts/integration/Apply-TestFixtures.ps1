@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Apply test fixtures to set up git state for act integration testing.
 

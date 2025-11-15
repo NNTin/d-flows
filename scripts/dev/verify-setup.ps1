@@ -1,4 +1,4 @@
-Write-Host "Verifying d-flows Development Setup... Current Modules" -ForegroundColor Cyan
+﻿Write-Host "Verifying d-flows Development Setup... Current Modules" -ForegroundColor Cyan
 Get-Module
 
 $scriptDir = $PSScriptRoot

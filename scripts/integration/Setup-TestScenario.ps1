@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Centralized test scenario definitions and management for act integration testing.
 
