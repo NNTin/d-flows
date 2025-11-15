@@ -33,7 +33,7 @@ jobs:
 
       - name: Upload actionlint log
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: actionlint-log
           path: actionlint.log
@@ -63,7 +63,7 @@ jobs:
 
       - name: Upload PSScriptAnalyzer log
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: psscriptanalyzer-log
           path: psscriptanalyzer.log
@@ -89,7 +89,7 @@ jobs:
 
       - name: Upload JSON Prettier log
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: json-prettier-log
           path: json-prettier.log
