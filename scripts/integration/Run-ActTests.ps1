@@ -1384,6 +1384,14 @@ function Invoke-ExecuteCommand {
     
     $command = $Step.command
     
+    # Make .git writable on Linux/macOS, skip on Windows
+    if (-not $IsWindows) {
+        Write-Message -Type Debug "Detected non-Windows OS. Setting write permissions for .git directory..."
+        chmod -R u+w .git
+    } else {
+        Write-Message -Type Debug "Windows OS detected. Skipping chmod."
+    }
+
     Write-Message -Type "Debug" "Executing command: $command"
     
     try {
