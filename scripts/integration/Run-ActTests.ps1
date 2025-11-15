@@ -195,6 +195,7 @@ Add-ToPSModulePath $testModules
 # Import-Module -Name (Join-Path $PSScriptRoot "../Modules/Utilities/MessageUtils") -ErrorAction Stop
 
 # Import module explicitely because auto-load does not work for variables
+Add-ToPSModulePath Join-Path $testModules "TestArtifacts"
 Import-Module TestArtifacts -ErrorAction Stop
 
 $ActCommand = Get-Command "act" | Select-Object -ExpandProperty Source
