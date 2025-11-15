@@ -14,6 +14,12 @@ jobs:
   run-integration-tests:
     name: Run Integration Tests
     runs-on: ubuntu-latest
+    outputs:
+      total_tests: ${{ steps.run_tests.outputs.total_tests }}
+      passed_tests: ${{ steps.run_tests.outputs.passed_tests }}
+      failed_tests: ${{ steps.run_tests.outputs.failed_tests }}
+      total_duration: ${{ steps.run_tests.outputs.total_duration }}
+      average_duration: ${{ steps.run_tests.outputs.average_duration }}
     env:
       ACT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -52,6 +58,7 @@ jobs:
           curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash -s -- -b /usr/local/bin
 
       - name: Run Integration Tests
+        id: run_tests
         run: |
           # Make sure Docker daemon is running
           docker info
@@ -69,19 +76,23 @@ jobs:
     needs: [run-integration-tests]
     if: always()
     with:
-      title: "Mock Test Results"
+      title: "Integration Test Results"
       markdown: |
-        ### Test Results
+        ## Integration Test Results
         
-        - ✅ Test 1 passed
-        - ✅ Test 2 passed
-        - ✅ All validations completed
+        ${{ needs.run-integration-tests.outputs.failed_tests == '0' && '✅ All tests passed!' || '❌ Some tests failed' }}
         
-        ```bash
-        Mock output from test execution
-        ```
+        | Metric | Value |
+        |--------|-------|
+        | **Total Tests** | ${{ needs.run-integration-tests.outputs.total_tests }} |
+        | **Passed Tests** | ✅ ${{ needs.run-integration-tests.outputs.passed_tests }} |
+        | **Failed Tests** | ${{ needs.run-integration-tests.outputs.failed_tests == '0' && '✅' || '❌' }} ${{ needs.run-integration-tests.outputs.failed_tests }} |
+        | **Total Duration** | ${{ needs.run-integration-tests.outputs.total_duration }}s |
+        | **Average Duration** | ${{ needs.run-integration-tests.outputs.average_duration }}s |
         
-        **Summary**: All tests completed successfully.
+        ---
+        
+        **Test Status**: ${{ needs.run-integration-tests.result == 'success' && '✅ Completed Successfully' || '⚠️ Completed with Issues' }}
       overwrite: false
 
   build-discord-fields-completion:
@@ -105,8 +116,18 @@ jobs:
             --arg pr_url "${{ github.event.pull_request.html_url }}" \
             --arg actor "${{ github.actor }}" \
             --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --arg total_tests "${{ needs.run-integration-tests.outputs.total_tests }}" \
+            --arg passed_tests "${{ needs.run-integration-tests.outputs.passed_tests }}" \
+            --arg failed_tests "${{ needs.run-integration-tests.outputs.failed_tests }}" \
+            --arg total_duration "${{ needs.run-integration-tests.outputs.total_duration }}" \
+            --arg average_duration "${{ needs.run-integration-tests.outputs.average_duration }}" \
             '[
               {"name": "Step Summary Test", "value": (($summary_status == "success" and "✅ Passed" or "❌ Failed")), "inline": true},
+              {"name": "Total Tests", "value": $total_tests, "inline": true},
+              {"name": "Passed Tests", "value": ("✅ " + $passed_tests), "inline": true},
+              {"name": "Failed Tests", "value": (($failed_tests == "0" and "✅ " or "❌ ") + $failed_tests), "inline": true},
+              {"name": "Total Duration", "value": ($total_duration + "s"), "inline": false},
+              {"name": "Average Duration", "value": ($average_duration + "s"), "inline": false},
               {"name": "PR Details", "value": ("[#" + $pr_number + "](" + $pr_url + ") by @" + $actor), "inline": false},
               {"name": "Run Details", "value": ("[View Full Run](" + $run_url + ")"), "inline": false}
             ]')

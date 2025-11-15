@@ -2043,6 +2043,47 @@ if ($MyInvocation.InvocationName -ne ".") {
     # Display summary
     Write-TestSummary -TestResults $testResults
     
+    # Write test statistics to GITHUB_OUTPUT for downstream jobs
+    if ($env:GITHUB_OUTPUT) {
+        try {
+            Write-Message -Type "Info" -Message "Writing test statistics to GITHUB_OUTPUT"
+            
+            # Calculate statistics from test results
+            $totalTests = $testResults.Count
+            $passedTests = @($testResults | Where-Object { $_.Success }).Count
+            $failedTests = $totalTests - $passedTests
+            
+            # Convert Duration to seconds before summing
+            $totalDuration = ($testResults | ForEach-Object {
+                # If Duration is a string, convert to TimeSpan first
+                if ($_ -and $_.Duration -is [string]) {
+                    [TimeSpan]::Parse($_.Duration).TotalSeconds
+                } elseif ($_ -and $_.Duration -is [TimeSpan]) {
+                    $_.Duration.TotalSeconds
+                } else {
+                    0
+                }
+            } | Measure-Object -Sum).Sum
+            
+            # Calculate average duration (fix bug: $totalDuration is already in seconds, not TimeSpan)
+            $avgDuration = if ($totalTests -gt 0) { $totalDuration / $totalTests } else { 0 }
+            
+            # Write statistics to GITHUB_OUTPUT
+            "total_tests=$totalTests" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            "passed_tests=$passedTests" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            "failed_tests=$failedTests" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            "total_duration=$("{0:N2}" -f $totalDuration)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            "average_duration=$("{0:N2}" -f $avgDuration)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+            
+            Write-Message -Type "Success" -Message "Test statistics written to GITHUB_OUTPUT"
+        } catch {
+            Write-Message -Type "Warning" -Message "Failed to write to GITHUB_OUTPUT: $_"
+        }
+    }
+    else {
+        Write-Message -Type "Debug" "GITHUB_OUTPUT not set; skipping writing test statistics to GitHub Actions output"
+    }
+    
     # Export report
     # How to view test logs: Check system temp directory for d-flows-test-state-*/logs/ directory
     $reportPath = Export-TestReport -TestResults $testResults
