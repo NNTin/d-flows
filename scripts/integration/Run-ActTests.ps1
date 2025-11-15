@@ -171,7 +171,7 @@ Get-Module | ForEach-Object {
                 Remove-Module -Name $_.Name -Force -ErrorAction Stop
             }
             catch {
-                Write-Warning "Failed to remove module $($_.Name): $_"
+                Write-Message -Type "Error" "Failed to remove module $($_.Name): $_"
             }
             break  # Module matched, no need to check other paths
         }

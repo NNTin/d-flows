@@ -320,7 +320,7 @@ function Backup-GitCommits {
 
         if ($exitCode -ne 0) {
             # If failed, write the captured output to the console
-            $gitOutput | ForEach-Object { Write-Host $_ }
+            $gitOutput | ForEach-Object { Write-Message -Type "Error" $_ }
             throw "Git bundle create failed with exit code: $exitCode"
         }
 
