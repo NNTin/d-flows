@@ -32,6 +32,9 @@ jobs:
       - name: Attach HEAD to the pull request
         if: ${{ github.event_name == 'pull_request' }}
         run: |
+          # Fetch the main branch and update refs
+          git fetch origin main:main
+
           echo "Attaching HEAD to PR: #${{ github.event.pull_request.number }}"
 
           # Create a local branch named "pull/<number>/merge" pointing at HEAD
