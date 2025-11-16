@@ -5,39 +5,98 @@ on:
   workflow_call:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   ##################################################################
   ####        Verifying bump-version.yml and release.yml        ####
   ##################################################################
-  # TODO: run integration tests with scripts/integration/Run-ActTests.ps1 -RunAll
+  run-integration-tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    outputs:
+      total_tests: ${{ steps.run_tests.outputs.total_tests }}
+      passed_tests: ${{ steps.run_tests.outputs.passed_tests }}
+      failed_tests: ${{ steps.run_tests.outputs.failed_tests }}
+      total_duration: ${{ steps.run_tests.outputs.total_duration }}
+      average_duration: ${{ steps.run_tests.outputs.average_duration }}
+    env:
+      ACT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+    
+      - name: Configure Git Identity
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+
+      - name: Fetch PR branch
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          # Make sure git logs are writable
+          chmod -R u+w .git
+          
+          # Fetch the PR branch from origin
+          git fetch origin pull/${{ github.event.pull_request.number }}/head:pr-${{ github.event.pull_request.number }}
+          
+          # Switch to the PR branch
+          git switch pr-${{ github.event.pull_request.number }}
+          
+          echo "Current branch: $(git branch --show-current)"
+          echo "Commit: $(git rev-parse HEAD)"
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install nektos/act
+        run: |
+          curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash -s -- -b /usr/local/bin
+
+      - name: Run Integration Tests
+        id: run_tests
+        run: |
+          # Make sure Docker daemon is running
+          docker info
+
+          # Run integration test script
+          pwsh ./scripts/integration/Run-ActTests.ps1 -RunAll
+        shell: pwsh
 
   ##################################################################
   #### Verifying v0, v1 discord-notify.yml and step-summary.yml ####
   ##################################################################
   test-step-summary:
+    name: Test Step Summary
     uses: ./.github/workflows/step-summary.yml
+    needs: [run-integration-tests]
     if: always()
     with:
-      title: "Mock Test Results"
+      title: "Integration Test Results"
       markdown: |
-        ### Test Results
+        ${{ needs.run-integration-tests.outputs.failed_tests == '0' && '✅ All tests passed!' || '❌ Some tests failed' }}
         
-        - ✅ Test 1 passed
-        - ✅ Test 2 passed
-        - ✅ All validations completed
+        | Metric | Value |
+        |--------|-------|
+        | **Total Tests** | ${{ needs.run-integration-tests.outputs.total_tests }} |
+        | **Passed Tests** | ✅ ${{ needs.run-integration-tests.outputs.passed_tests }} |
+        | **Failed Tests** | ${{ needs.run-integration-tests.outputs.failed_tests == '0' && '✅' || '❌' }} ${{ needs.run-integration-tests.outputs.failed_tests }} |
+        | **Total Duration** | ${{ needs.run-integration-tests.outputs.total_duration }}s |
+        | **Average Duration** | ${{ needs.run-integration-tests.outputs.average_duration }}s |
         
-        ```bash
-        Mock output from test execution
-        ```
+        ---
         
-        **Summary**: All tests completed successfully.
+        **Test Status**: ${{ needs.run-integration-tests.result == 'success' && '✅ Completed Successfully' || '⚠️ Completed with Issues' }}
       overwrite: false
 
   build-discord-fields-completion:
+    name: Build Discord Fields
     runs-on: ubuntu-latest
-    needs: [test-step-summary]
+    needs: [run-integration-tests]
     if: always()
     outputs:
       discord_fields: ${{ steps.discord_fields.outputs.fields }}
@@ -46,7 +105,7 @@ jobs:
       - name: Build Discord Fields
         id: discord_fields
         run: |
-          SUMMARY_STATUS="${{ needs['test-step-summary'].result }}"
+          SUMMARY_STATUS="${{ needs['run-integration-tests'].result }}"
           
           # Build JSON fields with readable formatting
           FIELDS=$(jq -n \
@@ -55,8 +114,18 @@ jobs:
             --arg pr_url "${{ github.event.pull_request.html_url }}" \
             --arg actor "${{ github.actor }}" \
             --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --arg total_tests "${{ needs.run-integration-tests.outputs.total_tests }}" \
+            --arg passed_tests "${{ needs.run-integration-tests.outputs.passed_tests }}" \
+            --arg failed_tests "${{ needs.run-integration-tests.outputs.failed_tests }}" \
+            --arg total_duration "${{ needs.run-integration-tests.outputs.total_duration }}" \
+            --arg average_duration "${{ needs.run-integration-tests.outputs.average_duration }}" \
             '[
               {"name": "Step Summary Test", "value": (($summary_status == "success" and "✅ Passed" or "❌ Failed")), "inline": true},
+              {"name": "Total Tests", "value": $total_tests, "inline": true},
+              {"name": "Passed Tests", "value": ("✅ " + $passed_tests), "inline": true},
+              {"name": "Failed Tests", "value": ((($failed_tests == "0") | if . then "✅ " else "❌ " end) + ($failed_tests | tostring)), "inline": true},
+              {"name": "Total Duration", "value": ($total_duration + "s"), "inline": false},
+              {"name": "Average Duration", "value": ($average_duration + "s"), "inline": false},
               {"name": "PR Details", "value": ("[#" + $pr_number + "](" + $pr_url + ") by @" + $actor), "inline": false},
               {"name": "Run Details", "value": ("[View Full Run](" + $run_url + ")"), "inline": false}
             ]')
@@ -70,14 +139,15 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   notify-completion:
+    name: Notify Discord
     uses: ./.github/workflows/discord-notify.yml
-    needs: [test-step-summary, build-discord-fields-completion]
+    needs: [build-discord-fields-completion, run-integration-tests]
     if: always()
     secrets:
       webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
     with:
       message_type: "embed"
-      title: ${{ needs['test-step-summary'].result == 'success' && '✅ PR CI Workflow Completed Successfully' || '⚠️ PR CI Workflow Completed with Issues' }}
-      description: ${{ needs['test-step-summary'].result == 'success' && 'All validation checks and tests passed successfully. The pull request is ready for review.' || 'The workflow completed but some checks failed. Please review the results and address any issues.' }}
-      color: ${{  needs['test-step-summary'].result == 'success' && '3066993' || '16776960' }}
+      title: ${{ needs['run-integration-tests'].result == 'success' && '✅ PR CI Workflow Completed Successfully' || '⚠️ PR CI Workflow Completed with Issues' }}
+      description: ${{ needs['run-integration-tests'].result == 'success' && 'All validation checks and tests passed successfully. The pull request is ready for review.' || 'The workflow completed but some checks failed. Please review the results and address any issues.' }}
+      color: ${{ needs['run-integration-tests'].result == 'success' && '3066993' || '16776960' }}
       fields: ${{ needs.build-discord-fields-completion.outputs.discord_fields }}

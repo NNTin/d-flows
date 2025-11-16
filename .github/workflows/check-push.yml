@@ -8,13 +8,8 @@ permissions:
   contents: read
 
 jobs:
-  # TODO:
-  # - test report should use discord-notify to report result
-  # - test report should use step-summary.yml to create a summary
-  # - add PSScriptAnalyzer
-  # - add JSON Prettier check
-
   validate-syntax:
+    name: Actionlint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,27 +32,68 @@ jobs:
             exit 1
           fi
 
-      - name: Write validation results
-        shell: bash
-        if: always()
+      - name: Upload actionlint log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: actionlint-log
+          path: actionlint.log
+
+  ps-script-analyzer:
+    name: PSScriptAnalyzer
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
         run: |
-          if [[ "${{ steps.actionlint.outputs.validation_result }}" == "success" ]]; then
-            cat >> "$GITHUB_STEP_SUMMARY" << 'EOF'
-          ✅ **Workflow Syntax Validation Passed**
-          
-          All workflows passed syntax validation successfully.
-          EOF
-          else
-            cat >> "$GITHUB_STEP_SUMMARY" << 'EOF'
-          ❌ **Workflow Syntax Validation Failed**
-          
-          One or more workflows failed syntax validation. Check the details below:
-          
-          ```
-          EOF
-            # Append actionlint output (limit to first 50 lines for readability)
-            head -50 actionlint.log >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "No actionlint output available" >> "$GITHUB_STEP_SUMMARY"
-            cat >> "$GITHUB_STEP_SUMMARY" << 'EOF'
-          ```
-          EOF
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $logFile = "psscriptanalyzer.log"
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Settings .\scripts\Modules\Utilities\PSScriptAnalyzerSettings.psd1
+          if ($results) {
+            $results | Out-File $logFile
+            $results | Format-Table -AutoSize
+            exit 1
+          } else {
+            "No issues found." | Out-File $logFile
+          }
+
+      - name: Upload PSScriptAnalyzer log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: psscriptanalyzer-log
+          path: psscriptanalyzer.log
+
+  json-prettier:
+    name: JSON Prettier
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install prettier
+        run: |
+          npm install -g prettier
+
+      - name: Check JSON formatting
+        run: |
+          FILES=$(find . -name "*.json")
+          LOGFILE="json-prettier.log"
+          if ! prettier --check "$FILES" | tee "$LOGFILE"; then
+            echo "Some JSON files are not properly formatted."
+            exit 1
           fi
+
+      - name: Upload JSON Prettier log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: json-prettier-log
+          path: json-prettier.log

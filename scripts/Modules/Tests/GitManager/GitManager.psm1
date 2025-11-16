@@ -1,4 +1,4 @@
-# GitManager.psm1
+﻿# GitManager.psm1
 # Provides git state management functions for creating and manipulating tags, branches, and commits during integration testing.
 
 <#
@@ -26,10 +26,12 @@ function Get-CurrentCommitSha {
         if ($LASTEXITCODE -eq 0) {
             Write-Message -Type "Debug" -Message "Current commit SHA: $sha"
             return $sha
-        } else {
+        }
+        else {
             throw "Failed to get current commit SHA"
         }
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" -Message "Error getting current commit: $_"
         throw $_
     }
@@ -62,7 +64,7 @@ function Test-GitTagExists {
 
     $existingTag = git tag -l $TagName 2>$null
     $exists = -not [string]::IsNullOrWhiteSpace($existingTag)
-    
+
     Write-Message -Type "Debug" -Message "Tag exists check '$TagName': $exists"
     return $exists
 }
@@ -94,7 +96,7 @@ function Test-GitBranchExists {
 
     $existingBranch = git branch -l $BranchName 2>$null
     $exists = -not [string]::IsNullOrWhiteSpace($existingBranch)
-    
+
     Write-Message -Type "Debug" -Message "Branch exists check '$BranchName': $exists"
     return $exists
 }
@@ -130,33 +132,38 @@ function Test-GitBranchExists {
     Throws an error if the commit creation fails.
 #>
 function New-GitCommit {
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    [OutputType([string])]
     param(
         [Parameter(Mandatory = $true)]
         [string]$Message,
-        
+
         [bool]$AllowEmpty = $true
     )
 
     try {
-        $args = @("commit")
+        $argsGit = @("commit")
         if ($AllowEmpty) {
-            $args += "--allow-empty"
+            $argsGit += "--allow-empty"
         }
-        $args += @("-m", $Message)
+        $argsGit += @("-m", $Message)
 
         Write-Message -Type "Debug" -Message "Creating commit: $Message"
-        
-        git @args 2>&1 | Out-Null
-        
+
+        if ($PSCmdlet.ShouldProcess("Git", "Commit")) {
+            git @argsGit 2>&1 | Out-Null
+        }
+
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to create commit"
         }
         Write-Message -Type "Tag" -Message "Commit created: $sha"
 
         $sha = Get-CurrentCommitSha
-        
+
         return $sha
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" -Message "Failed to create commit: $_"
         throw $_
     }
@@ -198,12 +205,14 @@ function New-GitCommit {
     If Force is $true, any existing tag is deleted before creating the new one.
 #>
 function New-GitTag {
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    [OutputType([bool])]
     param(
         [Parameter(Mandatory = $true)]
         [string]$TagName,
-        
+
         [string]$CommitSha,
-        
+
         [bool]$Force = $false
     )
 
@@ -215,28 +224,31 @@ function New-GitTag {
 
         Write-Message -Type "Tag" -Message "Creating tag: $TagName -> $CommitSha"
 
-        # Check if tag already exists
-        if (Test-GitTagExists -TagName $TagName) {
-            if (-not $Force) {
-                Write-Message -Type "Warning" -Message "Tag already exists and Force not set: $TagName"
-                return $false
+        if ($PSCmdlet.ShouldProcess("Git tag '$TagName'", "Force Restore")) {
+            # Check if tag already exists
+            if (Test-GitTagExists -TagName $TagName) {
+                if (-not $Force) {
+                    Write-Message -Type "Warning" -Message "Tag already exists and Force not set: $TagName"
+                    return $false
+                }
+
+                # Delete existing tag if force is enabled
+                Write-Message -Type "Debug" -Message "Deleting existing tag for force restore: $TagName"
+                git tag -d $TagName 2>&1 | Out-Null
             }
 
-            # Delete existing tag if force is enabled
-            Write-Message -Type "Debug" -Message "Deleting existing tag for force restore: $TagName"
-            git tag -d $TagName 2>&1 | Out-Null
+            # Create tag
+            git tag $TagName $CommitSha 2>&1 | Out-Null
         }
 
-        # Create tag
-        git tag $TagName $CommitSha 2>&1 | Out-Null
-        
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to create tag"
         }
 
         Write-Message -Type "Tag" -Message "Tag created successfully: $TagName"
         return $true
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" -Message "Failed to create tag '$TagName': $_"
         throw $_
     }
@@ -279,12 +291,14 @@ function New-GitTag {
     Cannot delete the currently checked out branch - will skip with a warning in this case.
 #>
 function New-GitBranch {
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    [OutputType([bool])]
     param(
         [Parameter(Mandatory = $true)]
         [string]$BranchName,
-        
+
         [string]$CommitSha,
-        
+
         [bool]$Force = $false
     )
 
@@ -296,35 +310,38 @@ function New-GitBranch {
 
         Write-Message -Type "Branch" -Message "Creating branch: $BranchName -> $CommitSha"
 
-        # Check if branch already exists
-        if (Test-GitBranchExists -BranchName $BranchName) {
-            if (-not $Force) {
-                Write-Message -Type "Warning" -Message "Branch already exists and Force not set: $BranchName"
-                return $false
+        if ($PSCmdlet.ShouldProcess("Git branch '$BranchName'", "Force Restore")) {
+            # Check if branch already exists
+            if (Test-GitBranchExists -BranchName $BranchName) {
+                if (-not $Force) {
+                    Write-Message -Type "Warning" -Message "Branch already exists and Force not set: $BranchName"
+                    return $false
+                }
+
+                # Check if this is the current branch
+                $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
+                if ($currentBranch -eq $BranchName) {
+                    Write-Message -Type "Warning" -Message "Cannot delete current branch: $BranchName"
+                    return $false
+                }
+
+                # Delete existing branch if force is enabled
+                Write-Message -Type "Debug" -Message "Deleting existing branch for force restore: $BranchName"
+                git branch -D $BranchName 2>&1 | Out-Null
             }
 
-            # Check if this is the current branch
-            $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
-            if ($currentBranch -eq $BranchName) {
-                Write-Message -Type "Warning" -Message "Cannot delete current branch: $BranchName"
-                return $false
-            }
-
-            # Delete existing branch if force is enabled
-            Write-Message -Type "Debug" -Message "Deleting existing branch for force restore: $BranchName"
-            git branch -D $BranchName 2>&1 | Out-Null
+            # Create branch
+            git branch $BranchName $CommitSha 2>&1 | Out-Null
         }
 
-        # Create branch
-        git branch $BranchName $CommitSha 2>&1 | Out-Null
-        
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to create branch"
         }
 
         Write-Message -Type "Branch" -Message "Branch created successfully: $BranchName"
         return $true
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" -Message "Failed to create branch '$BranchName': $_"
         throw $_
     }
@@ -357,6 +374,8 @@ function New-GitBranch {
     Throws an error if the checkout operation fails.
 #>
 function Set-GitBranch {
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    [OutputType([bool])]
     param(
         [Parameter(Mandatory = $true)]
         [string]$BranchName
@@ -364,16 +383,19 @@ function Set-GitBranch {
 
     try {
         Write-Message -Type "Branch" "Checking out branch: $BranchName"
-        
-        git checkout $BranchName 2>&1 | Out-Null
-        
-        if ($LASTEXITCODE -ne 0) {
-            throw "Failed to checkout branch - check for uncommitted changes"
-        }
 
-        Write-Message -Type "Branch" "Branch checked out: $BranchName"
+        if ($PSCmdlet.ShouldProcess("Git branch '$BranchName'", "Checkout")) {
+            git checkout $BranchName 2>&1 | Out-Null
+
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to checkout branch - check for uncommitted changes"
+            }
+
+            Write-Message -Type "Branch" "Branch checked out: $BranchName"
+        }
         return $true
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" "Failed to checkout branch '$BranchName': $_"
         return $false
     }
@@ -423,7 +445,7 @@ function Clear-GitState {
             $existingTags = @(git tag -l)
             if ($existingTags.Count -gt 0) {
                 Write-Message -Type "Warning" -Message "Deleting $($existingTags.Count) existing tags"
-                
+
                 foreach ($tag in $existingTags) {
                     git tag -d $tag 2>&1 | Out-Null
                     Write-Message -Type "Debug" -Message "Deleted tag: $tag"
@@ -434,16 +456,16 @@ function Clear-GitState {
         if ($DeleteBranches) {
             $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
             $existingBranches = @(git branch -l | Where-Object { $_ -notlike "*$currentBranch*" } )
-            
+
             if ($existingBranches.Count -gt 0) {
                 Write-Message -Type "Warning" -Message "Deleting $($existingBranches.Count) existing branches (excluding current)"
-                
+
                 foreach ($branchLine in $existingBranches) {
                     $branch = $branchLine.Trim()
                     if ($branch.StartsWith("* ")) {
                         $branch = $branch.Substring(2).Trim()
                     }
-                    
+
                     if ($branch -and $branch -ne $currentBranch) {
                         git branch -D $branch 2>&1 | Out-Null
                         Write-Message -Type "Debug" -Message "Deleted branch: $branch"
@@ -451,7 +473,8 @@ function Clear-GitState {
                 }
             }
         }
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" -Message "Error during state cleanup: $_"
         throw $_
     }

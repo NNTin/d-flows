@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Centralized test scenario definitions and management for act integration testing.
 
@@ -28,12 +28,12 @@
 
     This script is designed to be:
     - Dot-sourceable for use by other integration testing scripts
-    - Compatible with Apply-TestFixtures.ps1 and GitSnapshot module
+    - Compatible with Invoke-TestFixtures.ps1 and GitSnapshot module
     - Integrated with bump-version.yml workflow (line 58)
     - Exporting test-tags.txt file to system temp directory for bump-version.yml workflow access
 
 .PARAMETER ScenarioName
-    Used by functions that require a specific scenario (e.g., Get-ScenarioDefinition, Set-TestScenario).
+    Used by functions that require a specific scenario (e.g., Get-ScenarioDefinition, Invoke-TestScenario).
     Name of the test scenario to apply or retrieve.
 
 .EXAMPLE
@@ -49,7 +49,7 @@
 
 .EXAMPLE
     # Apply a scenario to the git repository
-    Set-TestScenario -ScenarioName "MajorBumpV0ToV1" -CleanState
+    Invoke-TestScenario -ScenarioName "MajorBumpV0ToV1" -CleanState
 
 .EXAMPLE
     # Validate current git state against a scenario
@@ -87,7 +87,7 @@
     - The calling script (Run-ActTests.ps1) manages cleanup
 
     Compatibility:
-    - Works with Apply-TestFixtures.ps1 for fixture application
+    - Works with Invoke-TestFixtures.ps1 for fixture application
     - Works with GitSnapshot module for state backup/restore
     - Can be dot-sourced by Run-ActTests.ps1 and other test runners
 
@@ -100,7 +100,7 @@
 
     Testing Workflow:
     1. Backup production state: $backup = Backup-GitState
-    2. Apply test scenario: Set-TestScenario -ScenarioName "MajorBumpV0ToV1"
+    2. Apply test scenario: Invoke-TestScenario -ScenarioName "MajorBumpV0ToV1"
     3. Run act workflows: act -j bump-version --eventpath tests/bump-version/major-bump-main.json
     4. Validate results: Test-ScenarioState -ScenarioName "MajorBumpV0ToV1"
     5. Restore production state: Restore-GitState -BackupName $backup.BackupName
@@ -111,27 +111,27 @@
 # ============================================================================
 
 $ScenarioDefinitions = @{
-    FirstRelease = @{
-        Description             = "Initial release scenario - clean state with only main branch, no existing tags"
-        Tags                    = @()
-        Branches                = @("main")
-        CurrentBranch           = "main"
-        Notes                   = "Used for testing initial v0.1.0 release. Referenced in: minor-bump-main.json. Documented in VERSIONING.md under 'Creating the First Release'."
-        ExpectedVersion         = "0.1.0"
-        TestFixtures            = @("tests/bump-version/minor-bump-main.json")
+    FirstRelease    = @{
+        Description     = "Initial release scenario - clean state with only main branch, no existing tags"
+        Tags            = @()
+        Branches        = @("main")
+        CurrentBranch   = "main"
+        Notes           = "Used for testing initial v0.1.0 release. Referenced in: minor-bump-main.json. Documented in VERSIONING.md under 'Creating the First Release'."
+        ExpectedVersion = "0.1.0"
+        TestFixtures    = @("tests/bump-version/minor-bump-main.json")
     }
-    
+
     MajorBumpV0ToV1 = @{
-        Description             = "v0 to v1 promotion scenario - v0.2.1 tag exists on main branch"
-        Tags                    = @(
+        Description            = "v0 to v1 promotion scenario - v0.2.1 tag exists on main branch"
+        Tags                   = @(
             @{ Name = "v0.2.1"; CommitMessage = "Release v0.2.1" }
         )
-        Branches                = @("main")
-        CurrentBranch           = "main"
-        Notes                   = "Used for testing v0 → v1 promotion with automatic release/v0 branch creation. Referenced in: major-bump-main.json, v0-to-v1-release-cycle.json. Documented in VERSIONING.md under 'Promoting to v1.0.0'."
-        ExpectedVersion         = "1.0.0"
-        ExpectedBranchCreation  = "release/v0"
-        TestFixtures            = @("tests/bump-version/major-bump-main.json", "tests/integration/v0-to-v1-release-cycle.json")
+        Branches               = @("main")
+        CurrentBranch          = "main"
+        Notes                  = "Used for testing v0 → v1 promotion with automatic release/v0 branch creation. Referenced in: major-bump-main.json, v0-to-v1-release-cycle.json. Documented in VERSIONING.md under 'Promoting to v1.0.0'."
+        ExpectedVersion        = "1.0.0"
+        ExpectedBranchCreation = "release/v0"
+        TestFixtures           = @("tests/bump-version/major-bump-main.json", "tests/integration/v0-to-v1-release-cycle.json")
     }
 }
 
@@ -155,7 +155,8 @@ function Get-ScenarioDefinition {
 
         Write-Message -Type "Scenario" "Retrieved scenario definition: $ScenarioName"
         return $ScenarioDefinitions[$ScenarioName]
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" $_
         throw $_
     }
@@ -177,20 +178,20 @@ function Get-ScenarioDefinition {
 #>
 function Get-AllScenarios {
     Write-Message -Type "Debug" "Listing all available scenarios"
-    
+
     $scenarios = @()
     foreach ($scenarioName in $ScenarioDefinitions.Keys) {
         $scenario = $ScenarioDefinitions[$scenarioName]
         $scenarios += @{
-            Name            = $scenarioName
-            Description     = $scenario.Description
-            TagCount        = $scenario.Tags.Count
-            BranchCount     = $scenario.Branches.Count
-            CurrentBranch   = $scenario.CurrentBranch
-            TestFixtures    = $scenario.TestFixtures
+            Name          = $scenarioName
+            Description   = $scenario.Description
+            TagCount      = $scenario.Tags.Count
+            BranchCount   = $scenario.Branches.Count
+            CurrentBranch = $scenario.CurrentBranch
+            TestFixtures  = $scenario.TestFixtures
         }
     }
-    
+
     Write-Message -Type "Debug" "Found $($scenarios.Count) scenarios"
     return $scenarios
 }
@@ -242,37 +243,37 @@ function Get-ScenarioNames {
     or generates GUID-based path. When called from Run-ActTests.ps1, the shared directory is used automatically.
 
 .EXAMPLE
-    Set-TestScenario -ScenarioName "FirstRelease"
+    Invoke-TestScenario -ScenarioName "FirstRelease"
 
 .EXAMPLE
-    Set-TestScenario -ScenarioName "MajorBumpV0ToV1" -CleanState $true -Force $true
+    Invoke-TestScenario -ScenarioName "MajorBumpV0ToV1" -CleanState $true -Force $true
 
 .EXAMPLE
-    Set-TestScenario -ScenarioName "MajorBumpV0ToV1" -OutputPath "C:\temp\my-test-state\test-tags.txt"
+    Invoke-TestScenario -ScenarioName "MajorBumpV0ToV1" -OutputPath "C:\temp\my-test-state\test-tags.txt"
 
 .NOTES
     Generates three files when GenerateTestTagsFile is true:
     - test-tags.txt: Tag names and commit SHAs for workflow restoration
     - test-branches.txt: Branch names and commit SHAs for workflow restoration
     - test-commits.bundle: Git bundle with all commit objects referenced by tags/branches
-    
+
     Returns ProductionTagsDeleted array containing the names of production tags that were deleted when CleanState=$true
-    
+
     Integrates with bump-version.yml workflow which reads these files from TEST_STATE_PATH.
     The workflow unbundles commits before restoring tags to ensure commit SHAs exist.
     Use Backup-GitState.ps1 to backup state before applying scenarios.
 #>
-function Set-TestScenario {
+function Invoke-TestScenario {
+    [OutputType([hashtable])]
     param(
         [Parameter(Mandatory = $true)]
         [string]$ScenarioName,
-        
+
         [bool]$CleanState = $false,
         [bool]$Force = $false,
         [bool]$GenerateTestTagsFile = $true,
         [string]$OutputPath
     )
-
     try {
         Write-Message -Type "Info" "Applying test scenario: $ScenarioName"
 
@@ -289,13 +290,14 @@ function Set-TestScenario {
                 Write-Message -Type "Debug" "Captured $($productionTagsDeleted.Count) production tags deleted during clean state"
             }
         }
-        
+
         # Check if repository is empty
         $hasCommits = $false
         try {
             $sha = Get-CurrentCommitSha
             $hasCommits = $true
-        } catch {
+        }
+        catch {
             Write-Message -Type "Debug" "Repository appears to be empty, will create initial commit"
             $hasCommits = $false
         }
@@ -315,7 +317,8 @@ function Set-TestScenario {
                 if ($created) {
                     $tagsCreated += $tag.Name
                 }
-            } catch {
+            }
+            catch {
                 Write-Message -Type "Warning" "Failed to create tag $($tag.Name): $_"
                 continue
             }
@@ -347,7 +350,8 @@ function Set-TestScenario {
                 if (-not $branchSha) {
                     if ($hasCommits) {
                         $branchSha = Get-CurrentCommitSha
-                    } else {
+                    }
+                    else {
                         # Create initial commit if repository is empty
                         $branchSha = New-GitCommit -Message "Initial commit"
                         $hasCommits = $true
@@ -358,7 +362,8 @@ function Set-TestScenario {
                 if ($created) {
                     $branchesCreated += $branch
                 }
-            } catch {
+            }
+            catch {
                 Write-Message -Type "Warning" "Failed to create branch ${branch}: $_"
                 continue
             }
@@ -371,7 +376,8 @@ function Set-TestScenario {
                 if (-not $checkoutSuccess) {
                     Write-Message -Type "Warning" "Failed to checkout current branch, continuing anyway"
                 }
-            } catch {
+            }
+            catch {
                 Write-Message -Type "Warning" "Error checking out current branch: $_"
             }
         }
@@ -389,7 +395,8 @@ function Set-TestScenario {
                 # Construct commits bundle path from tags path
                 $commitsOutputPath = $OutputPath -replace 'test-tags\.txt$', 'test-commits.bundle'
                 $testCommitsPath = Export-TestCommitsBundle -Tags $tagsCreated -Branches $branchesCreated -OutputPath $commitsOutputPath
-            } else {
+            }
+            else {
                 $testTagsPath = Export-TestTagsFile -Tags $tagsCreated
                 $testBranchesPath = Export-TestBranchesFile -Branches $branchesCreated
                 $testCommitsPath = Export-TestCommitsBundle -Tags $tagsCreated -Branches $branchesCreated
@@ -412,7 +419,8 @@ function Set-TestScenario {
             CommitMap             = $commitMap
             Success               = $true
         }
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" "Failed to apply scenario: $_"
         throw $_
     }
@@ -448,7 +456,7 @@ function Test-ScenarioState {
     param(
         [Parameter(Mandatory = $true)]
         [string]$ScenarioName,
-        
+
         [bool]$Strict = $false
     )
 
@@ -457,7 +465,7 @@ function Test-ScenarioState {
 
         # Get scenario definition
         $scenario = Get-ScenarioDefinition -ScenarioName $ScenarioName
-        
+
         $missingTags = @()
         $missingBranches = @()
         $currentBranchMismatch = $false
@@ -473,7 +481,8 @@ function Test-ScenarioState {
                 $isValid = $false
                 Write-Message -Type "Tag" "❌ Missing tag: $($tag.Name)"
                 $validationMessages += "Missing tag: $($tag.Name)"
-            } else {
+            }
+            else {
                 Write-Message -Type "Tag" "✅ Tag exists: $($tag.Name)"
                 $validationMessages += "✅ Tag exists: $($tag.Name)"
             }
@@ -486,7 +495,8 @@ function Test-ScenarioState {
                 $isValid = $false
                 Write-Message -Type "Branch" "❌ Missing branch: $branch"
                 $validationMessages += "Missing branch: $branch"
-            } else {
+            }
+            else {
                 Write-Message -Type "Branch" "✅ Branch exists: $branch"
                 $validationMessages += "✅ Branch exists: $branch"
             }
@@ -499,7 +509,8 @@ function Test-ScenarioState {
             $isValid = $false
             Write-Message -Type "Debug" "❌ Current branch mismatch: expected '$($scenario.CurrentBranch)', got '$currentBranch'"
             $validationMessages += "Current branch mismatch: expected '$($scenario.CurrentBranch)', got '$currentBranch'"
-        } else {
+        }
+        else {
             Write-Message -Type "Debug" "✅ Current branch correct: $currentBranch"
             $validationMessages += "✅ Current branch correct: $currentBranch"
         }
@@ -535,7 +546,8 @@ function Test-ScenarioState {
         # Build summary message
         if ($isValid) {
             Write-Message -Type "Success" "✅ Git state matches scenario: $ScenarioName"
-        } else {
+        }
+        else {
             $summary = "Git state does NOT match scenario: Missing tags: $($missingTags.Count), Missing branches: $($missingBranches.Count)"
             if ($currentBranchMismatch) {
                 $summary += ", Branch mismatch: true"
@@ -544,17 +556,18 @@ function Test-ScenarioState {
         }
 
         return @{
-            IsValid                  = $isValid
-            MissingTags              = $missingTags
-            MissingBranches          = $missingBranches
-            ExtraTags                = $extraTags
-            ExtraBranches            = $extraBranches
-            CurrentBranchMismatch    = $currentBranchMismatch
-            ExpectedCurrentBranch    = $scenario.CurrentBranch
-            ActualCurrentBranch      = $currentBranch
-            ValidationMessages       = $validationMessages
+            IsValid               = $isValid
+            MissingTags           = $missingTags
+            MissingBranches       = $missingBranches
+            ExtraTags             = $extraTags
+            ExtraBranches         = $extraBranches
+            CurrentBranchMismatch = $currentBranchMismatch
+            ExpectedCurrentBranch = $scenario.CurrentBranch
+            ActualCurrentBranch   = $currentBranch
+            ValidationMessages    = $validationMessages
         }
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" "Error validating scenario state: $_"
         throw $_
     }
@@ -584,7 +597,7 @@ function Show-ScenarioDefinition {
     param(
         [Parameter(Mandatory = $true)]
         [string]$ScenarioName,
-        
+
         [bool]$Detailed = $false
     )
 
@@ -597,7 +610,7 @@ function Show-ScenarioDefinition {
         Write-Message "  Scenario: $ScenarioName"
         Write-Message "═══════════════════════════════════════════════════════════════════════════"
         Write-Message ""
-        
+
         Write-Message -Type "Info" "Description:"
         Write-Message -Type "Info" "  $($scenario.Description)"
         Write-Message ""
@@ -605,7 +618,8 @@ function Show-ScenarioDefinition {
         Write-Message -Type "Tag" "Tags:"
         if ($scenario.Tags.Count -eq 0) {
             Write-Message -Type "Info" "  (none)"
-        } else {
+        }
+        else {
             foreach ($tag in $scenario.Tags) {
                 Write-Message -Type "Tag" "  • $($tag.Name) - $($tag.CommitMessage)"
             }
@@ -615,7 +629,8 @@ function Show-ScenarioDefinition {
         Write-Message -Type "Branch" "Branches:"
         if ($scenario.Branches.Count -eq 0) {
             Write-Message -Type "Info" "  (none)"
-        } else {
+        }
+        else {
             foreach ($branch in $scenario.Branches) {
                 Write-Message -Type "Branch" "  • $branch"
             }
@@ -625,27 +640,28 @@ function Show-ScenarioDefinition {
         if ($Detailed) {
             Write-Message -Type "Target" "Expected Version:"
             Write-Message -Type "Info" "  $($scenario.ExpectedVersion)" -ForegroundColor Cyan
-                if ($scenario.ExpectedBranchCreation) {
+            if ($scenario.ExpectedBranchCreation) {
                 Write-Message -Type "Info" "➕ Expected Branch Creation:" -ForegroundColor Yellow
                 Write-Message -Type "Info" "  $($scenario.ExpectedBranchCreation)" -ForegroundColor Cyan
-                    }
+            }
 
             if ($scenario.TestFixtures) {
                 Write-Message -Type "List" "Test Fixtures:"
                 foreach ($fixture in $scenario.TestFixtures) {
                     Write-Message -Type "Info" "  • $fixture" -ForegroundColor DarkGray
                 }
-                    }
+            }
         }
 
         if ($scenario.Notes) {
             Write-Message -Type "Note" "Notes:"
             Write-Message -Type "Info" "  $($scenario.Notes)" -ForegroundColor DarkGray
-            }
+        }
 
         Write-Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
         return $scenario
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" "Error displaying scenario: $_"
         throw $_
     }
@@ -667,18 +683,19 @@ function Show-AllScenarios {
         Write-Message "  Available Test Scenarios" -ForegroundColor Cyan
         Write-Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
         $scenarios = Get-AllScenarios
-        
+
         foreach ($scenario in $scenarios) {
             Write-Message -Type "Scenario" "$($scenario.Name)"
             Write-Message -Type "Info" "   $($scenario.Description)" -ForegroundColor White
             Write-Message -Type "Info" "   Tags: $($scenario.TagCount), Branches: $($scenario.BranchCount), Current: $($scenario.CurrentBranch)" -ForegroundColor DarkGray
-            }
+        }
 
         Write-Message -Type "Info" "Total scenarios: $($scenarios.Count)"
-        
+
         Write-Message "═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
         return $scenarios
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" "Error displaying all scenarios: $_"
         throw $_
     }
@@ -700,7 +717,7 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-Message "  Get-ScenarioDefinition [-ScenarioName]    - Get specific scenario definition" -ForegroundColor Cyan
     Write-Message "  Get-AllScenarios                          - List all scenarios" -ForegroundColor Cyan
     Write-Message "  Get-ScenarioNames                         - Get scenario names only" -ForegroundColor Cyan
-    Write-Message "  Set-TestScenario [-ScenarioName]          - Apply scenario to git state" -ForegroundColor Cyan
+    Write-Message "  Invoke-TestScenario [-ScenarioName]          - Apply scenario to git state" -ForegroundColor Cyan
     Write-Message "  Test-ScenarioState [-ScenarioName]        - Validate current state" -ForegroundColor Cyan
     Write-Message "  Show-ScenarioDefinition [-ScenarioName]   - Display scenario details" -ForegroundColor Cyan
     Write-Message "  Show-AllScenarios                         - Display all scenarios" -ForegroundColor Cyan
@@ -713,7 +730,7 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-Message "  # List available scenarios:" -ForegroundColor Gray
     Write-Message "  Show-AllScenarios" -ForegroundColor White
     Write-Message "  # Apply a scenario:" -ForegroundColor Gray
-    Write-Message "  Set-TestScenario -ScenarioName ""FirstRelease""" -ForegroundColor White
+    Write-Message "  Invoke-TestScenario -ScenarioName ""FirstRelease""" -ForegroundColor White
     Write-Message "  # Validate current state:" -ForegroundColor Gray
     Write-Message "  Test-ScenarioState -ScenarioName ""MajorBumpV0ToV1""" -ForegroundColor White
 

@@ -1,4 +1,4 @@
-# Emojis.psm1
+﻿# Emojis.psm1
 # Provides emoji constants and lookup functions for consistent script output.
 
 $script:Emojis = [ordered]@{

@@ -27,6 +27,7 @@ concurrency:
 
 jobs:
   calculate-and-release:
+    name: Bump Version
     runs-on: ubuntu-latest
     outputs:
       RELEASE_BRANCH_CREATED: ${{ steps.create-release-branch.outputs.RELEASE_BRANCH_CREATED }}
@@ -40,7 +41,7 @@ jobs:
           # may still fetch tags in some scenarios. Test isolation is ensured by filtering
           # production tags during test state export in Run-ActTests.ps1.
           fetch-tags: false  # Disabled to prevent remote tag fetching during act tests
-          token: ${{ secrets.GITHUB_TOKEN != '' && secrets.GITHUB_TOKEN || env.GITHUB_TOKEN != '' && env.GITHUB_TOKEN || env.TOKEN_FALLBACK }}
+          token: ${{ secrets.GITHUB_TOKEN != '' && secrets.GITHUB_TOKEN || env.TOKEN_FALLBACK }}
 
       # Restore commit objects from bundle before restoring tags. This ensures all commit
       # SHAs referenced by tags exist in the repository. The bundle is created by
@@ -59,7 +60,8 @@ jobs:
           # Fallback: if test-commits.bundle doesn't exist, try to find timestamped bundle
           if [[ ! -f "$BUNDLE_FILE" ]]; then
             echo "⚠️ test-commits.bundle not found, checking for timestamped bundles..."
-            TIMESTAMPED_BUNDLE=$(ls -t "${TEST_STATE_PATH:-/tmp/test-state}"/commits-*.bundle 2>/dev/null | head -n 1 || echo "")
+            TIMESTAMPED_BUNDLE=$(find "${TEST_STATE_PATH:-/tmp/test-state}" -maxdepth 1 -type f -name 'commits-*.bundle' -printf '%T@ %p\n' 2>/dev/null \
+              | sort -rn | head -n1 | cut -d' ' -f2-)
             if [[ -n "$TIMESTAMPED_BUNDLE" && -f "$TIMESTAMPED_BUNDLE" ]]; then
               BUNDLE_FILE="$TIMESTAMPED_BUNDLE"
               echo "📦 Found timestamped bundle: $BUNDLE_FILE"

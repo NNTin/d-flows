@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Apply test fixtures to set up git state for act integration testing.
 
@@ -41,17 +41,17 @@
 
 .EXAMPLE
     # Dot-source to load functions
-    . .\scripts\integration\Apply-TestFixtures.ps1
+    . .\scripts\integration\Invoke-TestFixtures.ps1
 
     # Apply a fixture by file path
-    Apply-TestFixtures -FixturePath "tests/bump-version/major-bump-main.json"
+    Invoke-TestFixtures -FixturePath "tests/bump-version/major-bump-main.json"
 
 .EXAMPLE
     # Apply a scenario directly
-    Apply-TestFixtures -Scenario "MajorBumpV0ToV1"
+    Invoke-TestFixtures -Scenario "MajorBumpV0ToV1"
 
     # Apply scenario with clean state
-    Apply-TestFixtures -Scenario "FirstRelease" -CleanState
+    Invoke-TestFixtures -Scenario "FirstRelease" -CleanState
 
 .EXAMPLE
     # Validate current git state matches a scenario
@@ -106,22 +106,22 @@
 # ============================================================================
 
 $ScenarioDefinitions = @{
-    FirstRelease = @{
-        Description      = "Initial release scenario - clean state with only main branch"
-        Tags             = @()  # No tags
-        Branches         = @("main")
-        CurrentBranch    = "main"
-        Notes            = "Used for testing initial v0.1.0 release (minor-bump-main.json)"
+    FirstRelease    = @{
+        Description   = "Initial release scenario - clean state with only main branch"
+        Tags          = @()  # No tags
+        Branches      = @("main")
+        CurrentBranch = "main"
+        Notes         = "Used for testing initial v0.1.0 release (minor-bump-main.json)"
     }
-    
+
     MajorBumpV0ToV1 = @{
-        Description      = "v0 to v1 promotion scenario - v0.2.1 tag on main"
-        Tags             = @(
+        Description   = "v0 to v1 promotion scenario - v0.2.1 tag on main"
+        Tags          = @(
             @{ Name = "v0.2.1"; CommitMessage = "Release v0.2.1" }
         )
-        Branches         = @("main")
-        CurrentBranch    = "main"
-        Notes            = "Used for testing v0 → v1 promotion (major-bump-main.json, v0-to-v1-release-cycle.json)"
+        Branches      = @("main")
+        CurrentBranch = "main"
+        Notes         = "Used for testing v0 → v1 promotion (major-bump-main.json, v0-to-v1-release-cycle.json)"
     }
 }
 
@@ -158,10 +158,11 @@ function Get-FixtureContent {
 
         Write-Message -Type "Fixture" "Reading fixture file: $FixturePath"
         $content = Get-Content -Path $FixturePath -Raw -Encoding UTF8 | ConvertFrom-Json
-        
+
         Write-Message -Type "Debug" "Fixture parsed successfully"
         return $content
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" "Failed to parse fixture file: $_"
         throw $_
     }
@@ -214,7 +215,8 @@ function Get-ScenarioFromFixture {
 
         Write-Message -Type "Debug" "No scenario found in fixture"
         return $null
-    } catch {
+    }
+    catch {
         Write-Message -Type "Warning" "Error extracting scenario: $_"
         return $null
     }
@@ -254,7 +256,8 @@ function Get-ExpectedStateFromFixture {
         }
 
         return $null
-    } catch {
+    }
+    catch {
         Write-Message -Type "Warning" "Error extracting expected state: $_"
         return $null
     }
@@ -287,7 +290,7 @@ function Get-FixtureScenarios {
 
     try {
         Write-Message -Type "Info" "Scanning for scenarios in fixture files"
-        
+
         $scenarios = @()
         $processedScenarios = @{}
 
@@ -296,14 +299,15 @@ function Get-FixtureScenarios {
             Write-Message -Type "Fixture" "Processing single fixture: $FixturePath"
             $content = Get-FixtureContent -FixturePath $FixturePath
             $scenario = Get-ScenarioFromFixture -FixtureContent $content
-            
+
             if ($scenario) {
                 $scenarios += @{
                     ScenarioName = $scenario
                     FixtureFile  = (Split-Path $FixturePath -Leaf)
                 }
             }
-        } else {
+        }
+        else {
             # Scan all fixtures
             $repoRoot = Get-RepositoryRoot
             $integrationDir = Join-Path $repoRoot "tests/integration"
@@ -313,12 +317,12 @@ function Get-FixtureScenarios {
             if (Test-Path $integrationDir) {
                 Write-Message -Type "Debug" "Scanning integration fixtures: $integrationDir"
                 $integrationFixtures = Get-ChildItem -Path $integrationDir -Filter "*.json" -ErrorAction SilentlyContinue
-                
+
                 foreach ($fixture in $integrationFixtures) {
                     try {
                         $content = Get-FixtureContent -FixturePath $fixture.FullName
                         $scenario = Get-ScenarioFromFixture -FixtureContent $content
-                        
+
                         if ($scenario -and -not $processedScenarios.ContainsKey($scenario)) {
                             $scenarios += @{
                                 ScenarioName = $scenario
@@ -326,7 +330,8 @@ function Get-FixtureScenarios {
                             }
                             $processedScenarios[$scenario] = $true
                         }
-                    } catch {
+                    }
+                    catch {
                         Write-Message -Type "Debug" "Skipping fixture due to error: $($fixture.Name)"
                     }
                 }
@@ -336,12 +341,12 @@ function Get-FixtureScenarios {
             if (Test-Path $bumpVersionDir) {
                 Write-Message -Type "Debug" "Scanning bump-version fixtures: $bumpVersionDir"
                 $bumpVersionFixtures = Get-ChildItem -Path $bumpVersionDir -Filter "*.json" -ErrorAction SilentlyContinue
-                
+
                 foreach ($fixture in $bumpVersionFixtures) {
                     try {
                         $content = Get-FixtureContent -FixturePath $fixture.FullName
                         $scenario = Get-ScenarioFromFixture -FixtureContent $content
-                        
+
                         if ($scenario -and -not $processedScenarios.ContainsKey($scenario)) {
                             $scenarios += @{
                                 ScenarioName = $scenario
@@ -349,7 +354,8 @@ function Get-FixtureScenarios {
                             }
                             $processedScenarios[$scenario] = $true
                         }
-                    } catch {
+                    }
+                    catch {
                         Write-Message -Type "Debug" "Skipping fixture due to error: $($fixture.Name)"
                     }
                 }
@@ -358,12 +364,14 @@ function Get-FixtureScenarios {
 
         if ($scenarios.Count -gt 0) {
             Write-Message -Type "Success" "Found $($scenarios.Count) scenarios"
-        } else {
+        }
+        else {
             Write-Message -Type "Info" "No scenarios found"
         }
 
         return $scenarios
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" "Failed to scan fixtures: $_"
         throw $_
     }
@@ -390,20 +398,20 @@ function Get-FixtureScenarios {
     Whether to overwrite existing tags/branches. Default: $false.
 
 .EXAMPLE
-    $result = Apply-Scenario -ScenarioName "MajorBumpV0ToV1"
+    $result = Invoke-Scenario -ScenarioName "MajorBumpV0ToV1"
 
 .EXAMPLE
-    $result = Apply-Scenario -ScenarioName "FirstRelease" -CleanState -Force
+    $result = Invoke-Scenario -ScenarioName "FirstRelease" -CleanState -Force
 
 .NOTES
     Returns hashtable with scenario application results including tags created,
     branches created, and path to generated test-tags.txt file.
 #>
-function Apply-Scenario {
+function Invoke-Scenario {
     param(
         [Parameter(Mandatory = $true)]
         [string]$ScenarioName,
-        
+
         [bool]$CleanState = $false,
         [bool]$Force = $false,
         [object]$ExpectedState = $null,
@@ -425,7 +433,7 @@ function Apply-Scenario {
         # Apply expectedState overrides if provided
         if ($ExpectedState) {
             Write-Message -Type "Debug" "Applying expectedState overrides from fixture"
-            
+
             # Override tags if specified in expectedState
             if ($ExpectedState.tags) {
                 Write-Message -Type "Debug" "Overriding tags from fixture: $($ExpectedState.tags -join ', ')"
@@ -434,19 +442,19 @@ function Apply-Scenario {
                     $scenario.Tags += @{ Name = $tagName; CommitMessage = "Release $tagName" }
                 }
             }
-            
+
             # Override branches if specified in expectedState
             if ($ExpectedState.branches) {
                 Write-Message -Type "Debug" "Overriding branches from fixture: $($ExpectedState.branches -join ', ')"
                 $scenario.Branches = $ExpectedState.branches
             }
-            
+
             # Override currentBranch if specified in expectedState
             if ($ExpectedState.currentBranch) {
                 Write-Message -Type "Debug" "Overriding currentBranch from fixture: $($ExpectedState.currentBranch)"
                 $scenario.CurrentBranch = $ExpectedState.currentBranch
             }
-            
+
             Write-Message -Type "Info" "Fixture-specific state overrides applied to scenario"
         }
 
@@ -455,15 +463,15 @@ function Apply-Scenario {
             Clear-GitState -DeleteTags $true
         }
 
-        $repoRoot = Get-RepositoryRoot
-        
         # Check if repository is empty
         $hasCommits = $false
         $firstSha = $null
         try {
             $firstSha = Get-CurrentCommitSha
+            Write-Message -Type "Debug" "Repository has existing commits, starting from SHA: $firstSha"
             $hasCommits = $true
-        } catch {
+        }
+        catch {
             Write-Message -Type "Debug" "Repository appears to be empty, will create initial commit"
             $hasCommits = $false
         }
@@ -483,7 +491,8 @@ function Apply-Scenario {
                 if ($created) {
                     $tagsCreated += $tag.Name
                 }
-            } catch {
+            }
+            catch {
                 Write-Message -Type "Warning" "Failed to create tag $($tag.Name): $_"
                 continue
             }
@@ -514,7 +523,8 @@ function Apply-Scenario {
                 if (-not $branchSha) {
                     if ($hasCommits) {
                         $branchSha = Get-CurrentCommitSha
-                    } else {
+                    }
+                    else {
                         # Create initial commit if repository is empty
                         $branchSha = New-GitCommit -Message "Initial commit"
                     }
@@ -524,7 +534,8 @@ function Apply-Scenario {
                 if ($created) {
                     $branchesCreated += $branch
                 }
-            } catch {
+            }
+            catch {
                 Write-Message -Type "Warning" "Failed to create branch ${branch}: $_"
                 continue
             }
@@ -537,7 +548,8 @@ function Apply-Scenario {
                 if (-not $checkoutSuccess) {
                     Write-Message -Type "Warning" "Failed to checkout current branch, continuing anyway"
                 }
-            } catch {
+            }
+            catch {
                 Write-Message -Type "Warning" "Error checking out current branch: $_"
             }
         }
@@ -546,20 +558,22 @@ function Apply-Scenario {
         $testTagsPath = $null
         if ($OutputPath) {
             $testTagsPath = Export-TestTagsFile -Tags $tagsCreated -OutputPath $OutputPath
-        } else {
+        }
+        else {
             $testTagsPath = Export-TestTagsFile -Tags $tagsCreated
         }
 
         Write-Message -Type "Success" "Scenario applied successfully: $ScenarioName"
 
         return @{
-            ScenarioName      = $ScenarioName
-            TagsCreated       = $tagsCreated
-            BranchesCreated   = $branchesCreated
-            CurrentBranch     = $scenario.CurrentBranch
-            TestTagsFile      = $testTagsPath
+            ScenarioName    = $ScenarioName
+            TagsCreated     = $tagsCreated
+            BranchesCreated = $branchesCreated
+            CurrentBranch   = $scenario.CurrentBranch
+            TestTagsFile    = $testTagsPath
         }
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" "Failed to apply scenario: $_"
         throw $_
     }
@@ -589,18 +603,18 @@ function Apply-Scenario {
     Custom path for the generated test-tags.txt file.
 
 .EXAMPLE
-    Apply-TestFixtures -FixturePath "tests/bump-version/major-bump-main.json"
+    Invoke-TestFixtures -FixturePath "tests/bump-version/major-bump-main.json"
 
 .EXAMPLE
-    Apply-TestFixtures -Scenario "MajorBumpV0ToV1" -CleanState
+    Invoke-TestFixtures -Scenario "MajorBumpV0ToV1" -CleanState
 
 .EXAMPLE
-    Apply-TestFixtures -FixturePath "tests/integration/v0-to-v1-release-cycle.json" -OutputPath "custom/test-tags.txt"
+    Invoke-TestFixtures -FixturePath "tests/integration/v0-to-v1-release-cycle.json" -OutputPath "custom/test-tags.txt"
 
 .NOTES
     Returns hashtable with scenario application results.
 #>
-function Apply-TestFixtures {
+function Invoke-TestFixtures {
     param(
         [string]$FixturePath,
         [string]$Scenario,
@@ -628,10 +642,10 @@ function Apply-TestFixtures {
         # Extract scenario from fixture if provided
         if ($FixturePath) {
             Write-Message -Type "Fixture" "Processing fixture file: $FixturePath"
-            
+
             $content = Get-FixtureContent -FixturePath $FixturePath
             $scenarioToApply = Get-ScenarioFromFixture -FixtureContent $content
-            
+
             if (-not $scenarioToApply) {
                 Write-Message -Type "Warning" "No scenario found in fixture file: $FixturePath"
                 Write-Message -Type "Info" "Fixture content available but scenario extraction failed"
@@ -644,7 +658,8 @@ function Apply-TestFixtures {
                 Write-Message -Type "Debug" "Found expectedState in fixture - applying overrides"
                 $fixtureOverrides = $expectedState
             }
-        } elseif ($Scenario) {
+        }
+        elseif ($Scenario) {
             $scenarioToApply = $Scenario
         }
 
@@ -652,19 +667,22 @@ function Apply-TestFixtures {
         if ($fixtureOverrides) {
             Write-Message -Type "Debug" "Applying fixture-specific state overrides to scenario '$scenarioToApply'"
             if ($OutputPath) {
-                $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -ExpectedState $fixtureOverrides -OutputPath $OutputPath
-            } else {
-                $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -ExpectedState $fixtureOverrides
+                $result = Invoke-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -ExpectedState $fixtureOverrides -OutputPath $OutputPath
             }
-        } else {
+            else {
+                $result = Invoke-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -ExpectedState $fixtureOverrides
+            }
+        }
+        else {
             if ($OutputPath) {
-                $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -OutputPath $OutputPath
-            } else {
-                $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force
+                $result = Invoke-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -OutputPath $OutputPath
+            }
+            else {
+                $result = Invoke-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force
             }
         }
 
-        # Update output path if specified (already handled in Apply-Scenario if OutputPath provided)
+        # Update output path if specified (already handled in Invoke-Scenario if OutputPath provided)
         # This is kept for backward compatibility but shouldn't regenerate if already done
         if ($OutputPath -and $result -and -not $result.TestTagsFile) {
             Write-Message -Type "Debug" "Regenerating test-tags.txt at custom path (fallback)"
@@ -672,7 +690,8 @@ function Apply-TestFixtures {
         }
 
         return $result
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" "Failed to apply test fixtures: $_"
         throw $_
     }
@@ -747,19 +766,21 @@ function Test-ScenarioState {
 
         if ($isValid) {
             Write-Message -Type "Success" "Git state matches scenario: $ScenarioName"
-        } else {
+        }
+        else {
             Write-Message -Type "Warning" "Git state does not match scenario"
         }
 
         return @{
-            IsValid                  = $isValid
-            MissingTags              = $missingTags
-            MissingBranches          = $missingBranches
-            CurrentBranchMismatch    = $currentBranchMismatch
-            ExpectedCurrentBranch    = $scenario.CurrentBranch
-            ActualCurrentBranch      = $currentBranch
+            IsValid               = $isValid
+            MissingTags           = $missingTags
+            MissingBranches       = $missingBranches
+            CurrentBranchMismatch = $currentBranchMismatch
+            ExpectedCurrentBranch = $scenario.CurrentBranch
+            ActualCurrentBranch   = $currentBranch
         }
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" "Error validating scenario state: $_"
         throw $_
     }
@@ -805,7 +826,8 @@ function Show-ScenarioDefinition {
         Write-Message -Type "Info" "Tags:" -ForegroundColor Yellow
         if ($scenario.Tags.Count -eq 0) {
             Write-Message -Type "Info" "  (none)" -ForegroundColor Gray
-        } else {
+        }
+        else {
             foreach ($tag in $scenario.Tags) {
                 Write-Message -Type "Tag" "  $($tag.Name) - $($tag.CommitMessage)"
             }
@@ -813,7 +835,8 @@ function Show-ScenarioDefinition {
         Write-Message -Type "Info" "Branches:" -ForegroundColor Yellow
         if ($scenario.Branches.Count -eq 0) {
             Write-Message -Type "Info" "  (none)" -ForegroundColor Gray
-        } else {
+        }
+        else {
             foreach ($branch in $scenario.Branches) {
                 Write-Message -Type "Branch" "  $branch"
             }
@@ -823,11 +846,12 @@ function Show-ScenarioDefinition {
         if ($scenario.Notes) {
             Write-Message -Type "Info" "Notes:" -ForegroundColor Yellow
             Write-Message -Type "Info" "  $($scenario.Notes)" -ForegroundColor Gray
-            }
+        }
 
         Write-Message -Type "Info" "==============================================================================" -ForegroundColor Cyan
         return $scenario
-    } catch {
+    }
+    catch {
         Write-Message -Type "Error" "Error displaying scenario: $_"
         throw $_
     }
@@ -846,8 +870,8 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-Message -Type "Info" "This script applies test fixtures to set up git state for act integration testing." -ForegroundColor Gray
 
     Write-Message -Type "Info" "Available Functions:" -ForegroundColor Yellow
-    Write-Message -Type "Info" "  Apply-TestFixtures [-FixturePath | -Scenario] - Apply fixture or scenario" -ForegroundColor Cyan
-    Write-Message -Type "Info" "  Apply-Scenario [-ScenarioName]              - Apply scenario directly" -ForegroundColor Cyan
+    Write-Message -Type "Info" "  Invoke-TestFixtures [-FixturePath | -Scenario] - Apply fixture or scenario" -ForegroundColor Cyan
+    Write-Message -Type "Info" "  Invoke-Scenario [-ScenarioName]              - Apply scenario directly" -ForegroundColor Cyan
     Write-Message -Type "Info" "  Get-FixtureScenarios                        - List scenarios from fixtures" -ForegroundColor Cyan
     Write-Message -Type "Info" "  Show-ScenarioDefinition [-ScenarioName]     - Display scenario details" -ForegroundColor Cyan
     Write-Message -Type "Info" "  Test-ScenarioState [-ScenarioName]          - Validate git state" -ForegroundColor Cyan
@@ -863,11 +887,11 @@ if ($MyInvocation.InvocationName -ne ".") {
 
     Write-Message "Usage Examples:" -ForegroundColor Yellow
     Write-Message "  # Dot-source to load functions:" -ForegroundColor Gray
-    Write-Message "  . .\scripts\integration\Apply-TestFixtures.ps1" -ForegroundColor White
+    Write-Message "  . .\scripts\integration\Invoke-TestFixtures.ps1" -ForegroundColor White
     Write-Message "  # Apply fixture by file path:" -ForegroundColor Gray
-    Write-Message "  Apply-TestFixtures -FixturePath 'tests/bump-version/major-bump-main.json'" -ForegroundColor White
+    Write-Message "  Invoke-TestFixtures -FixturePath 'tests/bump-version/major-bump-main.json'" -ForegroundColor White
     Write-Message "  # Apply scenario directly:" -ForegroundColor Gray
-    Write-Message "  Apply-TestFixtures -Scenario 'MajorBumpV0ToV1'" -ForegroundColor White
+    Write-Message "  Invoke-TestFixtures -Scenario 'MajorBumpV0ToV1'" -ForegroundColor White
     Write-Message "  # List available scenarios:" -ForegroundColor Gray
     Write-Message "  Get-FixtureScenarios" -ForegroundColor White
     Write-Message "  # Validate current state:" -ForegroundColor Gray
