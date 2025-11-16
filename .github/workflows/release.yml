@@ -251,16 +251,12 @@ jobs:
             exit 1
           fi
 
-      - name: Configure Git Identity
-        run: |
-          git config --global user.name "GitHub Actions Bot"
-          git config --global user.email "actions@github.com"
-
       - name: Update release version and fix BOM encoding
         if: ${{ !env.ACT }}
         run: |
           pwsh ./scripts/utils/Update-ModuleVersion.ps1 -Version "${{ inputs.version }}"
           pwsh ./scripts/utils/Fix-BOMEncoding.ps1
+          git remote set-url origin https://x-access-token:${{ secrets.BOT_PAT }}@github.com/nntin/d-flows.git
           git add '*.ps1' '*.psm1' '*.psd1'
           git commit -m "chore: Update release notes for v${{ inputs.version }}"
           git push origin HEAD:${{ inputs.target_branch }}
