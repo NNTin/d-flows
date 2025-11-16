@@ -3,7 +3,7 @@
     # Module metadata
     # ──────────────────────────────
     RootModule           = 'MessageUtils.psm1'
-    ModuleVersion        ='0.1.2'
+    ModuleVersion        ='1.0.0'
     GUID                 = 'c777b9d4-1d3c-468d-8cb3-6d42f80d33e4'
     Author               = 'Tin Nguyen'
     CompanyName          = 'N/A'

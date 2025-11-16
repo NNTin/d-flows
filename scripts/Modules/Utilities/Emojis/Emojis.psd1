@@ -3,7 +3,7 @@
     # Module metadata
     # ──────────────────────────────
     RootModule           = 'Emojis.psm1'
-    ModuleVersion        ='0.1.2'
+    ModuleVersion        ='1.0.0'
     GUID                 = '7631976f-c6a4-4386-bd86-02d15a1474a9'
     Author               = 'Tin Nguyen'
     CompanyName          = 'N/A'
