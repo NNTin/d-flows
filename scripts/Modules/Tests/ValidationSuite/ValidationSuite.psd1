@@ -3,7 +3,7 @@
     # Module metadata
     # ──────────────────────────────
     RootModule           = 'ValidationSuite.psm1'
-    ModuleVersion        = '0.0.1' # TODO: Make this update via CI/CD
+    ModuleVersion        ='0.1.2'
     GUID                 = 'f26debd5-0e23-4ccd-b4f9-935492d99ec1'
     Author               = 'Tin Nguyen'
     CompanyName          = 'N/A'

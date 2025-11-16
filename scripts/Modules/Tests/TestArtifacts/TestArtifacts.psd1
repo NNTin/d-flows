@@ -3,7 +3,7 @@
     # Module metadata
     # ──────────────────────────────
     RootModule           = 'TestArtifacts.psm1'
-    ModuleVersion        = '0.0.1' # TODO: Make this update via CI/CD
+    ModuleVersion        ='0.1.2'
     GUID                 = '2da18094-d83e-4c2d-874a-a0d5259ed76b'
     Author               = 'Tin Nguyen'
     CompanyName          = 'N/A'
