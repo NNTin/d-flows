@@ -21,15 +21,20 @@
     Returns the full path to the backup directory in temp.
 #>
 function New-BackupDirectory {
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param ()
+
     $fullBackupPath = Get-BackupBasePath
 
-    if (-not (Test-Path $fullBackupPath)) {
-        Write-Message -Type "Debug" "Creating temp backup directory: $fullBackupPath"
-        New-Item -ItemType Directory -Path $fullBackupPath -Force | Out-Null
-        Write-Message -Type "Debug" "Backup directory created"
-    }
-    else {
-        Write-Message -Type "Debug" "Backup directory already exists: $fullBackupPath"
+    if ($PSCmdlet.ShouldProcess($fullBackupPath, "Create backup directory")) {
+        if (-not (Test-Path $fullBackupPath)) {
+            Write-Message -Type "Debug" "Creating temp backup directory: $fullBackupPath"
+            New-Item -ItemType Directory -Path $fullBackupPath -Force | Out-Null
+            Write-Message -Type "Debug" "Backup directory created"
+        }
+        else {
+            Write-Message -Type "Debug" "Backup directory already exists: $fullBackupPath"
+        }
     }
 
     return $fullBackupPath

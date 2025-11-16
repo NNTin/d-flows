@@ -132,6 +132,7 @@ function Test-GitBranchExists {
     Throws an error if the commit creation fails.
 #>
 function New-GitCommit {
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $true)]
         [string]$Message,
@@ -148,7 +149,9 @@ function New-GitCommit {
 
         Write-Message -Type "Debug" -Message "Creating commit: $Message"
 
-        git @argsGit 2>&1 | Out-Null
+        if ($PSCmdlet.ShouldProcess("Git", "Commit")) {
+            git @argsGit 2>&1 | Out-Null
+        }
 
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to create commit"
@@ -201,6 +204,7 @@ function New-GitCommit {
     If Force is $true, any existing tag is deleted before creating the new one.
 #>
 function New-GitTag {
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $true)]
         [string]$TagName,
@@ -218,20 +222,22 @@ function New-GitTag {
 
         Write-Message -Type "Tag" -Message "Creating tag: $TagName -> $CommitSha"
 
-        # Check if tag already exists
-        if (Test-GitTagExists -TagName $TagName) {
-            if (-not $Force) {
-                Write-Message -Type "Warning" -Message "Tag already exists and Force not set: $TagName"
-                return $false
+        if ($PSCmdlet.ShouldProcess("Git tag '$TagName'", "Force Restore")) {
+            # Check if tag already exists
+            if (Test-GitTagExists -TagName $TagName) {
+                if (-not $Force) {
+                    Write-Message -Type "Warning" -Message "Tag already exists and Force not set: $TagName"
+                    return $false
+                }
+
+                # Delete existing tag if force is enabled
+                Write-Message -Type "Debug" -Message "Deleting existing tag for force restore: $TagName"
+                git tag -d $TagName 2>&1 | Out-Null
             }
 
-            # Delete existing tag if force is enabled
-            Write-Message -Type "Debug" -Message "Deleting existing tag for force restore: $TagName"
-            git tag -d $TagName 2>&1 | Out-Null
+            # Create tag
+            git tag $TagName $CommitSha 2>&1 | Out-Null
         }
-
-        # Create tag
-        git tag $TagName $CommitSha 2>&1 | Out-Null
 
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to create tag"
@@ -283,6 +289,7 @@ function New-GitTag {
     Cannot delete the currently checked out branch - will skip with a warning in this case.
 #>
 function New-GitBranch {
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $true)]
         [string]$BranchName,
@@ -300,27 +307,29 @@ function New-GitBranch {
 
         Write-Message -Type "Branch" -Message "Creating branch: $BranchName -> $CommitSha"
 
-        # Check if branch already exists
-        if (Test-GitBranchExists -BranchName $BranchName) {
-            if (-not $Force) {
-                Write-Message -Type "Warning" -Message "Branch already exists and Force not set: $BranchName"
-                return $false
+        if ($PSCmdlet.ShouldProcess("Git branch '$BranchName'", "Force Restore")) {
+            # Check if branch already exists
+            if (Test-GitBranchExists -BranchName $BranchName) {
+                if (-not $Force) {
+                    Write-Message -Type "Warning" -Message "Branch already exists and Force not set: $BranchName"
+                    return $false
+                }
+
+                # Check if this is the current branch
+                $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
+                if ($currentBranch -eq $BranchName) {
+                    Write-Message -Type "Warning" -Message "Cannot delete current branch: $BranchName"
+                    return $false
+                }
+
+                # Delete existing branch if force is enabled
+                Write-Message -Type "Debug" -Message "Deleting existing branch for force restore: $BranchName"
+                git branch -D $BranchName 2>&1 | Out-Null
             }
 
-            # Check if this is the current branch
-            $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
-            if ($currentBranch -eq $BranchName) {
-                Write-Message -Type "Warning" -Message "Cannot delete current branch: $BranchName"
-                return $false
-            }
-
-            # Delete existing branch if force is enabled
-            Write-Message -Type "Debug" -Message "Deleting existing branch for force restore: $BranchName"
-            git branch -D $BranchName 2>&1 | Out-Null
+            # Create branch
+            git branch $BranchName $CommitSha 2>&1 | Out-Null
         }
-
-        # Create branch
-        git branch $BranchName $CommitSha 2>&1 | Out-Null
 
         if ($LASTEXITCODE -ne 0) {
             throw "Failed to create branch"
@@ -362,6 +371,7 @@ function New-GitBranch {
     Throws an error if the checkout operation fails.
 #>
 function Set-GitBranch {
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $true)]
         [string]$BranchName
@@ -370,13 +380,15 @@ function Set-GitBranch {
     try {
         Write-Message -Type "Branch" "Checking out branch: $BranchName"
 
-        git checkout $BranchName 2>&1 | Out-Null
+        if ($PSCmdlet.ShouldProcess("Git branch '$BranchName'", "Checkout")) {
+            git checkout $BranchName 2>&1 | Out-Null
 
-        if ($LASTEXITCODE -ne 0) {
-            throw "Failed to checkout branch - check for uncommitted changes"
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to checkout branch - check for uncommitted changes"
+            }
+
+            Write-Message -Type "Branch" "Branch checked out: $BranchName"
         }
-
-        Write-Message -Type "Branch" "Branch checked out: $BranchName"
         return $true
     }
     catch {

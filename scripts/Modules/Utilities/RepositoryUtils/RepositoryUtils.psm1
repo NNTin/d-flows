@@ -103,25 +103,30 @@ function Get-RepositoryRoot {
 #>
 
 function New-TestStateDirectory {
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param ()
+
     $testStatePath = Get-TestStateBasePath
     $testLogsPath = Join-Path (Get-TestStateBasePath) "logs"
 
-    if (-not (Test-Path $testStatePath)) {
-        Write-Message -Type "Debug" "Creating temp test state directory: $testStatePath"
-        New-Item -ItemType Directory -Path $testStatePath -Force | Out-Null
-        Write-Message -Type "Debug" "Test state directory created"
-    }
-    else {
-        Write-Message -Type "Debug" "Test state directory already exists: $testStatePath"
-    }
+    if ($PSCmdlet.ShouldProcess($testStatePath, "Create test state directory")) {
+        if (-not (Test-Path $testStatePath)) {
+            Write-Message -Type "Debug" "Creating temp test state directory: $testStatePath"
+            New-Item -ItemType Directory -Path $testStatePath -Force | Out-Null
+            Write-Message -Type "Debug" "Test state directory created"
+        }
+        else {
+            Write-Message -Type "Debug" "Test state directory already exists: $testStatePath"
+        }
 
-    if (-not (Test-Path $testLogsPath)) {
-        Write-Message -Type "Debug" "Creating temp test logs directory: $testLogsPath"
-        New-Item -ItemType Directory -Path $testLogsPath -Force | Out-Null
-        Write-Message -Type "Debug" "Test logs directory created"
-    }
-    else {
-        Write-Message -Type "Debug" "Test logs directory already exists: $testLogsPath"
+        if (-not (Test-Path $testLogsPath)) {
+            Write-Message -Type "Debug" "Creating temp test logs directory: $testLogsPath"
+            New-Item -ItemType Directory -Path $testLogsPath -Force | Out-Null
+            Write-Message -Type "Debug" "Test logs directory created"
+        }
+        else {
+            Write-Message -Type "Debug" "Test logs directory already exists: $testLogsPath"
+        }
     }
 
     return $testStatePath

@@ -244,18 +244,19 @@ $ActCommand = Get-Command "act" | Select-Object -ExpandProperty Source
     - Linux: Removes directory from /tmp/d-flows-test-state-<guid>/
 #>
 function Remove-TestStateDirectory {
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $false)]
         [string]$Path = $TestStateDirectory
     )
 
-    # TODO: skip for now
-    return $true
-
     try {
         if (Test-Path $Path) {
             Write-Message -Type "Debug" "Removing test state directory: $Path"
-            Remove-Item -Path $Path -Recurse -Force -ErrorAction Stop
+
+            if ($PSCmdlet.ShouldProcess("$Path", "Remove-Item")) {
+                Remove-Item -Path $Path -Recurse -Force -ErrorAction Stop
+            }
             Write-Message -Type "Debug" "Test state directory removed successfully"
             return $true
         }
