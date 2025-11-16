@@ -1,0 +1,209 @@
+name: 'Discord Notification'
+description: 'Send Discord notifications via webhook'
+
+inputs:
+  webhook_url:
+    description: 'Discord webhook URL'
+    required: true
+  message_type:
+    description: "Type of message: 'embed' or 'message'"
+    required: false
+    default: 'embed'
+  title:
+    description: 'Title for embed message'
+    required: false
+  description:
+    description: 'Description for embed message'
+    required: false
+  content:
+    description: 'Content for normal message'
+    required: false
+  color:
+    description: 'Color for embed in decimal format (e.g., 5814783 for blue)'
+    required: false
+  fields:
+    description: 'JSON array of fields for embed (e.g., ''[{"name":"Field1","value":"Value1","inline":true}]'')'
+    required: false
+  username:
+    description: 'Custom username for webhook (defaults to GitHub actor)'
+    required: false
+  avatar_url:
+    description: 'Custom avatar URL for webhook (defaults to GitHub actor avatar)'
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Send Discord Notification
+      shell: bash
+      env:
+        WEBHOOK_URL: ${{ inputs.webhook_url }}
+        MESSAGE_TYPE: ${{ inputs.message_type }}
+        TITLE: ${{ inputs.title }}
+        DESCRIPTION: ${{ inputs.description }}
+        CONTENT: ${{ inputs.content }}
+        COLOR: ${{ inputs.color }}
+        FIELDS: ${{ inputs.fields }}
+        USERNAME: ${{ inputs.username }}
+        AVATAR_URL: ${{ inputs.avatar_url }}
+        GITHUB_ACTOR: ${{ github.actor }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_WORKFLOW: ${{ github.workflow }}
+      run: |
+        # Validate webhook URL is provided
+        if [[ -z "$WEBHOOK_URL" ]]; then
+          echo "❌ Error: webhook_url input is required for Discord notifications"
+          echo "Please provide the webhook_url input to the action"
+          exit 1
+        fi
+        
+        # Validate webhook URL format to prevent accidental secret leakage
+        if [[ ! "$WEBHOOK_URL" =~ ^https://discord(app)?\.com/api/webhooks/[0-9]+/[A-Za-z0-9_-]+$ ]]; then
+          echo "❌ Error: Invalid Discord webhook URL format"
+          echo "Expected format: https://discord.com/api/webhooks/{id}/{token}"
+          exit 1
+        fi
+        
+        # Generate ISO 8601 timestamp
+        TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        
+        # Check if jq is available, install if needed
+        if ! command -v jq >/dev/null 2>&1; then
+          echo "jq not found, installing..."
+          sudo apt-get update && sudo apt-get install -y jq
+        fi
+        
+        # Function to extract username from GitHub actor (handles formats like "nektos/act" -> "nektos")
+        extract_username() {
+          local actor="$1"
+          # Handle empty or whitespace-only strings
+          if [[ -z "$actor" || "$actor" =~ ^[[:space:]]*$ ]]; then
+            echo "github-actions"
+            return
+          fi
+          
+          # Extract everything before the first slash (for "owner/repo" format)
+          # If no slash exists, return the original string (for simple usernames)
+          local username="${actor%%/*}"
+          
+          # Validate that we have a non-empty result
+          if [[ -z "$username" || "$username" =~ ^[[:space:]]*$ ]]; then
+            echo "github-actions"
+            return
+          fi
+          
+          echo "$username"
+        }
+        
+        # Extract clean username from GitHub actor for avatar URLs
+        CLEAN_USERNAME=$(extract_username "$GITHUB_ACTOR")
+        
+        # Set default values - handle both unset variables AND empty strings
+        if [[ -z "$USERNAME" || "$USERNAME" =~ ^[[:space:]]*$ ]]; then
+          USERNAME="$GITHUB_ACTOR"
+        fi
+        
+        if [[ -z "$AVATAR_URL" || "$AVATAR_URL" =~ ^[[:space:]]*$ ]]; then
+          AVATAR_URL="https://github.com/$CLEAN_USERNAME.png"
+        fi
+        
+        # Function to escape JSON strings
+        escape_json() {
+          echo "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g; s/\n/\\n/g; s/\r/\\r/g'
+        }
+        
+        # Construct JSON payload based on message_type using jq
+        if [[ "$MESSAGE_TYPE" == "message" ]]; then
+          # Check if content is empty for message type
+          if [[ -z "$CONTENT" ]]; then
+            echo "Warning: message type specified but content is empty, skipping notification"
+            exit 0
+          fi
+          
+          # Simple message payload using jq
+          PAYLOAD=$(jq -n \
+            --arg username "$USERNAME" \
+            --arg avatar_url "$AVATAR_URL" \
+            --arg content "$CONTENT" \
+            '{
+              username: $username,
+              avatar_url: $avatar_url,
+              content: $content
+            }')
+        else
+          # Embed payload (default) using jq
+          ACTOR_ICON_URL="https://github.com/$CLEAN_USERNAME.png"
+          FOOTER_TEXT="$GITHUB_REPOSITORY • $GITHUB_WORKFLOW"
+          
+          # Start with base embed object
+          EMBED_BASE=$(jq -n \
+            --arg timestamp "$TIMESTAMP" \
+            --arg actor_name "$GITHUB_ACTOR" \
+            --arg actor_icon "$ACTOR_ICON_URL" \
+            --arg footer_text "$FOOTER_TEXT" \
+            '{
+              timestamp: $timestamp,
+              author: {
+                name: $actor_name,
+                icon_url: $actor_icon
+              },
+              footer: {
+                text: $footer_text
+              }
+            }')
+          
+          # Add optional fields
+          if [[ -n "$TITLE" ]]; then
+            EMBED_BASE=$(echo "$EMBED_BASE" | jq --arg title "$TITLE" '. + {title: $title}')
+          fi
+          
+          if [[ -n "$DESCRIPTION" ]]; then
+            EMBED_BASE=$(echo "$EMBED_BASE" | jq --arg description "$DESCRIPTION" '. + {description: $description}')
+          fi
+          
+          if [[ -n "$COLOR" ]]; then
+            # Validate that color is numeric
+            if [[ "$COLOR" =~ ^[0-9]+$ ]]; then
+              EMBED_BASE=$(echo "$EMBED_BASE" | jq --argjson color "$COLOR" '. + {color: $color}')
+            else
+              echo "Warning: Color value '$COLOR' is not numeric, omitting color field"
+            fi
+          fi
+          
+          # Add fields if provided and valid JSON array
+          if [[ -n "$FIELDS" ]]; then
+            # Validate JSON and check if it's an array
+            if command -v jq >/dev/null 2>&1 && echo "$FIELDS" | jq . >/dev/null 2>&1 && echo "$FIELDS" | jq -e 'type=="array"' >/dev/null 2>&1; then
+              EMBED_BASE=$(echo "$EMBED_BASE" | jq --argjson fields "$FIELDS" '. + {fields: $fields}')
+            else
+              echo "Warning: Fields input is not a valid JSON array, skipping fields"
+            fi
+          fi
+          
+          # Construct final payload
+          PAYLOAD=$(jq -n \
+            --arg username "$USERNAME" \
+            --arg avatar_url "$AVATAR_URL" \
+            --argjson embed "$EMBED_BASE" \
+            '{
+              username: $username,
+              avatar_url: $avatar_url,
+              embeds: [$embed]
+            }')
+        fi
+        
+        # Send the webhook using curl
+        echo "Sending Discord notification..."
+        
+        HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" -X POST \
+          -H "Content-Type: application/json" \
+          -d "$PAYLOAD" \
+          "$WEBHOOK_URL")
+        
+        if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "204" ]]; then
+          echo "✅ Discord notification sent successfully (HTTP $HTTP_STATUS)"
+        else
+          echo "⚠️ Failed to send Discord notification (HTTP $HTTP_STATUS)"
+          echo "Note: Webhook failures are non-fatal and do not fail the workflow"
+          exit 0
+        fi
