@@ -259,7 +259,7 @@ jobs:
       - name: Update release version and fix BOM encoding
         if: ${{ !env.ACT }}
         run: |
-          pwsh ./scripts/utils/Update-ReleaseNotes.ps1 -Version "${{ inputs.version }}"
+          pwsh ./scripts/utils/Update-ModuleVersion.ps1 -Version "${{ inputs.version }}"
           pwsh ./scripts/utils/Fix-BOMEncoding.ps1
           git add '*.ps1' '*.psm1' '*.psd1'
           git commit -m "chore: Update release notes for v${{ inputs.version }}"
@@ -321,7 +321,7 @@ jobs:
         if: ${{ !env.ACT }} # only run if NOT running under act
         shell: bash
         run: |
-          git push origin "v$MAJOR_VERSION"
+          git push origin "v$MAJOR_VERSION" --force
 
       - name: Update step summary with major tag information
         shell: bash
