@@ -256,8 +256,7 @@ jobs:
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
 
-      - name: 
-        id: 
+      - name: Update release version and fix BOM encoding
         run: |
           pwsh ./scripts/utils/Update-ReleaseNotes.ps1 -Version "${{ inputs.version }}"
           pwsh ./scripts/utils/Fix-BOMEncoding.ps1
