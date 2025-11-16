@@ -11,7 +11,7 @@
     The module version to set in all manifests. Must be supplied when running the script.
 
 .EXAMPLE
-    .\Update-ModuleVersions.ps1 -Version 1.3.0
+    .\scripts\utils\Update-ModuleVersions.ps1 -Version 1.3.0
     Updates all module manifests to version 1.3.0.
 
 .NOTES

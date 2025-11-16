@@ -251,6 +251,20 @@ jobs:
             exit 1
           fi
 
+      - name: Configure Git Identity
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+
+      - name: 
+        id: 
+        run: |
+          pwsh ./scripts/utils/Update-ReleaseNotes.ps1 -Version "${{ inputs.version }}"
+          pwsh ./scripts/utils/Fix-BOMEncoding.ps1
+          git add '*.ps1' '*.psm1' '*.psd1'
+          git commit -m "chore: Update release notes for v${{ inputs.version }}"
+        shell: pwsh
+
       - name: Create release
         shell: bash
         env:

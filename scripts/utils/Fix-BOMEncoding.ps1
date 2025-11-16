@@ -7,7 +7,11 @@
     with UTF-8 BOM encoding to satisfy PowerShell ScriptAnalyzer's PSUseBOMForUnicodeEncodedFile rule.
 
 .EXAMPLE
-    .\Fix-BOMEncoding.ps1
+    .\scripts\utils\Fix-BOMEncoding.ps1
+
+.NOTES
+    Author: Tin Nguyen
+    Repository: https://github.com/nntin/d-flows
 #>
 
 $scriptDir = $PSScriptRoot
