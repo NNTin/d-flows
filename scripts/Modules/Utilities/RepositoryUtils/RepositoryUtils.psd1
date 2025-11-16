@@ -3,7 +3,7 @@
     # Module metadata
     # ──────────────────────────────
     RootModule           = 'RepositoryUtils.psm1'
-    ModuleVersion        ='1.0.0'
+    ModuleVersion        ='1.0.1'
     GUID                 = '9150b029-d4f9-46a0-bbf0-ffbbea2a9c10'
     Author               = 'Tin Nguyen'
     CompanyName          = 'N/A'
