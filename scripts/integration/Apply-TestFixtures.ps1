@@ -41,17 +41,17 @@
 
 .EXAMPLE
     # Dot-source to load functions
-    . .\scripts\integration\Apply-TestFixtures.ps1
+    . .\scripts\integration\Invoke-TestFixtures.ps1
 
     # Apply a fixture by file path
-    Apply-TestFixtures -FixturePath "tests/bump-version/major-bump-main.json"
+    Invoke-TestFixtures -FixturePath "tests/bump-version/major-bump-main.json"
 
 .EXAMPLE
     # Apply a scenario directly
-    Apply-TestFixtures -Scenario "MajorBumpV0ToV1"
+    Invoke-TestFixtures -Scenario "MajorBumpV0ToV1"
 
     # Apply scenario with clean state
-    Apply-TestFixtures -Scenario "FirstRelease" -CleanState
+    Invoke-TestFixtures -Scenario "FirstRelease" -CleanState
 
 .EXAMPLE
     # Validate current git state matches a scenario
@@ -398,16 +398,16 @@ function Get-FixtureScenarios {
     Whether to overwrite existing tags/branches. Default: $false.
 
 .EXAMPLE
-    $result = Apply-Scenario -ScenarioName "MajorBumpV0ToV1"
+    $result = Invoke-Scenario -ScenarioName "MajorBumpV0ToV1"
 
 .EXAMPLE
-    $result = Apply-Scenario -ScenarioName "FirstRelease" -CleanState -Force
+    $result = Invoke-Scenario -ScenarioName "FirstRelease" -CleanState -Force
 
 .NOTES
     Returns hashtable with scenario application results including tags created,
     branches created, and path to generated test-tags.txt file.
 #>
-function Apply-Scenario {
+function Invoke-Scenario {
     param(
         [Parameter(Mandatory = $true)]
         [string]$ScenarioName,
@@ -603,18 +603,18 @@ function Apply-Scenario {
     Custom path for the generated test-tags.txt file.
 
 .EXAMPLE
-    Apply-TestFixtures -FixturePath "tests/bump-version/major-bump-main.json"
+    Invoke-TestFixtures -FixturePath "tests/bump-version/major-bump-main.json"
 
 .EXAMPLE
-    Apply-TestFixtures -Scenario "MajorBumpV0ToV1" -CleanState
+    Invoke-TestFixtures -Scenario "MajorBumpV0ToV1" -CleanState
 
 .EXAMPLE
-    Apply-TestFixtures -FixturePath "tests/integration/v0-to-v1-release-cycle.json" -OutputPath "custom/test-tags.txt"
+    Invoke-TestFixtures -FixturePath "tests/integration/v0-to-v1-release-cycle.json" -OutputPath "custom/test-tags.txt"
 
 .NOTES
     Returns hashtable with scenario application results.
 #>
-function Apply-TestFixtures {
+function Invoke-TestFixtures {
     param(
         [string]$FixturePath,
         [string]$Scenario,
@@ -667,22 +667,22 @@ function Apply-TestFixtures {
         if ($fixtureOverrides) {
             Write-Message -Type "Debug" "Applying fixture-specific state overrides to scenario '$scenarioToApply'"
             if ($OutputPath) {
-                $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -ExpectedState $fixtureOverrides -OutputPath $OutputPath
+                $result = Invoke-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -ExpectedState $fixtureOverrides -OutputPath $OutputPath
             }
             else {
-                $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -ExpectedState $fixtureOverrides
+                $result = Invoke-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -ExpectedState $fixtureOverrides
             }
         }
         else {
             if ($OutputPath) {
-                $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -OutputPath $OutputPath
+                $result = Invoke-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -OutputPath $OutputPath
             }
             else {
-                $result = Apply-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force
+                $result = Invoke-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force
             }
         }
 
-        # Update output path if specified (already handled in Apply-Scenario if OutputPath provided)
+        # Update output path if specified (already handled in Invoke-Scenario if OutputPath provided)
         # This is kept for backward compatibility but shouldn't regenerate if already done
         if ($OutputPath -and $result -and -not $result.TestTagsFile) {
             Write-Message -Type "Debug" "Regenerating test-tags.txt at custom path (fallback)"
@@ -870,8 +870,8 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-Message -Type "Info" "This script applies test fixtures to set up git state for act integration testing." -ForegroundColor Gray
 
     Write-Message -Type "Info" "Available Functions:" -ForegroundColor Yellow
-    Write-Message -Type "Info" "  Apply-TestFixtures [-FixturePath | -Scenario] - Apply fixture or scenario" -ForegroundColor Cyan
-    Write-Message -Type "Info" "  Apply-Scenario [-ScenarioName]              - Apply scenario directly" -ForegroundColor Cyan
+    Write-Message -Type "Info" "  Invoke-TestFixtures [-FixturePath | -Scenario] - Apply fixture or scenario" -ForegroundColor Cyan
+    Write-Message -Type "Info" "  Invoke-Scenario [-ScenarioName]              - Apply scenario directly" -ForegroundColor Cyan
     Write-Message -Type "Info" "  Get-FixtureScenarios                        - List scenarios from fixtures" -ForegroundColor Cyan
     Write-Message -Type "Info" "  Show-ScenarioDefinition [-ScenarioName]     - Display scenario details" -ForegroundColor Cyan
     Write-Message -Type "Info" "  Test-ScenarioState [-ScenarioName]          - Validate git state" -ForegroundColor Cyan
@@ -887,11 +887,11 @@ if ($MyInvocation.InvocationName -ne ".") {
 
     Write-Message "Usage Examples:" -ForegroundColor Yellow
     Write-Message "  # Dot-source to load functions:" -ForegroundColor Gray
-    Write-Message "  . .\scripts\integration\Apply-TestFixtures.ps1" -ForegroundColor White
+    Write-Message "  . .\scripts\integration\Invoke-TestFixtures.ps1" -ForegroundColor White
     Write-Message "  # Apply fixture by file path:" -ForegroundColor Gray
-    Write-Message "  Apply-TestFixtures -FixturePath 'tests/bump-version/major-bump-main.json'" -ForegroundColor White
+    Write-Message "  Invoke-TestFixtures -FixturePath 'tests/bump-version/major-bump-main.json'" -ForegroundColor White
     Write-Message "  # Apply scenario directly:" -ForegroundColor Gray
-    Write-Message "  Apply-TestFixtures -Scenario 'MajorBumpV0ToV1'" -ForegroundColor White
+    Write-Message "  Invoke-TestFixtures -Scenario 'MajorBumpV0ToV1'" -ForegroundColor White
     Write-Message "  # List available scenarios:" -ForegroundColor Gray
     Write-Message "  Get-FixtureScenarios" -ForegroundColor White
     Write-Message "  # Validate current state:" -ForegroundColor Gray

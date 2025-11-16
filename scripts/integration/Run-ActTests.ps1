@@ -19,7 +19,7 @@
     Integration with existing scripts:
     - Uses GitSnapshot module for git state backup/restore
     - Uses Setup-TestScenario.ps1 for scenario management
-    - Uses Apply-TestFixtures.ps1 for fixture parsing patterns
+    - Uses Invoke-TestFixtures.ps1 for fixture parsing patterns
 
     Supported test step actions:
     - setup-git-state: Apply test scenarios to git repository
@@ -832,7 +832,7 @@ function Invoke-ActWorkflow {
         Write-Message -Type "Debug" "Act execution completed in $($duration.TotalSeconds) seconds with exit code: $exitCode"
 
         # Parse outputs from workflow
-        $outputs = Parse-ActOutput -Output $output
+        $outputs = Get-ActOutput -Output $output
 
         return @{
             Success  = ($exitCode -eq 0)
@@ -859,13 +859,13 @@ function Invoke-ActWorkflow {
     Full act output text
 
 .EXAMPLE
-    $outputs = Parse-ActOutput -Output $actOutput
+    $outputs = Get-ActOutput -Output $actOutput
 
 .NOTES
     Returns hashtable of parsed outputs.
     Workflows output markers like: "OUTPUT: NEW_VERSION=1.0.0"
 #>
-function Parse-ActOutput {
+function Get-ActOutput {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Output
@@ -1337,7 +1337,7 @@ function Invoke-ValidateState {
     Executes an external command from a single string, capturing stdout, stderr, and exit code.
 
 .DESCRIPTION
-    Run-Command safely executes a command provided as a single string.
+    Invoke-StepCommand safely executes a command provided as a single string.
     It handles quoted arguments correctly, merges stdout and stderr,
     and returns both the full output and the exit code as a PSCustomObject.
 
@@ -1349,19 +1349,19 @@ function Invoke-ValidateState {
     Switch. If specified, prints the command, exit code, and output to the host.
 
 .EXAMPLE
-    $result = Run-Command "git commit --allow-empty -m 'Trigger release v0.2.1'"
+    $result = Invoke-StepCommand "git commit --allow-empty -m 'Trigger release v0.2.1'"
     Write-Message -Type "Debug" "Exit code: $($result.ExitCode)"
     Write-Message -Type "Info" "Output: $($result.Output)"
 
 .EXAMPLE
-    Run-Command "docker build -t myimage ." -VerboseOutput
+    Invoke-StepCommand "docker build -t myimage ." -VerboseOutput
 
 .NOTES
     - Avoids Invoke-Expression to improve safety.
     - Properly splits the string into executable + arguments.
     - Captures both stdout and stderr.
 #>
-function Run-Command {
+function Invoke-StepCommand {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
@@ -1441,7 +1441,7 @@ function Invoke-ExecuteCommand {
     Write-Message -Type "Debug" "Executing command: $command"
 
     try {
-        $result = Run-Command $command -VerboseOutput
+        $result = Invoke-StepCommand $command -VerboseOutput
 
         $output = $($result.Output)
         $exitCode = $($result.ExitCode)
