@@ -78,8 +78,6 @@ jobs:
     with:
       title: "Integration Test Results"
       markdown: |
-        ## Integration Test Results
-        
         ${{ needs.run-integration-tests.outputs.failed_tests == '0' && '✅ All tests passed!' || '❌ Some tests failed' }}
         
         | Metric | Value |

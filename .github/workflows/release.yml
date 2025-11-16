@@ -22,6 +22,7 @@ concurrency:
 
 jobs:
   create-release:
+    name: Create Release
     runs-on: ubuntu-latest
     outputs:
       MAJOR_VERSION: ${{ steps.extract-major-version.outputs.MAJOR_VERSION }}

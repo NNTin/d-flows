@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   validate-syntax:
+    name: Actionlint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -39,6 +40,7 @@ jobs:
           path: actionlint.log
 
   ps-script-analyzer:
+    name: PSScriptAnalyzer
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -70,6 +72,7 @@ jobs:
           path: psscriptanalyzer.log
 
   json-prettier:
+    name: JSON Prettier
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

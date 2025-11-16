@@ -27,6 +27,7 @@ concurrency:
 
 jobs:
   calculate-and-release:
+    name: Bump Version
     runs-on: ubuntu-latest
     outputs:
       RELEASE_BRANCH_CREATED: ${{ steps.create-release-branch.outputs.RELEASE_BRANCH_CREATED }}
