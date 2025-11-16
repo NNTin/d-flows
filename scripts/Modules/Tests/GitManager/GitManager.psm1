@@ -375,7 +375,7 @@ function New-GitBranch {
 #>
 function Set-GitBranch {
     [CmdletBinding(SupportsShouldProcess = $true)]
-    [OutputType([string])]
+    [OutputType([bool])]
     param(
         [Parameter(Mandatory = $true)]
         [string]$BranchName

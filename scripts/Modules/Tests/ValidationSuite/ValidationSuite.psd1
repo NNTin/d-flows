@@ -17,25 +17,25 @@
     # Export definitions
     # ──────────────────────────────
     FunctionsToExport    = @(
-        'Validate-TagExists',
-        'Validate-TagNotExists',
-        'Validate-TagPointsTo',
-        'Validate-TagAccessible',
-        'Validate-TagCount',
-        'Validate-BranchExists',
-        'Validate-BranchPointsToTag',
-        'Validate-BranchCount',
-        'Validate-CurrentBranch',
-        'Validate-VersionGreater',
-        'Validate-VersionProgression',
-        'Validate-MajorIncrement',
-        'Validate-MajorTagCoexistence',
-        'Validate-MajorTagProgression',
-        'Validate-NoCrossContamination',
-        'Validate-NoTagConflicts',
-        'Validate-WorkflowSuccess',
-        'Validate-WorkflowFailure',
-        'Validate-IdempotencyVerified'
+        'Test-TagExists',
+        'Test-TagNotExists',
+        'Test-TagPointsTo',
+        'Test-TagAccessible',
+        'Test-TagCount',
+        'Test-BranchExists',
+        'Test-BranchPointsToTag',
+        'Test-BranchCount',
+        'Test-CurrentBranch',
+        'Test-VersionGreater',
+        'Test-VersionProgression',
+        'Test-MajorIncrement',
+        'Test-MajorTagCoexistence',
+        'Test-MajorTagProgression',
+        'Test-NoCrossContamination',
+        'Test-NoTagConflicts',
+        'Test-WorkflowSuccess',
+        'Test-WorkflowFailure',
+        'Test-IdempotencyVerified'
     )
 
     # ──────────────────────────────

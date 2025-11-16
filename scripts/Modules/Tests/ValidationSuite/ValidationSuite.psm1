@@ -8,9 +8,9 @@
     Tag name to check
 
 .EXAMPLE
-    Validate-TagExists -Tag "v1.0.0"
+    Test-TagExists -Tag "v1.0.0"
 #>
-function Validate-TagExists {
+function Test-TagExists {
     param([Parameter(Mandatory = $true)][string]$Tag)
 
     $existingTag = git tag -l $Tag 2>$null
@@ -33,9 +33,9 @@ function Validate-TagExists {
     Tag name to check
 
 .EXAMPLE
-    Validate-TagNotExists -Tag "v2.0.0"
+    Test-TagNotExists -Tag "v2.0.0"
 #>
-function Validate-TagNotExists {
+function Test-TagNotExists {
     param([Parameter(Mandatory = $true)][string]$Tag)
 
     $existingTag = git tag -l $Tag 2>$null
@@ -61,9 +61,9 @@ function Validate-TagNotExists {
     Target tag or commit SHA
 
 .EXAMPLE
-    Validate-TagPointsTo -Tag "v1" -Target "v1.0.0"
+    Test-TagPointsTo -Tag "v1" -Target "v1.0.0"
 #>
-function Validate-TagPointsTo {
+function Test-TagPointsTo {
     param(
         [Parameter(Mandatory = $true)][string]$Tag,
         [Parameter(Mandatory = $true)][string]$Target
@@ -100,9 +100,9 @@ function Validate-TagPointsTo {
     Tag name to check
 
 .EXAMPLE
-    Validate-TagAccessible -Tag "v1.0.0"
+    Test-TagAccessible -Tag "v1.0.0"
 #>
-function Validate-TagAccessible {
+function Test-TagAccessible {
     param([Parameter(Mandatory = $true)][string]$Tag)
 
     try {
@@ -136,9 +136,9 @@ function Validate-TagAccessible {
     Expected tag count
 
 .EXAMPLE
-    Validate-TagCount -Expected 3
+    Test-TagCount -Expected 3
 #>
-function Validate-TagCount {
+function Test-TagCount {
     param([Parameter(Mandatory = $true)][int]$Expected)
 
     $tags = @(git tag -l)
@@ -163,9 +163,9 @@ function Validate-TagCount {
     Branch name to check
 
 .EXAMPLE
-    Validate-BranchExists -Branch "release/v1"
+    Test-BranchExists -Branch "release/v1"
 #>
-function Validate-BranchExists {
+function Test-BranchExists {
     param([Parameter(Mandatory = $true)][string]$Branch)
 
     $existingBranch = git branch -l $Branch 2>$null
@@ -191,9 +191,9 @@ function Validate-BranchExists {
     Tag name
 
 .EXAMPLE
-    Validate-BranchPointsToTag -Branch "release/v1" -Tag "v1.0.0"
+    Test-BranchPointsToTag -Branch "release/v1" -Tag "v1.0.0"
 #>
-function Validate-BranchPointsToTag {
+function Test-BranchPointsToTag {
     param(
         [Parameter(Mandatory = $true)][string]$Branch,
         [Parameter(Mandatory = $true)][string]$Tag
@@ -230,9 +230,9 @@ function Validate-BranchPointsToTag {
     Expected branch count
 
 .EXAMPLE
-    Validate-BranchCount -Expected 2
+    Test-BranchCount -Expected 2
 #>
-function Validate-BranchCount {
+function Test-BranchCount {
     param([Parameter(Mandatory = $true)][int]$Expected)
 
     $branches = @(git branch -l)
@@ -257,9 +257,9 @@ function Validate-BranchCount {
     Expected branch name
 
 .EXAMPLE
-    Validate-CurrentBranch -Branch "main"
+    Test-CurrentBranch -Branch "main"
 #>
-function Validate-CurrentBranch {
+function Test-CurrentBranch {
     param([Parameter(Mandatory = $true)][string]$Branch)
 
     $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
@@ -285,9 +285,9 @@ function Validate-CurrentBranch {
     New version (e.g., "1.0.0")
 
 .EXAMPLE
-    Validate-VersionGreater -Current "0.2.1" -New "1.0.0"
+    Test-VersionGreater -Current "0.2.1" -New "1.0.0"
 #>
-function Validate-VersionGreater {
+function Test-VersionGreater {
     param(
         [Parameter(Mandatory = $true)][string]$Current,
         [Parameter(Mandatory = $true)][string]$New
@@ -345,9 +345,9 @@ function Validate-VersionGreater {
     Type of bump: "major", "minor", or "patch"
 
 .EXAMPLE
-    Validate-VersionProgression -From "0.2.1" -To "1.0.0" -BumpType "major"
+    Test-VersionProgression -From "0.2.1" -To "1.0.0" -BumpType "major"
 #>
-function Validate-VersionProgression {
+function Test-VersionProgression {
     param(
         [Parameter(Mandatory = $true)][string]$From,
         [Parameter(Mandatory = $true)][string]$To,
@@ -408,9 +408,9 @@ function Validate-VersionProgression {
     Ending major version
 
 .EXAMPLE
-    Validate-MajorIncrement -From 0 -To 1
+    Test-MajorIncrement -From 0 -To 1
 #>
-function Validate-MajorIncrement {
+function Test-MajorIncrement {
     param(
         [Parameter(Mandatory = $true)][int]$From,
         [Parameter(Mandatory = $true)][int]$To
@@ -435,9 +435,9 @@ function Validate-MajorIncrement {
     Array of major tag names (e.g., @("v0", "v1"))
 
 .EXAMPLE
-    Validate-MajorTagCoexistence -Tags @("v0", "v1")
+    Test-MajorTagCoexistence -Tags @("v0", "v1")
 #>
-function Validate-MajorTagCoexistence {
+function Test-MajorTagCoexistence {
     param([Parameter(Mandatory = $true)][array]$Tags)
 
     $allExist = $true
@@ -470,9 +470,9 @@ function Validate-MajorTagCoexistence {
     Array of major tag names in order
 
 .EXAMPLE
-    Validate-MajorTagProgression -Tags @("v0", "v1", "v2")
+    Test-MajorTagProgression -Tags @("v0", "v1", "v2")
 #>
-function Validate-MajorTagProgression {
+function Test-MajorTagProgression {
     param([Parameter(Mandatory = $true)][array]$Tags)
 
     $valid = $true
@@ -516,12 +516,12 @@ function Validate-MajorTagProgression {
     Version 2 tag
 
 .EXAMPLE
-    Validate-NoCrossContamination -V1 "v1.0.0" -V2 "v2.0.0"
+    Test-NoCrossContamination -V1 "v1.0.0" -V2 "v2.0.0"
 
 .NOTES
     Placeholder implementation - validates tags exist.
 #>
-function Validate-NoCrossContamination {
+function Test-NoCrossContamination {
     param(
         [Parameter(Mandatory = $true)][string]$V1,
         [Parameter(Mandatory = $true)][string]$V2
@@ -555,12 +555,12 @@ function Validate-NoCrossContamination {
     Check that no tag conflicts exist.
 
 .EXAMPLE
-    Validate-NoTagConflicts
+    Test-NoTagConflicts
 
 .NOTES
     Checks for duplicate tags (shouldn't happen) and other conflicts.
 #>
-function Validate-NoTagConflicts {
+function Test-NoTagConflicts {
     $tags = @(git tag -l)
 
     # Check for duplicates (shouldn't happen but validate)
@@ -587,9 +587,9 @@ function Validate-NoTagConflicts {
     Result from Invoke-ActWorkflow
 
 .EXAMPLE
-    Validate-WorkflowSuccess -Workflow "bump-version" -ActResult $actResult
+    Test-WorkflowSuccess -Workflow "bump-version" -ActResult $actResult
 #>
-function Validate-WorkflowSuccess {
+function Test-WorkflowSuccess {
     param(
         [Parameter(Mandatory = $true)][string]$Workflow,
         [Parameter(Mandatory = $true)][object]$ActResult
@@ -617,9 +617,9 @@ function Validate-WorkflowSuccess {
     Result from Invoke-ActWorkflow
 
 .EXAMPLE
-    Validate-WorkflowFailure -Workflow "bump-version" -ActResult $actResult
+    Test-WorkflowFailure -Workflow "bump-version" -ActResult $actResult
 #>
-function Validate-WorkflowFailure {
+function Test-WorkflowFailure {
     param(
         [Parameter(Mandatory = $true)][string]$Workflow,
         [Parameter(Mandatory = $true)][object]$ActResult
@@ -641,12 +641,12 @@ function Validate-WorkflowFailure {
     Check that operation is idempotent.
 
 .EXAMPLE
-    Validate-IdempotencyVerified
+    Test-IdempotencyVerified
 
 .NOTES
     Placeholder for future implementation.
 #>
-function Validate-IdempotencyVerified {
+function Test-IdempotencyVerified {
     Write-Message -Type "Validation" "Idempotency check (placeholder)"
 
     return @{

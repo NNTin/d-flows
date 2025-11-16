@@ -245,6 +245,7 @@ $ActCommand = Get-Command "act" | Select-Object -ExpandProperty Source
 #>
 function Remove-TestStateDirectory {
     [CmdletBinding(SupportsShouldProcess = $true)]
+    [OutputType([bool])]
     param(
         [Parameter(Mandatory = $false)]
         [string]$Path = $TestStateDirectory
@@ -931,52 +932,52 @@ function Invoke-ValidationCheck {
     try {
         switch ($checkType) {
             "tag-exists" {
-                return Validate-TagExists -Tag $Check.tag
+                return Test-TagExists -Tag $Check.tag
             }
             "tag-not-exists" {
-                return Validate-TagNotExists -Tag $Check.tag
+                return Test-TagNotExists -Tag $Check.tag
             }
             "tag-points-to" {
-                return Validate-TagPointsTo -Tag $Check.tag -Target $Check.target
+                return Test-TagPointsTo -Tag $Check.tag -Target $Check.target
             }
             "tag-accessible" {
-                return Validate-TagAccessible -Tag $Check.tag
+                return Test-TagAccessible -Tag $Check.tag
             }
             "tag-count" {
-                return Validate-TagCount -Expected $Check.expected
+                return Test-TagCount -Expected $Check.expected
             }
             "branch-exists" {
-                return Validate-BranchExists -Branch $Check.branch
+                return Test-BranchExists -Branch $Check.branch
             }
             "branch-points-to-tag" {
-                return Validate-BranchPointsToTag -Branch $Check.branch -Tag $Check.tag
+                return Test-BranchPointsToTag -Branch $Check.branch -Tag $Check.tag
             }
             "branch-count" {
-                return Validate-BranchCount -Expected $Check.expected
+                return Test-BranchCount -Expected $Check.expected
             }
             "current-branch" {
-                return Validate-CurrentBranch -Branch $Check.branch
+                return Test-CurrentBranch -Branch $Check.branch
             }
             "version-greater" {
-                return Validate-VersionGreater -Current $Check.current -New $Check.new
+                return Test-VersionGreater -Current $Check.current -New $Check.new
             }
             "version-progression" {
-                return Validate-VersionProgression -From $Check.from -To $Check.to -BumpType $Check.bumpType
+                return Test-VersionProgression -From $Check.from -To $Check.to -BumpType $Check.bumpType
             }
             "major-increment" {
-                return Validate-MajorIncrement -From $Check.from -To $Check.to
+                return Test-MajorIncrement -From $Check.from -To $Check.to
             }
             "major-tags-coexist" {
-                return Validate-MajorTagCoexistence -Tags $Check.tags
+                return Test-MajorTagCoexistence -Tags $Check.tags
             }
             "major-tag-progression" {
-                return Validate-MajorTagProgression -Tags $Check.tags
+                return Test-MajorTagProgression -Tags $Check.tags
             }
             "no-cross-contamination" {
-                return Validate-NoCrossContamination -V1 $Check.v1 -V2 $Check.v2
+                return Test-NoCrossContamination -V1 $Check.v1 -V2 $Check.v2
             }
             "no-tag-conflicts" {
-                return Validate-NoTagConflicts
+                return Test-NoTagConflicts
             }
             "workflow-success" {
                 # Validate that ActResult is available for workflow-success checks
@@ -987,7 +988,7 @@ function Invoke-ValidationCheck {
                         Type    = $checkType
                     }
                 }
-                return Validate-WorkflowSuccess -Workflow $Check.workflow -ActResult $ActResult
+                return Test-WorkflowSuccess -Workflow $Check.workflow -ActResult $ActResult
             }
             "workflow-failure" {
                 # Validate that ActResult is available for workflow-failure checks
@@ -998,10 +999,10 @@ function Invoke-ValidationCheck {
                         Type    = $checkType
                     }
                 }
-                return Validate-WorkflowFailure -Workflow $Check.workflow -ActResult $ActResult
+                return Test-WorkflowFailure -Workflow $Check.workflow -ActResult $ActResult
             }
             "idempotency-verified" {
-                return Validate-IdempotencyVerified
+                return Test-IdempotencyVerified
             }
             default {
                 $supportedTypes = @(

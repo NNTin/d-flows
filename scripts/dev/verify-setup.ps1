@@ -120,10 +120,10 @@ Write-Message -Type Test "Failed Tests: " -NoNewline
 Write-Message "2" -ForegroundColor Red
 
 Write-Message -Type Debug "Calling ValidationSuite for deeper checks..."
-Write-Message -Type Debug "Validating tag existence for v0.1.0 $((Validate-TagExists -Tag 'v0.1.0').Success)"
-Write-Message -Type Debug "Validating tag existence for v1.0.0 $((Validate-TagExists -Tag 'v1.0.0').Success)"
-Write-Message -Type Debug "Validating tag existence for v1.7.0 $((Validate-TagExists -Tag 'v1.7.0').Success)"
-Write-Message -Type Debug "Validating tag existence for v99.99.99 $((Validate-TagExists -Tag 'v99.99.99').Success)"
+Write-Message -Type Debug "Validating tag existence for v0.1.0 $((Test-TagExists -Tag 'v0.1.0').Success)"
+Write-Message -Type Debug "Validating tag existence for v1.0.0 $((Test-TagExists -Tag 'v1.0.0').Success)"
+Write-Message -Type Debug "Validating tag existence for v1.7.0 $((Test-TagExists -Tag 'v1.7.0').Success)"
+Write-Message -Type Debug "Validating tag existence for v99.99.99 $((Test-TagExists -Tag 'v99.99.99').Success)"
 
 Write-Message -Type Success "Setup Verification Complete. Current Modules Loaded:"
 Get-Module
