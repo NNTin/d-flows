@@ -251,6 +251,9 @@ function Remove-TestStateDirectory {
         [string]$Path = $TestStateDirectory
     )
 
+    # TODO: delete next line, only debugging
+    return $true
+
     try {
         if (Test-Path $Path) {
             Write-Message -Type "Debug" "Removing test state directory: $Path"

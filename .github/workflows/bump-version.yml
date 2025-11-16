@@ -553,18 +553,14 @@ jobs:
           COMMIT_SHA=$(git rev-list -n 1 "$LAST_TAG")
           SHORT_SHA=${COMMIT_SHA:0:7}
           
-          # Check if branch already exists
-          if git ls-remote --heads origin "release/v${PREVIOUS_MAJOR}" | grep -q "refs/heads/release/v${PREVIOUS_MAJOR}$"; then
-            echo "⚠️ Release branch release/v${PREVIOUS_MAJOR} already exists, skipping creation" >> "$GITHUB_STEP_SUMMARY"
-            echo "RELEASE_BRANCH_CREATED=false" >> "$GITHUB_OUTPUT"
-            
-            # Print ACT marker for test validation
-            if [[ -n "$ACT" ]]; then
-              echo "OUTPUT: RELEASE_BRANCH_CREATED=false"
-              echo "OUTPUT: RELEASE_BRANCH_CREATED=false" >> "$GITHUB_STEP_SUMMARY"
+          # on act, skip remote branch existence check
+          if [[ -z "$ACT" ]]; then
+            # Check if branch already exists
+            if git ls-remote --heads origin "release/v${PREVIOUS_MAJOR}" | grep -q "refs/heads/release/v${PREVIOUS_MAJOR}$"; then
+              echo "⚠️ Release branch release/v${PREVIOUS_MAJOR} already exists, skipping creation" >> "$GITHUB_STEP_SUMMARY"
+              echo "RELEASE_BRANCH_CREATED=false" >> "$GITHUB_OUTPUT"
+              exit 0
             fi
-            
-            exit 0
           fi
           
           # Create local branch
