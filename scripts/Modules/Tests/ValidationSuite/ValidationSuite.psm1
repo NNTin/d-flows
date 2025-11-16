@@ -73,13 +73,13 @@ function Validate-TagPointsTo {
         $tagSha = git rev-parse "$Tag^{commit}" 2>$null
         $targetSha = git rev-parse "$Target^{commit}" 2>$null
 
-        $matches = ($tagSha -eq $targetSha)
+        $matchResults = ($tagSha -eq $targetSha)
 
-        Write-Message -Type "Validation" "Tag '$Tag' points to '$Target': $matches"
+        Write-Message -Type "Validation" "Tag '$Tag' points to '$Target': $matchResults"
 
         return @{
-            Success = $matches
-            Message = if ($matches) { "Tag '$Tag' points to '$Target'" } else { "Tag '$Tag' does not point to '$Target'" }
+            Success = $matchResults
+            Message = if ($matchResults) { "Tag '$Tag' points to '$Target'" } else { "Tag '$Tag' does not point to '$Target'" }
             Type    = "tag-points-to"
         }
     }
@@ -144,13 +144,13 @@ function Validate-TagCount {
     $tags = @(git tag -l)
     $actual = $tags.Count
 
-    $matches = ($actual -eq $Expected)
+    $matchResults = ($actual -eq $Expected)
 
     Write-Message -Type "Validation" "Tag count: $actual (expected: $Expected)"
 
     return @{
-        Success = $matches
-        Message = if ($matches) { "Tag count matches: $actual" } else { "Tag count mismatch: expected $Expected, got $actual" }
+        Success = $matchResults
+        Message = if ($matchResults) { "Tag count matches: $actual" } else { "Tag count mismatch: expected $Expected, got $actual" }
         Type    = "tag-count"
     }
 }
@@ -203,13 +203,13 @@ function Validate-BranchPointsToTag {
         $branchSha = git rev-parse $Branch 2>$null
         $tagSha = git rev-parse $Tag 2>$null
 
-        $matches = ($branchSha -eq $tagSha)
+        $matchResults = ($branchSha -eq $tagSha)
 
-        Write-Message -Type "Validation" "Branch '$Branch' points to tag '$Tag': $matches"
+        Write-Message -Type "Validation" "Branch '$Branch' points to tag '$Tag': $matchResults"
 
         return @{
-            Success = $matches
-            Message = if ($matches) { "Branch '$Branch' points to tag '$Tag'" } else { "Branch '$Branch' does not point to tag '$Tag'" }
+            Success = $matchResults
+            Message = if ($matchResults) { "Branch '$Branch' points to tag '$Tag'" } else { "Branch '$Branch' does not point to tag '$Tag'" }
             Type    = "branch-points-to-tag"
         }
     }
@@ -238,13 +238,13 @@ function Validate-BranchCount {
     $branches = @(git branch -l)
     $actual = $branches.Count
 
-    $matches = ($actual -eq $Expected)
+    $matchResults = ($actual -eq $Expected)
 
     Write-Message -Type "Validation" "Branch count: $actual (expected: $Expected)"
 
     return @{
-        Success = $matches
-        Message = if ($matches) { "Branch count matches: $actual" } else { "Branch count mismatch: expected $Expected, got $actual" }
+        Success = $matchResults
+        Message = if ($matchResults) { "Branch count matches: $actual" } else { "Branch count mismatch: expected $Expected, got $actual" }
         Type    = "branch-count"
     }
 }
@@ -263,13 +263,13 @@ function Validate-CurrentBranch {
     param([Parameter(Mandatory = $true)][string]$Branch)
 
     $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
-    $matches = ($currentBranch -eq $Branch)
+    $matchResults = ($currentBranch -eq $Branch)
 
-    Write-Message -Type "Validation" "Current branch is '$Branch': $matches"
+    Write-Message -Type "Validation" "Current branch is '$Branch': $matchResults"
 
     return @{
-        Success = $matches
-        Message = if ($matches) { "Current branch is '$Branch'" } else { "Current branch is '$currentBranch', expected '$Branch'" }
+        Success = $matchResults
+        Message = if ($matchResults) { "Current branch is '$Branch'" } else { "Current branch is '$currentBranch', expected '$Branch'" }
         Type    = "current-branch"
     }
 }
@@ -488,7 +488,7 @@ function Validate-MajorTagProgression {
 
         # Check if version number matches index
         if ($tag -match '^v(\d+)$') {
-            $version = [int]$matches[1]
+            $version = [int]$matchResults[1]
             if ($version -ne $i) {
                 $valid = $false
                 break

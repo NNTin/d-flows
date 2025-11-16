@@ -448,7 +448,6 @@ function Write-TestResult {
         [string]$Message
     )
 
-    $type = if ($Success) { "Success" } else { "Error" }
     $status = if ($Success) { "PASSED" } else { "FAILED" }
 
     $durationText = "{0:N2}s" -f $Duration.TotalSeconds
@@ -667,6 +666,7 @@ function Test-DockerRunning {
         $dockerPs = docker ps 2>&1
         if ($LASTEXITCODE -eq 0) {
             Write-Message -Type "Debug" "Docker is running"
+            Write-Message -Type "Debug" "$dockerPs"
             return $true
         }
     }
@@ -1048,7 +1048,6 @@ function Invoke-SetupGitState {
     param([Parameter(Mandatory = $true)][object]$Step)
 
     $scenario = $Step.scenario
-    $expectedState = $Step.expectedState
 
     Write-Message -Type "Debug" "Applying scenario: $scenario"
 
@@ -1649,7 +1648,7 @@ function Invoke-TestCleanup {
     try {
         if ($action -eq "reset-git-state") {
             # Call Clear-GitState from Setup-TestScenario.ps1
-            $result = Clear-GitState -DeleteTags $true -DeleteBranches $true
+            Clear-GitState -DeleteTags $true -DeleteBranches $true
 
             Write-Message -Type "Debug" "Cleanup completed"
 

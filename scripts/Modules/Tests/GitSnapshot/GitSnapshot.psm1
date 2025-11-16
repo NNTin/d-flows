@@ -67,9 +67,6 @@ function Get-BackupTimestamp {
 .PARAMETER BackupPath
     Optional custom backup file path. If not provided, generates using timestamp.
 
-.PARAMETER IncludeAnnotatedInfo
-    Optional flag to include annotation information (default: $false).
-
 .EXAMPLE
     $tagsBackupPath = Backup-GitTags
     Write-Message -Type "Backup" "Tags backed up to: $tagsBackupPath"
@@ -82,10 +79,7 @@ function Get-BackupTimestamp {
     Empty repositories result in a file with comment "# No tags found"
 #>
 function Backup-GitTags {
-    param(
-        [string]$BackupPath,
-        [bool]$IncludeAnnotatedInfo = $false
-    )
+    param([string]$BackupPath)
 
     Write-Message -Type "Info" "Starting git tags backup"
 
