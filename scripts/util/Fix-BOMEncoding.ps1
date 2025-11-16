@@ -1,27 +1,14 @@
 ﻿<#
 .SYNOPSIS
-    Updates the ModuleVersion in all PowerShell module manifests (.psd1) within the repository.
+    Fixes missing BOM encoding for PowerShell files.
 
 .DESCRIPTION
-    This script searches recursively for all module manifest files (.psd1) in the repository
-    and updates their ModuleVersion field to the version supplied via the -Version parameter.
-    Files like PSScriptAnalyzerSettings.psd1 are ignored.
-
-.PARAMETER Version
-    The module version to set in all manifests. Must be supplied when running the script.
+    Recursively searches for all .ps1, .psm1, and .psd1 files and ensures they are saved
+    with UTF-8 BOM encoding to satisfy PowerShell ScriptAnalyzer's PSUseBOMForUnicodeEncodedFile rule.
 
 .EXAMPLE
-    .\Update-ModuleVersions.ps1 -Version 1.3.0
-    Updates all module manifests to version 1.3.0.
-
-.NOTES
-    Author: Tin Nguyen
-    Repository: https://github.com/nntin/d-flows
+    .\Fix-BOMEncoding.ps1
 #>
-param(
-    [Parameter(Mandatory = $true)]
-    [string]$Version
-)
 
 $scriptDir = $PSScriptRoot
 $utilDir = Split-Path -Parent $scriptDir
@@ -65,23 +52,22 @@ function Add-ToPSModulePath {
 Add-ToPSModulePath $utilitiesModules
 Add-ToPSModulePath $projectModules
 
-# Find all module manifest files in your repo
-$psd1Files = Get-ChildItem -Path $root -Recurse -Filter '*.psd1' | Where-Object {
-    # Exclude non-module manifests like PSScriptAnalyzerSettings.psd1
-    $_.Name -notmatch 'PSScriptAnalyzerSettings'
+# Get all PowerShell files recursively
+$files = Get-ChildItem -Path $root -Recurse -Include *.ps1, *.psm1, *.psd1
+
+foreach ($file in $files) {
+    try {
+        Write-Message -Type "Info" "Processing $($file.FullName)..."
+
+        # Read the file content
+        $content = Get-Content -Path $file.FullName -Raw
+
+        # Save it back as UTF8 with BOM
+        [System.IO.File]::WriteAllText($file.FullName, $content, [System.Text.Encoding]::UTF8)
+    }
+    catch {
+        Write-Message -Type "Warning" "Failed to process $($file.FullName): $_"
+    }
 }
 
-foreach ($file in $psd1Files) {
-    Write-Message -Type "Info" "Updating $($file.FullName) to version $Version"
-
-    # Read the content
-    $content = Get-Content $file.FullName
-
-    # Replace the ModuleVersion line
-    $newContent = $content -replace '(?<=ModuleVersion\s*=\s*).*', "'$Version'"
-
-    # Save the updated content
-    Set-Content -Path $file.FullName -Value $newContent
-}
-
-Write-Message -Type "Success" "All module manifests updated successfully."
+Write-Message -Type "Success" "All files processed. BOM encoding applied where necessary."
