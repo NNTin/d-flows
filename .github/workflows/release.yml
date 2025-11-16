@@ -27,6 +27,12 @@ jobs:
     outputs:
       MAJOR_VERSION: ${{ steps.extract-major-version.outputs.MAJOR_VERSION }}
     steps:
+      - name: Setup SSH
+        if: ${{ !env.ACT }}
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.BOT_SSH_KEY }}
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -256,7 +262,9 @@ jobs:
         run: |
           pwsh ./scripts/utils/Update-ModuleVersion.ps1 -Version "${{ inputs.version }}"
           pwsh ./scripts/utils/Fix-BOMEncoding.ps1
-          git remote set-url origin https://x-access-token:${{ secrets.BOT_PAT }}@github.com/nntin/d-flows.git
+          git remote set-url origin git@github.com:nntin/d-flows.git
+          git config user.name "nntin-bot"
+          git config user.email "48604375+nntin-bot@users.noreply.github.com"
           git add '*.ps1' '*.psm1' '*.psd1'
           git commit -m "chore: Update release notes for v${{ inputs.version }}"
           git push origin HEAD:${{ inputs.target_branch }}
@@ -265,11 +273,7 @@ jobs:
       - name: Create release
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.BOT_PAT }}
-          GIT_COMMITTER_NAME: "nntin-bot"
-          GIT_COMMITTER_EMAIL: "48604375+nntin-bot@users.noreply.github.com"
-          GIT_AUTHOR_NAME: "nntin-bot"
-          GIT_AUTHOR_EMAIL: "48604375+nntin-bot@users.noreply.github.com"
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [[ -n "$ACT" ]]; then        
             VERSION="v${{ inputs.version }}"
@@ -305,12 +309,6 @@ jobs:
 
       - name: Create annotated major tag
         shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.BOT_PAT }}
-          GIT_COMMITTER_NAME: "nntin-bot"
-          GIT_COMMITTER_EMAIL: "48604375+nntin-bot@users.noreply.github.com"
-          GIT_AUTHOR_NAME: "nntin-bot"
-          GIT_AUTHOR_EMAIL: "48604375+nntin-bot@users.noreply.github.com"
         run: |
           git tag -a "v$MAJOR_VERSION" -f -m "Update v$MAJOR_VERSION -> v${{ inputs.version }}"
 
