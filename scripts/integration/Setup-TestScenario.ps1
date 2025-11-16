@@ -33,7 +33,7 @@
     - Exporting test-tags.txt file to system temp directory for bump-version.yml workflow access
 
 .PARAMETER ScenarioName
-    Used by functions that require a specific scenario (e.g., Get-ScenarioDefinition, Set-TestScenario).
+    Used by functions that require a specific scenario (e.g., Get-ScenarioDefinition, Invoke-TestScenario).
     Name of the test scenario to apply or retrieve.
 
 .EXAMPLE
@@ -49,7 +49,7 @@
 
 .EXAMPLE
     # Apply a scenario to the git repository
-    Set-TestScenario -ScenarioName "MajorBumpV0ToV1" -CleanState
+    Invoke-TestScenario -ScenarioName "MajorBumpV0ToV1" -CleanState
 
 .EXAMPLE
     # Validate current git state against a scenario
@@ -100,7 +100,7 @@
 
     Testing Workflow:
     1. Backup production state: $backup = Backup-GitState
-    2. Apply test scenario: Set-TestScenario -ScenarioName "MajorBumpV0ToV1"
+    2. Apply test scenario: Invoke-TestScenario -ScenarioName "MajorBumpV0ToV1"
     3. Run act workflows: act -j bump-version --eventpath tests/bump-version/major-bump-main.json
     4. Validate results: Test-ScenarioState -ScenarioName "MajorBumpV0ToV1"
     5. Restore production state: Restore-GitState -BackupName $backup.BackupName
@@ -243,13 +243,13 @@ function Get-ScenarioNames {
     or generates GUID-based path. When called from Run-ActTests.ps1, the shared directory is used automatically.
 
 .EXAMPLE
-    Set-TestScenario -ScenarioName "FirstRelease"
+    Invoke-TestScenario -ScenarioName "FirstRelease"
 
 .EXAMPLE
-    Set-TestScenario -ScenarioName "MajorBumpV0ToV1" -CleanState $true -Force $true
+    Invoke-TestScenario -ScenarioName "MajorBumpV0ToV1" -CleanState $true -Force $true
 
 .EXAMPLE
-    Set-TestScenario -ScenarioName "MajorBumpV0ToV1" -OutputPath "C:\temp\my-test-state\test-tags.txt"
+    Invoke-TestScenario -ScenarioName "MajorBumpV0ToV1" -OutputPath "C:\temp\my-test-state\test-tags.txt"
 
 .NOTES
     Generates three files when GenerateTestTagsFile is true:
@@ -263,8 +263,8 @@ function Get-ScenarioNames {
     The workflow unbundles commits before restoring tags to ensure commit SHAs exist.
     Use Backup-GitState.ps1 to backup state before applying scenarios.
 #>
-function Set-TestScenario {
-    [CmdletBinding(SupportsShouldProcess = $true)]
+function Invoke-TestScenario {
+    [OutputType([hashtable])]
     param(
         [Parameter(Mandatory = $true)]
         [string]$ScenarioName,
@@ -274,157 +274,155 @@ function Set-TestScenario {
         [bool]$GenerateTestTagsFile = $true,
         [string]$OutputPath
     )
-    if ($PSCmdlet.ShouldProcess("Test scenario '$ScenarioName'", "Apply")) {
+    try {
+        Write-Message -Type "Info" "Applying test scenario: $ScenarioName"
+
+        # Get scenario definition
+        $scenario = Get-ScenarioDefinition -ScenarioName $ScenarioName
+        Write-Message -Type "Scenario" "Scenario description: $($scenario.Description)"
+
+        # Clean state if requested and capture production tags deleted
+        $productionTagsDeleted = @()
+        if ($CleanState) {
+            $cleanStateResult = Clear-GitState -DeleteTags $true
+            if ($cleanStateResult.PSObject.Properties.Name -contains 'DeletedTagNames') {
+                $productionTagsDeleted = @($cleanStateResult.DeletedTagNames)
+                Write-Message -Type "Debug" "Captured $($productionTagsDeleted.Count) production tags deleted during clean state"
+            }
+        }
+
+        # Check if repository is empty
+        $hasCommits = $false
         try {
-            Write-Message -Type "Info" "Applying test scenario: $ScenarioName"
-
-            # Get scenario definition
-            $scenario = Get-ScenarioDefinition -ScenarioName $ScenarioName
-            Write-Message -Type "Scenario" "Scenario description: $($scenario.Description)"
-
-            # Clean state if requested and capture production tags deleted
-            $productionTagsDeleted = @()
-            if ($CleanState) {
-                $cleanStateResult = Clear-GitState -DeleteTags $true
-                if ($cleanStateResult.PSObject.Properties.Name -contains 'DeletedTagNames') {
-                    $productionTagsDeleted = @($cleanStateResult.DeletedTagNames)
-                    Write-Message -Type "Debug" "Captured $($productionTagsDeleted.Count) production tags deleted during clean state"
-                }
-            }
-
-            # Check if repository is empty
-            $hasCommits = $false
-            try {
-                $sha = Get-CurrentCommitSha
-                $hasCommits = $true
-            }
-            catch {
-                Write-Message -Type "Debug" "Repository appears to be empty, will create initial commit"
-                $hasCommits = $false
-            }
-
-            # Create commits and tags
-            $tagsCreated = @()
-            $commitMap = @{}
-
-            foreach ($tag in $scenario.Tags) {
-                try {
-                    # Create commit for this tag
-                    $sha = New-GitCommit -Message $tag.CommitMessage
-                    $commitMap[$tag.Name] = $sha
-
-                    # Create tag
-                    $created = New-GitTag -TagName $tag.Name -CommitSha $sha -Force $Force
-                    if ($created) {
-                        $tagsCreated += $tag.Name
-                    }
-                }
-                catch {
-                    Write-Message -Type "Warning" "Failed to create tag $($tag.Name): $_"
-                    continue
-                }
-            }
-
-            # Create branches
-            $branchesCreated = @()
-            foreach ($branch in $scenario.Branches) {
-                try {
-                    # Skip if branch already exists and not force
-                    if (Test-GitBranchExists -BranchName $branch) {
-                        if (-not $Force) {
-                            Write-Message -Type "Branch" "Branch already exists, skipping: $branch"
-                            continue
-                        }
-                    }
-
-                    # Determine commit SHA for branch
-                    # First, check if any tag should be on this branch
-                    $branchSha = $null
-                    foreach ($tag in $scenario.Tags) {
-                        if ($tag.Branch -eq $branch -and $commitMap.ContainsKey($tag.Name)) {
-                            $branchSha = $commitMap[$tag.Name]
-                            break
-                        }
-                    }
-
-                    # If no tag-specific branch assignment, use latest commit
-                    if (-not $branchSha) {
-                        if ($hasCommits) {
-                            $branchSha = Get-CurrentCommitSha
-                        }
-                        else {
-                            # Create initial commit if repository is empty
-                            $branchSha = New-GitCommit -Message "Initial commit"
-                            $hasCommits = $true
-                        }
-                    }
-
-                    $created = New-GitBranch -BranchName $branch -CommitSha $branchSha -Force $Force
-                    if ($created) {
-                        $branchesCreated += $branch
-                    }
-                }
-                catch {
-                    Write-Message -Type "Warning" "Failed to create branch ${branch}: $_"
-                    continue
-                }
-            }
-
-            # Checkout current branch
-            if ($scenario.CurrentBranch) {
-                try {
-                    $checkoutSuccess = Set-GitBranch -BranchName $scenario.CurrentBranch
-                    if (-not $checkoutSuccess) {
-                        Write-Message -Type "Warning" "Failed to checkout current branch, continuing anyway"
-                    }
-                }
-                catch {
-                    Write-Message -Type "Warning" "Error checking out current branch: $_"
-                }
-            }
-
-            # Generate test-tags.txt
-            $testTagsPath = $null
-            $testBranchesPath = $null
-            $testCommitsPath = $null
-            if ($GenerateTestTagsFile) {
-                if ($OutputPath) {
-                    $testTagsPath = Export-TestTagsFile -Tags $tagsCreated -OutputPath $OutputPath
-                    # Construct branches file path from tags path
-                    $branchesOutputPath = $OutputPath -replace 'test-tags\.txt$', 'test-branches.txt'
-                    $testBranchesPath = Export-TestBranchesFile -Branches $branchesCreated -OutputPath $branchesOutputPath
-                    # Construct commits bundle path from tags path
-                    $commitsOutputPath = $OutputPath -replace 'test-tags\.txt$', 'test-commits.bundle'
-                    $testCommitsPath = Export-TestCommitsBundle -Tags $tagsCreated -Branches $branchesCreated -OutputPath $commitsOutputPath
-                }
-                else {
-                    $testTagsPath = Export-TestTagsFile -Tags $tagsCreated
-                    $testBranchesPath = Export-TestBranchesFile -Branches $branchesCreated
-                    $testCommitsPath = Export-TestCommitsBundle -Tags $tagsCreated -Branches $branchesCreated
-                }
-                Write-Message -Type "Branch" "Test branches file exported to: $testBranchesPath"
-                Write-Message -Type "Backup" "Test commits bundle exported to: $testCommitsPath"
-            }
-
-            Write-Message -Type "Success" "Scenario applied successfully: $ScenarioName"
-
-            return @{
-                ScenarioName          = $ScenarioName
-                TagsCreated           = $tagsCreated
-                ProductionTagsDeleted = $productionTagsDeleted
-                BranchesCreated       = $branchesCreated
-                CurrentBranch         = $scenario.CurrentBranch
-                TestTagsFile          = $testTagsPath
-                TestBranchesFile      = $testBranchesPath
-                TestCommitsBundle     = $testCommitsPath
-                CommitMap             = $commitMap
-                Success               = $true
-            }
+            $sha = Get-CurrentCommitSha
+            $hasCommits = $true
         }
         catch {
-            Write-Message -Type "Error" "Failed to apply scenario: $_"
-            throw $_
+            Write-Message -Type "Debug" "Repository appears to be empty, will create initial commit"
+            $hasCommits = $false
         }
+
+        # Create commits and tags
+        $tagsCreated = @()
+        $commitMap = @{}
+
+        foreach ($tag in $scenario.Tags) {
+            try {
+                # Create commit for this tag
+                $sha = New-GitCommit -Message $tag.CommitMessage
+                $commitMap[$tag.Name] = $sha
+
+                # Create tag
+                $created = New-GitTag -TagName $tag.Name -CommitSha $sha -Force $Force
+                if ($created) {
+                    $tagsCreated += $tag.Name
+                }
+            }
+            catch {
+                Write-Message -Type "Warning" "Failed to create tag $($tag.Name): $_"
+                continue
+            }
+        }
+
+        # Create branches
+        $branchesCreated = @()
+        foreach ($branch in $scenario.Branches) {
+            try {
+                # Skip if branch already exists and not force
+                if (Test-GitBranchExists -BranchName $branch) {
+                    if (-not $Force) {
+                        Write-Message -Type "Branch" "Branch already exists, skipping: $branch"
+                        continue
+                    }
+                }
+
+                # Determine commit SHA for branch
+                # First, check if any tag should be on this branch
+                $branchSha = $null
+                foreach ($tag in $scenario.Tags) {
+                    if ($tag.Branch -eq $branch -and $commitMap.ContainsKey($tag.Name)) {
+                        $branchSha = $commitMap[$tag.Name]
+                        break
+                    }
+                }
+
+                # If no tag-specific branch assignment, use latest commit
+                if (-not $branchSha) {
+                    if ($hasCommits) {
+                        $branchSha = Get-CurrentCommitSha
+                    }
+                    else {
+                        # Create initial commit if repository is empty
+                        $branchSha = New-GitCommit -Message "Initial commit"
+                        $hasCommits = $true
+                    }
+                }
+
+                $created = New-GitBranch -BranchName $branch -CommitSha $branchSha -Force $Force
+                if ($created) {
+                    $branchesCreated += $branch
+                }
+            }
+            catch {
+                Write-Message -Type "Warning" "Failed to create branch ${branch}: $_"
+                continue
+            }
+        }
+
+        # Checkout current branch
+        if ($scenario.CurrentBranch) {
+            try {
+                $checkoutSuccess = Set-GitBranch -BranchName $scenario.CurrentBranch
+                if (-not $checkoutSuccess) {
+                    Write-Message -Type "Warning" "Failed to checkout current branch, continuing anyway"
+                }
+            }
+            catch {
+                Write-Message -Type "Warning" "Error checking out current branch: $_"
+            }
+        }
+
+        # Generate test-tags.txt
+        $testTagsPath = $null
+        $testBranchesPath = $null
+        $testCommitsPath = $null
+        if ($GenerateTestTagsFile) {
+            if ($OutputPath) {
+                $testTagsPath = Export-TestTagsFile -Tags $tagsCreated -OutputPath $OutputPath
+                # Construct branches file path from tags path
+                $branchesOutputPath = $OutputPath -replace 'test-tags\.txt$', 'test-branches.txt'
+                $testBranchesPath = Export-TestBranchesFile -Branches $branchesCreated -OutputPath $branchesOutputPath
+                # Construct commits bundle path from tags path
+                $commitsOutputPath = $OutputPath -replace 'test-tags\.txt$', 'test-commits.bundle'
+                $testCommitsPath = Export-TestCommitsBundle -Tags $tagsCreated -Branches $branchesCreated -OutputPath $commitsOutputPath
+            }
+            else {
+                $testTagsPath = Export-TestTagsFile -Tags $tagsCreated
+                $testBranchesPath = Export-TestBranchesFile -Branches $branchesCreated
+                $testCommitsPath = Export-TestCommitsBundle -Tags $tagsCreated -Branches $branchesCreated
+            }
+            Write-Message -Type "Branch" "Test branches file exported to: $testBranchesPath"
+            Write-Message -Type "Backup" "Test commits bundle exported to: $testCommitsPath"
+        }
+
+        Write-Message -Type "Success" "Scenario applied successfully: $ScenarioName"
+
+        return @{
+            ScenarioName          = $ScenarioName
+            TagsCreated           = $tagsCreated
+            ProductionTagsDeleted = $productionTagsDeleted
+            BranchesCreated       = $branchesCreated
+            CurrentBranch         = $scenario.CurrentBranch
+            TestTagsFile          = $testTagsPath
+            TestBranchesFile      = $testBranchesPath
+            TestCommitsBundle     = $testCommitsPath
+            CommitMap             = $commitMap
+            Success               = $true
+        }
+    }
+    catch {
+        Write-Message -Type "Error" "Failed to apply scenario: $_"
+        throw $_
     }
 }
 
@@ -719,7 +717,7 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-Message "  Get-ScenarioDefinition [-ScenarioName]    - Get specific scenario definition" -ForegroundColor Cyan
     Write-Message "  Get-AllScenarios                          - List all scenarios" -ForegroundColor Cyan
     Write-Message "  Get-ScenarioNames                         - Get scenario names only" -ForegroundColor Cyan
-    Write-Message "  Set-TestScenario [-ScenarioName]          - Apply scenario to git state" -ForegroundColor Cyan
+    Write-Message "  Invoke-TestScenario [-ScenarioName]          - Apply scenario to git state" -ForegroundColor Cyan
     Write-Message "  Test-ScenarioState [-ScenarioName]        - Validate current state" -ForegroundColor Cyan
     Write-Message "  Show-ScenarioDefinition [-ScenarioName]   - Display scenario details" -ForegroundColor Cyan
     Write-Message "  Show-AllScenarios                         - Display all scenarios" -ForegroundColor Cyan
@@ -732,7 +730,7 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-Message "  # List available scenarios:" -ForegroundColor Gray
     Write-Message "  Show-AllScenarios" -ForegroundColor White
     Write-Message "  # Apply a scenario:" -ForegroundColor Gray
-    Write-Message "  Set-TestScenario -ScenarioName ""FirstRelease""" -ForegroundColor White
+    Write-Message "  Invoke-TestScenario -ScenarioName ""FirstRelease""" -ForegroundColor White
     Write-Message "  # Validate current state:" -ForegroundColor Gray
     Write-Message "  Test-ScenarioState -ScenarioName ""MajorBumpV0ToV1""" -ForegroundColor White
 

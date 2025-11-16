@@ -133,6 +133,7 @@ function Test-GitBranchExists {
 #>
 function New-GitCommit {
     [CmdletBinding(SupportsShouldProcess = $true)]
+    [OutputType([string])]
     param(
         [Parameter(Mandatory = $true)]
         [string]$Message,
@@ -205,6 +206,7 @@ function New-GitCommit {
 #>
 function New-GitTag {
     [CmdletBinding(SupportsShouldProcess = $true)]
+    [OutputType([bool])]
     param(
         [Parameter(Mandatory = $true)]
         [string]$TagName,
@@ -290,6 +292,7 @@ function New-GitTag {
 #>
 function New-GitBranch {
     [CmdletBinding(SupportsShouldProcess = $true)]
+    [OutputType([bool])]
     param(
         [Parameter(Mandatory = $true)]
         [string]$BranchName,
@@ -372,6 +375,7 @@ function New-GitBranch {
 #>
 function Set-GitBranch {
     [CmdletBinding(SupportsShouldProcess = $true)]
+    [OutputType([string])]
     param(
         [Parameter(Mandatory = $true)]
         [string]$BranchName

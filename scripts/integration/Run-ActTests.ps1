@@ -1034,7 +1034,7 @@ function Invoke-ValidationCheck {
 
 .DESCRIPTION
     Applies test scenario using Setup-TestScenario.ps1.
-    Integration with Setup-TestScenario.ps1: Call Set-TestScenario for "setup-git-state" steps.
+    Integration with Setup-TestScenario.ps1: Call Invoke-TestScenario for "setup-git-state" steps.
 
 .PARAMETER Step
     Step object from fixture
@@ -1053,8 +1053,8 @@ function Invoke-SetupGitState {
     Write-Message -Type "Debug" "Applying scenario: $scenario"
 
     try {
-        # Call Set-TestScenario from Setup-TestScenario.ps1
-        $result = Set-TestScenario -ScenarioName $scenario -CleanState $true -Force $true -GenerateTestTagsFile $true
+        # Call Invoke-TestScenario from Setup-TestScenario.ps1
+        $result = Invoke-TestScenario -ScenarioName $scenario -CleanState $true -Force $true -GenerateTestTagsFile $true
 
         if (-not $result.Success) {
             return @{
