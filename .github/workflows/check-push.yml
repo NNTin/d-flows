@@ -97,3 +97,114 @@ jobs:
         with:
           name: json-prettier-log
           path: json-prettier.log
+
+  ##################################################################
+  ####        Build validation results for Discord notification ####
+  ##################################################################
+  build-validation-fields:
+    name: Build Validation Fields
+    runs-on: ubuntu-latest
+    needs: [validate-syntax, ps-script-analyzer, json-prettier]
+    if: always()
+    outputs:
+      discord_fields: ${{ steps.discord_fields.outputs.fields }}
+      validation_result: ${{ steps.validation_result.outputs.result }}
+    
+    steps:
+      - name: Determine validation result
+        id: validation_result
+        run: |
+          ACTIONLINT_STATUS="${{ needs['validate-syntax'].result }}"
+          PSA_STATUS="${{ needs['ps-script-analyzer'].result }}"
+          JSON_STATUS="${{ needs['json-prettier'].result }}"
+          
+          if [[ "$ACTIONLINT_STATUS" == "success" && "$PSA_STATUS" == "success" && "$JSON_STATUS" == "success" ]]; then
+            echo "result=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=failed" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build Discord Fields
+        id: discord_fields
+        run: |
+          ACTIONLINT_STATUS="${{ needs['validate-syntax'].result }}"
+          PSA_STATUS="${{ needs['ps-script-analyzer'].result }}"
+          JSON_STATUS="${{ needs['json-prettier'].result }}"
+          
+          # Determine status emoji
+          ACTIONLINT_EMOJI=$([[ "$ACTIONLINT_STATUS" == "success" ]] && echo "✅" || echo "❌")
+          PSA_EMOJI=$([[ "$PSA_STATUS" == "success" ]] && echo "✅" || echo "❌")
+          JSON_EMOJI=$([[ "$JSON_STATUS" == "success" ]] && echo "✅" || echo "❌")
+          
+          # Build JSON fields with readable formatting
+          FIELDS=$(jq -n \
+            --arg actionlint_status "$ACTIONLINT_EMOJI $ACTIONLINT_STATUS" \
+            --arg psa_status "$PSA_EMOJI $PSA_STATUS" \
+            --arg json_status "$JSON_EMOJI $JSON_STATUS" \
+            --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '[
+              {"name": "Actionlint", "value": $actionlint_status, "inline": true},
+              {"name": "PSScriptAnalyzer", "value": $psa_status, "inline": true},
+              {"name": "JSON Prettier", "value": $json_status, "inline": true},
+              {"name": "Run Details", "value": ("[View Full Run](" + $run_url + ")"), "inline": false}
+            ]')
+          
+          # Use delimiter to safely output the multiline JSON
+          delimiter="$(openssl rand -hex 8)"
+          {
+            echo "fields<<${delimiter}"
+            echo "$FIELDS"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
+
+  ##################################################################
+  ####          Display validation results via Step Summary        ####
+  ##################################################################
+  display-validation-summary:
+    name: Display Validation Summary
+    runs-on: ubuntu-latest
+    needs: [validate-syntax, ps-script-analyzer, json-prettier, build-validation-fields]
+    if: always()
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Write Step Summary
+        uses: ./actions/step-summary
+        with:
+          title: 'Push Validation Results'
+          markdown: |
+            ## Validation Results
+            
+            | Check | Status |
+            |-------|--------|
+            | Actionlint | ${{ needs['validate-syntax'].result == 'success' && '✅ Passed' || '❌ Failed' }} |
+            | PSScriptAnalyzer | ${{ needs['ps-script-analyzer'].result == 'success' && '✅ Passed' || '❌ Failed' }} |
+            | JSON Prettier | ${{ needs['json-prettier'].result == 'success' && '✅ Passed' || '❌ Failed' }} |
+            
+            **Overall Result**: ${{ needs.build-validation-fields.outputs.validation_result == 'success' && '✅ All validations passed' || '⚠️ Some validations failed' }}
+          overwrite: false
+
+  ##################################################################
+  ####              Display validation results via Discord         ####
+  ##################################################################
+  notify-push-validation:
+    name: Notify Validation Results
+    runs-on: ubuntu-latest
+    needs: [build-validation-fields, display-validation-summary]
+    if: always()
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Send Discord Notification
+        uses: ./actions/discord-notify
+        with:
+          webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          message_type: 'embed'
+          title: ${{ needs.build-validation-fields.outputs.validation_result == 'success' && '✅ Push Validation Completed Successfully' || '⚠️ Push Validation Completed with Issues' }}
+          description: ${{ needs.build-validation-fields.outputs.validation_result == 'success' && 'All syntax checks and validations passed successfully.' || 'Some validation checks failed. Please review the workflow logs.' }}
+          color: ${{ needs.build-validation-fields.outputs.validation_result == 'success' && '3066993' || '16776960' }}
+          fields: ${{ needs.build-validation-fields.outputs.discord_fields }}

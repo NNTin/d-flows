@@ -1,0 +1,48 @@
+name: 'GitHub Step Summary'
+description: 'Write markdown content to GitHub Step Summary'
+
+inputs:
+  title:
+    description: 'Optional heading for the summary'
+    required: false
+  markdown:
+    description: 'Markdown content to display'
+    required: true
+  overwrite:
+    description: 'Whether to overwrite existing summary or append'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Write Step Summary
+      shell: bash
+      env:
+        TITLE: ${{ inputs.title }}
+        MARKDOWN: ${{ inputs.markdown }}
+        OVERWRITE: ${{ inputs.overwrite }}
+      run: |
+        # Validate GITHUB_STEP_SUMMARY is set
+        if [[ -z "$GITHUB_STEP_SUMMARY" ]]; then
+          echo "❌ Error: GITHUB_STEP_SUMMARY environment variable is not set" >&2
+          exit 1
+        fi
+        
+        # Clear existing summary if overwrite is true
+        if [[ "$OVERWRITE" == "true" ]]; then
+          echo -n > "$GITHUB_STEP_SUMMARY"
+        fi
+        
+        # Add title as level-2 heading if provided
+        if [[ -n "$TITLE" ]]; then
+          printf '%s\n' "## $TITLE" >> "$GITHUB_STEP_SUMMARY"
+        fi
+        
+        # Append markdown content
+        cat >> "$GITHUB_STEP_SUMMARY" << '__GITHUB_STEP_SUMMARY_EOF__'
+        ${{ inputs.markdown }}
+        __GITHUB_STEP_SUMMARY_EOF__
+        
+        # Success message
+        echo "✅ Step summary written successfully"
