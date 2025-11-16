@@ -251,27 +251,25 @@ jobs:
             exit 1
           fi
 
-      - name: Configure Git Identity
-        run: |
-          git config --global user.name "GitHub Actions Bot"
-          git config --global user.email "actions@github.com"
-
       - name: Update release version and fix BOM encoding
+        if: ${{ !env.ACT }}
         run: |
-          pwsh ./scripts/utils/Update-ReleaseNotes.ps1 -Version "${{ inputs.version }}"
+          pwsh ./scripts/utils/Update-ModuleVersion.ps1 -Version "${{ inputs.version }}"
           pwsh ./scripts/utils/Fix-BOMEncoding.ps1
+          git remote set-url origin https://x-access-token:${{ secrets.BOT_PAT }}@github.com/nntin/d-flows.git
           git add '*.ps1' '*.psm1' '*.psd1'
           git commit -m "chore: Update release notes for v${{ inputs.version }}"
+          git push origin HEAD:${{ inputs.target_branch }}
         shell: pwsh
 
       - name: Create release
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
-          GIT_COMMITTER_NAME: "github-actions[bot]"
-          GIT_COMMITTER_EMAIL: "github-actions[bot]@users.noreply.github.com"
-          GIT_AUTHOR_NAME: "github-actions[bot]"
-          GIT_AUTHOR_EMAIL: "github-actions[bot]@users.noreply.github.com"
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
+          GIT_COMMITTER_NAME: "nntin-bot"
+          GIT_COMMITTER_EMAIL: "48604375+nntin-bot@users.noreply.github.com"
+          GIT_AUTHOR_NAME: "nntin-bot"
+          GIT_AUTHOR_EMAIL: "48604375+nntin-bot@users.noreply.github.com"
         run: |
           if [[ -n "$ACT" ]]; then        
             VERSION="v${{ inputs.version }}"
@@ -308,10 +306,11 @@ jobs:
       - name: Create annotated major tag
         shell: bash
         env:
-          GIT_COMMITTER_NAME: "github-actions[bot]"
-          GIT_COMMITTER_EMAIL: "github-actions[bot]@users.noreply.github.com"
-          GIT_AUTHOR_NAME: "github-actions[bot]"
-          GIT_AUTHOR_EMAIL: "github-actions[bot]@users.noreply.github.com"
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
+          GIT_COMMITTER_NAME: "nntin-bot"
+          GIT_COMMITTER_EMAIL: "48604375+nntin-bot@users.noreply.github.com"
+          GIT_AUTHOR_NAME: "nntin-bot"
+          GIT_AUTHOR_EMAIL: "48604375+nntin-bot@users.noreply.github.com"
         run: |
           git tag -a "v$MAJOR_VERSION" -f -m "Update v$MAJOR_VERSION -> v${{ inputs.version }}"
 
@@ -319,7 +318,7 @@ jobs:
         if: ${{ !env.ACT }} # only run if NOT running under act
         shell: bash
         run: |
-          git push origin "v$MAJOR_VERSION"
+          git push origin "v$MAJOR_VERSION" --force
 
       - name: Update step summary with major tag information
         shell: bash
