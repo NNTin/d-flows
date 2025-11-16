@@ -1822,8 +1822,6 @@ function Invoke-IntegrationTest {
         if (-not $SkipBackup -and $backupName) {
             Write-Message -Type "Restore" "Restoring git state from backup: $backupName"
             try {
-                # TODO: writing to $null to suppress output, fixes the issue with unwanted output in test results
-                # However doing so duration calculation is affected since Restore-GitState outputs time taken
                 $null = Restore-GitState -BackupName $backupName -Force $true -DeleteExistingTags $true
                 Write-Message -Type "Debug" "Git state restored"
             }
