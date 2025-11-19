@@ -1,7 +1,0 @@
-{
-  "inputs": {
-    "message_type": "embed",
-    "title": "No Webhook Test",
-    "description": "This test verifies graceful failure handling when no webhook URL is configured. The workflow should exit successfully with a warning message."
-  }
-}

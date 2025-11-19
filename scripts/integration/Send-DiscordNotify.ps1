@@ -296,7 +296,7 @@ function Get-WebhookUrl {
     - FixtureName (string): Base name of fixture file
 
     Workflow is invoked via act with:
-    - Event: workflow_dispatch
+    - Event: workflow_call
     - Workflow file: tests/local-workflows/discord-notify-act.yml
     - Job: send-notification
     - Environment: ACT=true (for workflow detection)
@@ -318,7 +318,7 @@ function Invoke-DiscordNotifyTest {
 
     # Build act command arguments
     $actArgs = @(
-        "workflow_dispatch",
+        "workflow_call",
         "-W", "tests/local-workflows/discord-notify-act.yml",
         "-e", $FixturePath,
         "--job", "send-notification",
