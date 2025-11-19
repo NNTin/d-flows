@@ -1,0 +1,9 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "All URLs Test",
+    "description": "This fixture tests all clickable URL features working together. Both the author name and the embed title should be clickable with their respective URLs.",
+    "author_url": "https://github.com/NNTin",
+    "url": "https://github.com/NNTin/d-flows"
+  }
+}

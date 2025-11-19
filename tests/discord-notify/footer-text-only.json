@@ -1,0 +1,8 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "Footer Text Test",
+    "description": "This fixture tests custom footer text customization without an icon. The footer should display the custom text instead of the default repository and workflow name.",
+    "footer_text": "Custom Footer • Powered by D-Flows"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "Image & Thumbnail Test",
+    "description": "This fixture tests both visual elements (image and thumbnail) working together simultaneously. The large image should appear at the bottom and the thumbnail in the top-right corner.",
+    "image_url": "https://glitchii.github.io/embedbuilder/assets/media/banner.png",
+    "thumbnail_url": "https://glitchii.github.io/embedbuilder/assets/media/banner.png"
+  }
+}

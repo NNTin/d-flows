@@ -1,0 +1,8 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "Invalid Fields Test",
+    "description": "This fixture tests malformed JSON handling in the fields input. The fields value is invalid JSON, which should trigger a warning and skip the fields. The action should still succeed.",
+    "fields": "{\"name\":\"broken\" missing bracket"
+  }
+}

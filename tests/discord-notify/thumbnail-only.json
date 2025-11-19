@@ -1,0 +1,8 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "Thumbnail Display Test",
+    "description": "This fixture tests the thumbnail display feature. The thumbnail image should appear in the top-right corner of the embed.",
+    "thumbnail_url": "https://glitchii.github.io/embedbuilder/assets/media/banner.png"
+  }
+}

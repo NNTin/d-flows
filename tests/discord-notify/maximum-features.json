@@ -1,0 +1,17 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "🎨 Maximum Features Test",
+    "description": "This comprehensive fixture tests all available features working together: custom username, custom avatar, footer with text and icon, image, thumbnail, clickable author and title URLs, color, and fields. All visual and customization features should be applied to a single embed.",
+    "color": "15844367",
+    "fields": "[{\"name\":\"Feature 1\",\"value\":\"All visual elements enabled\",\"inline\":true},{\"name\":\"Feature 2\",\"value\":\"All URLs clickable\",\"inline\":true},{\"name\":\"Description\",\"value\":\"Comprehensive test of discord-notify action capabilities\",\"inline\":false}]",
+    "username": "D-Flows Complete Bot",
+    "avatar_url": "https://cdn.discordapp.com/embed/avatars/0.png",
+    "footer_text": "All Features Enabled",
+    "footer_icon_url": "https://cdn.discordapp.com/embed/avatars/0.png",
+    "image_url": "https://glitchii.github.io/embedbuilder/assets/media/banner.png",
+    "thumbnail_url": "https://glitchii.github.io/embedbuilder/assets/media/banner.png",
+    "author_url": "https://github.com/NNTin",
+    "url": "https://github.com/NNTin/d-flows"
+  }
+}
