@@ -195,12 +195,15 @@ function Get-DiscordNotifyFixtures {
     Extract Discord webhook URL from configuration.
 
 .DESCRIPTION
-    Retrieves webhook URL from parameter, or falls back to .secrets file in repository root.
+    Retrieves webhook URL from:
+        1. ProvidedUrl parameter
+        2. .secrets file in repository root
+        3. Environment variable WEBHOOK_URL
     Returns $null if no webhook URL is configured.
     Uses Write-Message for debug logging about where URL was sourced.
 
 .PARAMETER ProvidedUrl
-    Optional webhook URL provided as parameter (takes precedence over .secrets file)
+    Optional webhook URL provided as parameter (takes precedence over others)
 
 .PARAMETER RepositoryRoot
     Path to repository root for locating .secrets file
@@ -215,9 +218,11 @@ function Get-DiscordNotifyFixtures {
     Priority order:
     1. ProvidedUrl parameter (if not empty)
     2. .secrets file in repository root
-    3. Returns $null if not found
+    3. Environment variable WEBHOOK_URL
+    4. Returns $null if not found
 
-    Format expected in .secrets file: webhook_url=https://discord.com/api/webhooks/...
+    Format expected in .secrets file:
+        webhook_url=https://discord.com/api/webhooks/...
 #>
 function Get-WebhookUrl {
     [CmdletBinding()]
@@ -230,22 +235,21 @@ function Get-WebhookUrl {
         [string]$RepositoryRoot = (Get-Location)
     )
 
-    # Check if provided URL is not empty
     if (-not [string]::IsNullOrWhiteSpace($ProvidedUrl)) {
         Write-Message -Type "Debug" "Using webhook URL from parameter"
         return $ProvidedUrl
     }
 
-    # Check .secrets file
     $secretsPath = Join-Path $RepositoryRoot ".secrets"
     if (Test-Path $secretsPath) {
         try {
             $secretsContent = Get-Content $secretsPath -Raw
-            $webhookMatch = $secretsContent -match 'webhook_url=(.+?)(?:`n|$)'
-            if ($webhookMatch -and $matches[1]) {
+            if ($secretsContent -match 'webhook_url=(.+?)(?:`n|$)') {
                 $url = $matches[1].Trim()
-                Write-Message -Type "Debug" "Using webhook URL from .secrets file"
-                return $url
+                if (-not [string]::IsNullOrWhiteSpace($url)) {
+                    Write-Message -Type "Debug" "Using webhook URL from .secrets file"
+                    return $url
+                }
             }
         }
         catch {
@@ -253,7 +257,13 @@ function Get-WebhookUrl {
         }
     }
 
-    Write-Message -Type "Debug" "No webhook URL found in parameter or .secrets file"
+    $envUrl = $env:WEBHOOK_URL
+    if (-not [string]::IsNullOrWhiteSpace($envUrl)) {
+        Write-Message -Type "Debug" "Using webhook URL from environment variable WEBHOOK_URL"
+        return $envUrl
+    }
+
+    Write-Message -Type "Debug" "No webhook URL found in parameter, .secrets file, or environment variable"
     return $null
 }
 
