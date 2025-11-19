@@ -30,9 +30,8 @@ tests/
     ├── embed-with-color.json   # Embed with custom color
     ├── embed-with-fields.json  # Embed with structured fields
     ├── custom-identity.json    # Custom username/avatar
-    ├── full-embed.json        # All embed options
+    ├── extended-embed.json        # Extended embed options
     ├── input-webhook.json     # Webhook via inputs (local testing)
-    └── no-webhook.json        # Graceful failure test
 ```
 
 ## Step Summary Workflow Testing 📝
@@ -108,7 +107,7 @@ act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notif
 
 #### Full Embed Features
 ```powershell
-act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/full-embed.json
+act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/extended-embed.json
 ```
 
 #### Input Webhook (Local Testing)
@@ -117,12 +116,6 @@ act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notif
 act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/input-webhook.json
 ```
 > **Note**: While using `webhook_url` via inputs is supported for local testing, using secrets is the preferred and more secure approach for production workflows.
-
-#### Graceful Failure (No Webhook)
-```powershell
-# Remove webhook from secrets temporarily or use empty secrets
-act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/no-webhook.json --secret-file /dev/null
-```
 
 ### Direct Command-Line Inputs
 
@@ -253,7 +246,7 @@ Get-Content tests/step-summary/full.json | ConvertFrom-Json
 - ✅ **Solution**: Validate JSON syntax and escape special characters:
   ```powershell
   # Test JSON syntax
-  Get-Content tests/discord-notify/full-embed.json | ConvertFrom-Json
+  Get-Content tests/discord-notify/extended-embed.json | ConvertFrom-Json
   ```
 
 ### Step Summary Not Visible
@@ -284,9 +277,8 @@ Get-Content tests/step-summary/full.json | ConvertFrom-Json
 | **Discord - Colored** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/embed-with-color.json` | Color customization |
 | **Discord - Fields** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/embed-with-fields.json` | Structured data display |
 | **Discord - Identity** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/custom-identity.json` | Custom username/avatar |
-| **Discord - Full** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/full-embed.json` | All embed features |
+| **Discord - Full** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/extended-embed.json` | Extended features |
 | **Discord - Input Webhook** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/input-webhook.json` | Webhook via inputs (local testing) |
-| **Discord - No Webhook** | `act workflow_call -W .github/workflows/discord-notify.yml -e tests/discord-notify/no-webhook.json --secret-file /dev/null` | Graceful failure handling |
 
 ## Version Management Workflow Testing 🔄
 
