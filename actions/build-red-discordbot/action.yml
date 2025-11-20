@@ -38,7 +38,7 @@ runs:
         cd Red-DiscordBot
         echo "🧱 Installing build tool and building..."
         uv tool install build
-        uvx build
+        uvx python -m build
 
     # Step 4 — Validate distributions
     - name: Check distributions
