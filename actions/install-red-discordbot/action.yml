@@ -36,18 +36,12 @@ runs:
     - name: Install uv
       uses: astral-sh/setup-uv@v1
 
-    - name: Create Python virtual environment
-      shell: bash
-      run: uv venv
-
     - name: Install Red-DiscordBot
       shell: bash
       run: |
-        source .venv/bin/activate
-        uv pip install ./dist/*.whl
+        uv pip install ./dist/*.whl --system
 
     - name: Verify installation
       shell: bash
       run: |
-        source .venv/bin/activate
-        python -c "import red; print('✅ Red-DiscordBot installed successfully')"
+        python -c "import redbot; print('✅ Red-DiscordBot installed successfully')"
