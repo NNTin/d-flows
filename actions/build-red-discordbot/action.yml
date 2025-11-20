@@ -12,7 +12,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    # Step 1 — Checkout Red-DiscordBot repo
     - name: Checkout Red-DiscordBot
       shell: bash
       run: |
@@ -27,22 +26,21 @@ runs:
           echo "📌 No commit provided — using default branch"
         fi
 
-    # Step 2 — Install uv
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
     - name: Install uv
       uses: astral-sh/setup-uv@v1
 
-    # Step 3 — Build the project
     - name: Build Red-DiscordBot
       shell: bash
       run: |
         cd Red-DiscordBot
-        echo "🧱 Installing Python 3.11 and build tool..."
-        uv tool install python@3.11
         uv tool install build
-        echo "🧱 Building Red-DiscordBot..."
         uvx python -m build
 
-    # Step 4 — Validate distributions
     - name: Check distributions
       shell: bash
       run: |
@@ -50,7 +48,6 @@ runs:
         uv tool install twine
         uvx twine check dist/*
 
-    # Step 5 — Upload resulting build artifacts
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
