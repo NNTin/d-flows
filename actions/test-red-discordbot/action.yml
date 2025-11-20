@@ -40,7 +40,7 @@ runs:
           echo "❌ Missing Red-DiscordBot config at ${CONFIG_FILE}"
           exit 1
         fi
-        INSTALL_PATH="$(python3 -c 'import json, os, sys; cfg=json.load(open(sys.argv[1])); inst=cfg.get("tinkerer", {}).get("DATA_PATH"); append=cfg.get("tinkerer", {}).get("COG_PATH_APPEND", "cogs");\nif not inst:\n    raise SystemExit("Missing DATA_PATH for tinkerer instance");\nprint(os.path.join(inst, append))' "${CONFIG_FILE}")"
+        INSTALL_PATH="$(python3 -c 'import json, os, sys; cfg=json.load(open(sys.argv[1])); inst=cfg.get("tinkerer", {}).get("DATA_PATH"); append=cfg.get("tinkerer", {}).get("COG_PATH_APPEND", "cogs"); if not inst: raise SystemExit("Missing DATA_PATH for tinkerer instance"); print(os.path.join(inst, append))' "${CONFIG_FILE}")"
 
         if [[ -z "${INSTALL_PATH}" ]]; then
           echo "❌ Failed to determine cog install path"
