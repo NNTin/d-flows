@@ -36,20 +36,7 @@ runs:
         LOG_PATH="${{ runner.temp }}/redbot-rpc.log"
         echo "📁 Writing Red-DiscordBot logs to ${LOG_PATH}"
 
-        INSTALL_PATH="$(python3 - <<'PY'
-import asyncio
-from redbot.core import data_manager
-from redbot.core._cog_manager import CogManager
-
-async def main():
-    data_manager.load_basic_configuration("tinkerer")
-    mgr = CogManager()
-    path = await mgr.install_path()
-    print(path)
-
-asyncio.run(main())
-PY
-)"
+        INSTALL_PATH="$(python3 -c $'import asyncio\nfrom redbot.core import data_manager\nfrom redbot.core._cog_manager import CogManager\n\ndata_manager.load_basic_configuration(\"tinkerer\")\n\nasync def main():\n    mgr = CogManager()\n    path = await mgr.install_path()\n    print(path)\n\nasyncio.run(main())')"
         if [[ -z "${INSTALL_PATH}" ]]; then
           echo "❌ Failed to determine cog install path"
           exit 1
