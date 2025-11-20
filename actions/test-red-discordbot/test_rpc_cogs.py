@@ -21,6 +21,21 @@ CORE_UNLOAD_METHOD = "CORE__UNLOAD"
 RPC_WAIT_TIMEOUT = 30
 RPC_WAIT_INTERVAL = 0.5
 
+try:
+    from aiohttp import ClientWSTimeout
+except ImportError:  # pragma: no cover - fallback for older aiohttp
+    ClientWSTimeout = None  # type: ignore[assignment]
+
+
+def _ws_timeout(seconds: float):
+    if ClientWSTimeout is None:
+        return seconds
+    return ClientWSTimeout(ws_close=seconds)
+
+
+WS_CONNECT_TIMEOUT = _ws_timeout(10)
+WS_WAIT_TIMEOUT = _ws_timeout(3)
+
 
 class RPCError(RuntimeError):
     """Raised when the RPC server reports an error."""
@@ -40,7 +55,7 @@ class JsonRpcClient:
         self._next_id = 1
 
     async def __aenter__(self) -> "JsonRpcClient":
-        self._ws = await self._session.ws_connect(self._url, timeout=10)
+        self._ws = await self._session.ws_connect(self._url, timeout=WS_CONNECT_TIMEOUT)
         return self
 
     async def __aexit__(self, exc_type, exc, tb) -> None:
@@ -117,7 +132,7 @@ async def wait_for_rpc(session: aiohttp.ClientSession, url: str) -> None:
     start = time.monotonic()
     while True:
         try:
-            async with session.ws_connect(url, timeout=3):
+            async with session.ws_connect(url, timeout=WS_WAIT_TIMEOUT):
                 print(f"🟢 RPC endpoint {url} is ready")
                 return
         except (aiohttp.ClientError, OSError):
