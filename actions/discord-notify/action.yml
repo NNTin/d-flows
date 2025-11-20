@@ -30,6 +30,24 @@ inputs:
   avatar_url:
     description: 'Custom avatar URL for webhook (defaults to GitHub actor avatar)'
     required: false
+  footer_text:
+    description: 'Custom footer text (defaults to repository and workflow name)'
+    required: false
+  footer_icon_url:
+    description: 'Footer icon URL'
+    required: false
+  image_url:
+    description: 'Large image URL displayed in embed'
+    required: false
+  thumbnail_url:
+    description: 'Thumbnail image URL displayed in top-right of embed'
+    required: false
+  author_url:
+    description: 'URL for clickable author name'
+    required: false
+  url:
+    description: 'URL for clickable embed title'
+    required: false
 
 runs:
   using: 'composite'
@@ -46,6 +64,12 @@ runs:
         FIELDS: ${{ inputs.fields }}
         USERNAME: ${{ inputs.username }}
         AVATAR_URL: ${{ inputs.avatar_url }}
+        FOOTER_TEXT: ${{ inputs.footer_text }}
+        FOOTER_ICON_URL: ${{ inputs.footer_icon_url }}
+        IMAGE_URL: ${{ inputs.image_url }}
+        THUMBNAIL_URL: ${{ inputs.thumbnail_url }}
+        AUTHOR_URL: ${{ inputs.author_url }}
+        URL: ${{ inputs.url }}
         GITHUB_ACTOR: ${{ github.actor }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         GITHUB_WORKFLOW: ${{ github.workflow }}
@@ -133,7 +157,11 @@ runs:
         else
           # Embed payload (default) using jq
           ACTOR_ICON_URL="https://github.com/$CLEAN_USERNAME.png"
-          FOOTER_TEXT="$GITHUB_REPOSITORY • $GITHUB_WORKFLOW"
+          
+          # Set footer text - use custom if provided, otherwise use default
+          if [[ -z "$FOOTER_TEXT" || "$FOOTER_TEXT" =~ ^[[:space:]]*$ ]]; then
+            FOOTER_TEXT="$GITHUB_REPOSITORY • $GITHUB_WORKFLOW"
+          fi
           
           # Start with base embed object
           EMBED_BASE=$(jq -n \
@@ -151,6 +179,16 @@ runs:
                 text: $footer_text
               }
             }')
+          
+          # Add author URL if provided
+          if [[ -n "$AUTHOR_URL" ]]; then
+            EMBED_BASE=$(echo "$EMBED_BASE" | jq --arg author_url "$AUTHOR_URL" '.author |= . + {url: $author_url}')
+          fi
+          
+          # Add footer icon URL if provided
+          if [[ -n "$FOOTER_ICON_URL" ]]; then
+            EMBED_BASE=$(echo "$EMBED_BASE" | jq --arg footer_icon_url "$FOOTER_ICON_URL" '.footer |= . + {icon_url: $footer_icon_url}')
+          fi
           
           # Add optional fields
           if [[ -n "$TITLE" ]]; then
@@ -178,6 +216,21 @@ runs:
             else
               echo "Warning: Fields input is not a valid JSON array, skipping fields"
             fi
+          fi
+          
+          # Add top-level URL if provided
+          if [[ -n "$URL" ]]; then
+            EMBED_BASE=$(echo "$EMBED_BASE" | jq --arg url "$URL" '. + {url: $url}')
+          fi
+          
+          # Add thumbnail if provided
+          if [[ -n "$THUMBNAIL_URL" ]]; then
+            EMBED_BASE=$(echo "$EMBED_BASE" | jq --arg thumbnail_url "$THUMBNAIL_URL" '. + {thumbnail: {url: $thumbnail_url}}')
+          fi
+          
+          # Add image if provided
+          if [[ -n "$IMAGE_URL" ]]; then
+            EMBED_BASE=$(echo "$EMBED_BASE" | jq --arg image_url "$IMAGE_URL" '. + {image: {url: $image_url}}')
           fi
           
           # Construct final payload

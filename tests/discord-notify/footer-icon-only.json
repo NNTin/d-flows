@@ -1,0 +1,8 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "Footer Icon Only Test",
+    "description": "This fixture tests footer icon customization without custom text. The default footer text (repository and workflow name) should be used with the provided icon.",
+    "footer_icon_url": "https://cdn.discordapp.com/embed/avatars/0.png"
+  }
+}

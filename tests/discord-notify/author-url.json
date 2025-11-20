@@ -1,0 +1,8 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "Clickable Author Test",
+    "description": "This fixture tests the author URL feature. The author name at the top of the embed should be clickable and link to the specified URL.",
+    "author_url": "https://github.com/NNTin"
+  }
+}

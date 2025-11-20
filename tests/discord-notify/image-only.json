@@ -1,0 +1,8 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "Image Display Test",
+    "description": "This fixture tests the large image display feature. The image_url should display a large image at the bottom of the embed.",
+    "image_url": "https://glitchii.github.io/embedbuilder/assets/media/banner.png"
+  }
+}

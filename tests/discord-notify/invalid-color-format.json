@@ -1,0 +1,8 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "Invalid Color Test",
+    "description": "This fixture tests invalid color format handling. The color value is non-numeric (hex format), which should trigger a warning and omit the color field. The action should still succeed.",
+    "color": "#FF5733"
+  }
+}

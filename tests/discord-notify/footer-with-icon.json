@@ -1,0 +1,9 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "Footer with Icon Test",
+    "description": "This fixture tests footer customization with both text and icon. Both footer_text and footer_icon_url should be applied to the embed footer.",
+    "footer_text": "D-Flows Automation",
+    "footer_icon_url": "https://cdn.discordapp.com/embed/avatars/0.png"
+  }
+}

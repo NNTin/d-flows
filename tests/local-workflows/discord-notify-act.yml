@@ -1,0 +1,68 @@
+name: Discord Notification
+
+on:
+  workflow_call:
+    inputs:
+      message_type:
+        type: string
+        default: "embed"
+      title:
+        type: string
+      description:
+        type: string
+      content:
+        type: string
+      color:
+        type: string
+      fields:
+        type: string
+      username:
+        type: string
+      avatar_url:
+        type: string
+      footer_text:
+        type: string
+      footer_icon_url:
+        type: string
+      image_url:
+        type: string
+      thumbnail_url:
+        type: string
+      author_url:
+        type: string
+      url:
+        type: string
+    secrets:
+      webhook_url:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  send-notification:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout is only needed in local workflow calls to access the action code
+      # in production we will use nntin/d-flows/actions/discord-notify@vX.Y.Z
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Discord Notification Action
+        uses: ./actions/discord-notify
+        with:
+          webhook_url: ${{ secrets.webhook_url }}
+          message_type: ${{ inputs.message_type }}
+          title: ${{ inputs.title }}
+          description: ${{ inputs.description }}
+          content: ${{ inputs.content }}
+          color: ${{ inputs.color }}
+          fields: ${{ inputs.fields }}
+          username: ${{ inputs.username }}
+          avatar_url: ${{ inputs.avatar_url }}
+          footer_text: ${{ inputs.footer_text }}
+          footer_icon_url: ${{ inputs.footer_icon_url }}
+          image_url: ${{ inputs.image_url }}
+          thumbnail_url: ${{ inputs.thumbnail_url }}
+          author_url: ${{ inputs.author_url }}
+          url: ${{ inputs.url }}

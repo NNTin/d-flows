@@ -1,0 +1,28 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Install & Run PSScriptAnalyzer",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser; Invoke-ScriptAnalyzer -Path . -Recurse -Settings .\\scripts\\Modules\\Utilities\\PSScriptAnalyzerSettings.psd1"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

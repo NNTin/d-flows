@@ -1,0 +1,8 @@
+{
+  "inputs": {
+    "message_type": "embed",
+    "title": "Clickable Title Test",
+    "description": "This fixture tests the title URL feature. The embed title should be clickable and link to the specified URL.",
+    "url": "https://github.com/NNTin/d-flows"
+  }
+}
