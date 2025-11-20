@@ -17,10 +17,10 @@ runs:
         path: ./dist
 
     - name: Copy local artifact for act
-      if: env.ACT == 'true'  # Copy local when running with act
+      if: env.ACT == 'true'
       run: |
         mkdir -p ./dist
-        cp ../Red-DiscordBot/dist/* ./dist/   # Adjust path to your built wheels
+        cp /tmp/dist/* ./dist/  # Use the mounted path inside container path\to\Red-DiscordBot\dist:/tmp/dist
 
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
