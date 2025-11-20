@@ -16,6 +16,8 @@ import aiohttp
 JSONRPC_VERSION = "2.0"
 # RPC server defined in redbot/core/_rpc.py binds websocket listener to "/"
 RPC_URL_TEMPLATE = "ws://127.0.0.1:{port}/"
+CORE_LOAD_METHOD = "CORE__LOAD"
+CORE_UNLOAD_METHOD = "CORE__UNLOAD"
 RPC_WAIT_TIMEOUT = 30
 RPC_WAIT_INTERVAL = 0.5
 
@@ -133,7 +135,7 @@ def cog_name_from_path(path: Path) -> str:
 
 async def load_cog(client: JsonRpcClient, cog_name: str) -> None:
     print(f"📥 Loading cog {cog_name}")
-    result = await client.request("CORELOGIC__LOAD", [cog_name])
+    result = await client.request(CORE_LOAD_METHOD, [cog_name])
     loaded = (result or {}).get("loaded_packages", [])
     failed = (result or {}).get("failed_packages", [])
     if cog_name not in loaded:
@@ -145,7 +147,7 @@ async def load_cog(client: JsonRpcClient, cog_name: str) -> None:
 
 async def unload_cog(client: JsonRpcClient, cog_name: str) -> None:
     print(f"📤 Unloading cog {cog_name}")
-    result = await client.request("CORELOGIC__UNLOAD", [cog_name])
+    result = await client.request(CORE_UNLOAD_METHOD, [cog_name])
     unloaded = (result or {}).get("unloaded_packages", [])
     if cog_name not in unloaded:
         raise RPCError(f"RPC did not report {cog_name} in unloaded_packages: {result}")
