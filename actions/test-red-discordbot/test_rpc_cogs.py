@@ -135,7 +135,7 @@ def cog_name_from_path(path: Path) -> str:
 
 async def load_cog(client: JsonRpcClient, cog_name: str) -> None:
     print(f"📥 Loading cog {cog_name}")
-    result = await client.request(CORE_LOAD_METHOD, [cog_name])
+    result = await client.request(CORE_LOAD_METHOD, [[cog_name]])
     loaded = (result or {}).get("loaded_packages", [])
     failed = (result or {}).get("failed_packages", [])
     if cog_name not in loaded:
@@ -147,7 +147,7 @@ async def load_cog(client: JsonRpcClient, cog_name: str) -> None:
 
 async def unload_cog(client: JsonRpcClient, cog_name: str) -> None:
     print(f"📤 Unloading cog {cog_name}")
-    result = await client.request(CORE_UNLOAD_METHOD, [cog_name])
+    result = await client.request(CORE_UNLOAD_METHOD, [[cog_name]])
     unloaded = (result or {}).get("unloaded_packages", [])
     if cog_name not in unloaded:
         raise RPCError(f"RPC did not report {cog_name} in unloaded_packages: {result}")
