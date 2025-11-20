@@ -3,7 +3,7 @@
     # Module metadata
     # ──────────────────────────────
     RootModule           = 'Colors.psm1'
-    ModuleVersion        ='1.0.1'
+    ModuleVersion        ='1.0.2'
     GUID                 = 'fc71ab99-aca7-46e9-b75d-65e789820b51'
     Author               = 'Tin Nguyen'
     CompanyName          = 'N/A'
