@@ -3,7 +3,7 @@
     # Module metadata
     # ──────────────────────────────
     RootModule           = 'GitManager.psm1'
-    ModuleVersion        ='1.1.0'
+    ModuleVersion        ='1.1.1'
     GUID                 = '4bd44232-beb2-4444-a5c5-a78af6d6243e'
     Author               = 'Tin Nguyen'
     CompanyName          = 'N/A'
