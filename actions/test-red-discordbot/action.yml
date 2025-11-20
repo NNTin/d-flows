@@ -1,0 +1,113 @@
+name: "Test Red-DiscordBot cogs"
+description: "Loads and unloads cogs via RPC to verify they work inside Red-DiscordBot."
+
+inputs:
+  token:
+    description: "Discord bot token used when starting Red-DiscordBot"
+    required: true
+  cog_paths:
+    description: "Comma-separated list of cog directories to validate"
+    required: true
+  rpc_port:
+    description: "Port Red-DiscordBot RPC server listens on"
+    required: false
+    default: "6133"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install RPC client dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "📦 Ensuring aiohttp is available for RPC client"
+        python3 -m pip install "aiohttp>=3.9,<3.10"
+
+    - name: Start Red-DiscordBot and run RPC cog tests
+      shell: bash
+      env:
+        COG_PATHS: ${{ inputs.cog_paths }}
+        RPC_PORT: ${{ inputs.rpc_port }}
+      run: |
+        set -euo pipefail
+        trap 'if [[ -n "${BOT_PID:-}" ]]; then echo "🛑 Stopping Red-DiscordBot (${BOT_PID})"; kill "${BOT_PID}" 2>/dev/null || true; wait "${BOT_PID}" 2>/dev/null || true; fi' EXIT
+
+        LOG_PATH="${{ runner.temp }}/redbot-rpc.log"
+        echo "📁 Writing Red-DiscordBot logs to ${LOG_PATH}"
+
+        CONFIG_FILE="${HOME}/.config/Red-DiscordBot/config.json"
+        if [[ ! -f "${CONFIG_FILE}" ]]; then
+          echo "❌ Missing Red-DiscordBot config at ${CONFIG_FILE}"
+          exit 1
+        fi
+        PY_SCRIPT=$'import asyncio\nimport json\nimport os\nimport sys\nfrom redbot.core import data_manager\nfrom redbot.core._cog_manager import CogManager\ncfg = json.load(open(sys.argv[1]))\ninst = cfg.get("tinkerer", {}).get("DATA_PATH")\nappend = cfg.get("tinkerer", {}).get("COG_PATH_APPEND", "cogs")\nif not inst:\n    raise SystemExit("Missing DATA_PATH for tinkerer instance")\nbase = os.path.join(inst, append)\ndata_manager.load_basic_configuration("tinkerer")\nasync def main():\n    mgr = CogManager()\n    path = await mgr.install_path()\n    print(base)\n    print(path)\nasyncio.run(main())\n'
+        readarray -t COG_PATH_INFO < <(python3 -c "$PY_SCRIPT" "${CONFIG_FILE}")
+        BASE_COG_PATH="${COG_PATH_INFO[0]}"
+        INSTALL_PATH="${COG_PATH_INFO[1]}"
+
+        if [[ -z "${BASE_COG_PATH}" || -z "${INSTALL_PATH}" ]]; then
+          echo "❌ Failed to determine cog paths (base='${BASE_COG_PATH}', install='${INSTALL_PATH}')"
+          exit 1
+        fi
+        echo "📁 Installing cogs to ${BASE_COG_PATH} and ${INSTALL_PATH}"
+        mkdir -p "${BASE_COG_PATH}" "${INSTALL_PATH}"
+        IFS=',' read -ra RAW_COG_PATHS <<< "${COG_PATHS}"
+        for raw in "${RAW_COG_PATHS[@]}"; do
+          trimmed="$(echo "${raw}" | xargs || true)"
+          if [[ -z "${trimmed}" ]]; then
+            continue
+          fi
+          if [[ ! -d "${trimmed}" ]]; then
+            echo "❌ Cog path ${trimmed} does not exist"
+            exit 1
+          fi
+          src="$(realpath "${trimmed}")"
+          cog_name="$(basename "${src}")"
+          for target in "${BASE_COG_PATH}" "${INSTALL_PATH}"; do
+            dest="${target}/${cog_name}"
+            if [[ "${src}" == "${dest}" ]]; then
+              echo "ℹ️ Cog ${cog_name} already installed at ${dest}; skipping copy"
+              continue
+            fi
+            echo "📂 Installing ${src} -> ${dest}"
+            rm -rf "${dest}"
+            cp -a "${src}" "${dest}"
+          done
+        done
+
+        echo "🚀 Launching Red-DiscordBot in the background"
+        python3 -m redbot tinkerer \
+          --token "${{ inputs.token }}" \
+          --prefix "!" \
+          --rpc \
+          --rpc-port "${{ inputs.rpc_port }}" \
+          > "${LOG_PATH}" 2>&1 &
+        BOT_PID=$!
+
+        sleep 5
+        if ! ps -p "${BOT_PID}" > /dev/null; then
+          echo "❌ Red-DiscordBot did not stay running. Last log lines:"
+          tail -n 100 "${LOG_PATH}" || true
+          exit 1
+        fi
+        echo "✅ Red-DiscordBot is running with PID ${BOT_PID}"
+
+        SCRIPT_PATH="${{ github.action_path }}/test_rpc_cogs.py"
+        if [[ ! -f "${SCRIPT_PATH}" ]]; then
+          echo "❌ Missing helper script at ${SCRIPT_PATH}"
+          exit 1
+        fi
+
+        set +e
+        python3 "${SCRIPT_PATH}"
+        status=$?
+        set -e
+
+        if [[ $status -ne 0 ]]; then
+          echo "🪵 Dumping Red-DiscordBot log tail after failure"
+          tail -n 200 "${LOG_PATH}" || true
+        else
+          echo "🎉 RPC cog tests passed"
+        fi
+        echo "status=$status"
+        exit $status

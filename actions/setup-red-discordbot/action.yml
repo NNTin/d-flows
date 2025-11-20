@@ -1,0 +1,37 @@
+name: "Setup Red-DiscordBot"
+description: "Sets up Red-DiscordBot configuration"
+
+inputs:
+  token:
+    description: "Discord bot token"
+    required: true
+  prefix:
+    description: "Command prefix for the bot"
+    default: "!"
+  optional_args:
+    description: "Optional extra arguments for redbot"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Red-DiscordBot configuration
+      shell: bash
+      run: |
+        echo "📁 Creating Red-DiscordBot directories"
+        mkdir -p ~/.config/Red-DiscordBot
+
+        APP_DIR="$HOME/redbot-app"
+        mkdir -p "$APP_DIR/cogs"
+
+        echo "📝 Writing config.json"
+        CONFIG_JSON="{\"tinkerer\":{\"DATA_PATH\":\"$APP_DIR\",\"COG_PATH_APPEND\":\"cogs\",\"CORE_PATH_APPEND\":\"core\",\"STORAGE_TYPE\":\"JSON\",\"STORAGE_DETAILS\":{}}}"
+
+        echo "$CONFIG_JSON" > ~/.config/Red-DiscordBot/config.json
+
+    - name: Dry-Run Red-DiscordBot
+      shell: bash
+      run: |
+        echo "🚀 Starting Red-DiscordBot"
+        python3 -m redbot tinkerer --token "${{ inputs.token }}" --prefix "${{ inputs.prefix }}" --dry-run ${{ inputs.optional_args }}

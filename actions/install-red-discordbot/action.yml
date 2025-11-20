@@ -1,0 +1,54 @@
+name: "Install Red-DiscordBot"
+description: "Downloads a Red-DiscordBot build artifact and installs it using uv."
+
+inputs:
+  artifact_name:
+    description: "Optional artifact name to download. Default: red-discordbot-build"
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Download Red-DiscordBot artifact
+      if: ${{ inputs.artifact_name != '' && env.ACT != 'true' }}  # Skip download when running with act or no artifact name provided
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: ./dist
+
+    - name: Copy local artifact for act
+      if: env.ACT == 'true'  # On act use local mounted artifact
+      shell: bash
+      run: |
+        # Use the mounted path inside container path\to\Red-DiscordBot\dist:/tmp/dist
+        mkdir -p ./dist
+        if compgen -G "/tmp/dist/*" > /dev/null; then
+          cp /tmp/dist/* ./dist/
+        else
+          echo "❌ No files found in /tmp/dist. Did you mount the host folder correctly?"
+          exit 1
+        fi
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
+
+    - name: Install Red-DiscordBot
+      shell: bash
+      run: |
+        if [[ -d "./dist" && $(ls -A ./dist/*.whl 2>/dev/null) ]]; then
+          echo "📦 Installing Red-DiscordBot from local artifact in ./dist"
+          uv pip install ./dist/*.whl --system
+        else
+          echo "📦 Installing Red-DiscordBot from PyPI"
+          uv pip install Red-DiscordBot --system
+        fi
+
+    - name: Verify installation
+      shell: bash
+      run: |
+        python -c "import redbot; print('✅ Red-DiscordBot installed successfully')"
