@@ -103,5 +103,5 @@ runs:
         else
           echo "🎉 RPC cog tests passed"
         fi
-
+        echo "status=$status"
         exit $status
