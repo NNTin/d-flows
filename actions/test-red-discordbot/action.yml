@@ -2,6 +2,7 @@ name: "Test Red-DiscordBot cogs"
 description: "Loads and unloads cogs via RPC to verify they work inside Red-DiscordBot."
 
 inputs:
+  # todo: do a check whether token was supplied or not, furthermore sanitize inputs (trailing whitespace, ..) 
   token:
     description: "Discord bot token used when starting Red-DiscordBot"
     required: true
