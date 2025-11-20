@@ -39,10 +39,14 @@ runs:
         python -m pip install --upgrade build twine
 
     - name: Build Red-DiscordBot
-      run: python -m build
+      run: |
+        cd Red-DiscordBot
+        python -m build
 
     - name: Check distributions
-      run: python -m twine check dist/*
+      run: |
+        cd Red-DiscordBot
+        python -m twine check dist/*
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
