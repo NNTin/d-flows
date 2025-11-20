@@ -49,7 +49,7 @@ runs:
         python -m twine check dist/*
 
     - name: Upload build artifacts
-      if: github.server_url == 'https://github.com'
+      if: env.ACT != 'true'  # Skip upload when running with act
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.artifact_name || 'red-discordbot-build' }}

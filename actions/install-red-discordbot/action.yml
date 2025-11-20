@@ -10,14 +10,14 @@ runs:
   using: "composite"
   steps:
     - name: Download Red-DiscordBot artifact
-      if: github.server_url == 'https://github.com'  # Only on GitHub
+      if: env.ACT != 'true'  # Skip download when running with act
       uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.artifact_name || 'red-discordbot-build' }}
         path: ./dist
 
     - name: Copy local artifact for act
-      if: github.server_url != 'https://github.com'
+      if: env.ACT == 'true'  # Copy local when running with act
       run: |
         mkdir -p ./dist
         cp ../Red-DiscordBot/dist/* ./dist/   # Adjust path to your built wheels
