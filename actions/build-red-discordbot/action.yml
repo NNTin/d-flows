@@ -1,0 +1,52 @@
+name: "Build Red-DiscordBot"
+description: "Clones Red-DiscordBot at optional commit, builds it using uv, and uploads the artifact."
+
+inputs:
+  red_commit:
+    description: "Optional commit SHA for Red-DiscordBot. If omitted, main is used."
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    # Step 1 — Checkout Red-DiscordBot repo
+    - name: Checkout Red-DiscordBot
+      shell: bash
+      run: |
+        echo "🔄 Cloning Red-DiscordBot..."
+        git clone https://github.com/Cog-Creators/Red-DiscordBot.git
+        cd Red-DiscordBot
+
+        if [ -n "${{ inputs.red_commit }}" ]; then
+          echo "📌 Checking out commit: ${{ inputs.red_commit }}"
+          git checkout ${{ inputs.red_commit }}
+        else
+          echo "📌 No commit provided — using default branch"
+        fi
+
+    # Step 2 — Install uv
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
+
+    # Step 3 — Build the project
+    - name: Build Red-DiscordBot
+      shell: bash
+      run: |
+        cd Red-DiscordBot
+        echo "🧱 Building Red-DiscordBot with uv..."
+        uv build
+
+    # Step 4 — Validate distributions
+    - name: Check distributions
+      shell: bash
+      run: |
+        cd Red-DiscordBot
+        uv tool install twine
+        uvx twine check dist/*
+
+    # Step 5 — Upload build artifacts
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: red-discordbot-build
+        path: Red-DiscordBot/dist

@@ -1,6 +1,9 @@
 # d-flows
 
-[![Version](https://img.shields.io/github/v/release/nntin/d-flows?sort=semver&label=Version)](https://github.com/nntin/d-flows/releases) [![CI](https://img.shields.io/github/actions/workflow/status/nntin/d-flows/pr-ci.yml?branch=main&label=CI)](https://github.com/nntin/d-flows/actions)
+[![Version](https://img.shields.io/github/v/release/nntin/d-flows?sort=semver&label=Version)](https://github.com/nntin/d-flows/releases)
+[![Check Push](https://img.shields.io/github/actions/workflow/status/nntin/d-flows/check-push.yml?branch=main&label=Check%20Push)](https://github.com/nntin/d-flows/actions/workflows/check-push.yml)
+[![Check PR](https://img.shields.io/github/actions/workflow/status/nntin/d-flows/check-pr.yml?branch=main&label=Check%20PR)](https://github.com/nntin/d-flows/actions/workflows/check-pr.yml)
+
 
 ## Documentation
 

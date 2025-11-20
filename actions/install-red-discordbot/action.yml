@@ -1,0 +1,33 @@
+name: "Install Red-DiscordBot"
+description: "Downloads a Red-DiscordBot build artifact and installs it using uv."
+
+inputs:
+  artifact_name:
+    description: "The name of the build artifact to download."
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    # Step 1 — Download the artifact
+    - name: Download Red-DiscordBot artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: ./dist
+
+    # Step 2 — Install uv
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
+
+    # Step 3 — Install the downloaded package
+    - name: Install Red-DiscordBot
+      shell: bash
+      run: |
+        uv install ./dist/*
+
+    # Step 4 — Verify installation
+    - name: Verify installation
+      shell: bash
+      run: |
+        uvx python -c "import red; print('✅ Red-DiscordBot installed successfully')"
