@@ -34,4 +34,4 @@ runs:
       shell: bash
       run: |
         echo "🚀 Starting Red-DiscordBot"
-        python3 -m redbot tinkerer --token "${{ inputs.token }}" --prefix "${{ inputs.prefix }}" ${{ inputs.optional_args }}
+        python3 -m redbot tinkerer --token "${{ inputs.token }}" --prefix "${{ inputs.prefix }}" --dry-run ${{ inputs.optional_args }}

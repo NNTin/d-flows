@@ -10,10 +10,10 @@ runs:
   using: "composite"
   steps:
     - name: Download Red-DiscordBot artifact
-      if: env.ACT != 'true'  # Skip download when running with act
+      if: ${{ inputs.artifact_name != '' && env.ACT != 'true' }}  # Skip download when running with act or no artifact name provided
       uses: actions/download-artifact@v4
       with:
-        name: ${{ inputs.artifact_name || 'red-discordbot-build' }}
+        name: ${{ inputs.artifact_name }}
         path: ./dist
 
     - name: Copy local artifact for act
@@ -39,7 +39,13 @@ runs:
     - name: Install Red-DiscordBot
       shell: bash
       run: |
-        uv pip install ./dist/*.whl --system
+        if [[ -d "./dist" && $(ls -A ./dist/*.whl 2>/dev/null) ]]; then
+          echo "📦 Installing Red-DiscordBot from local artifact in ./dist"
+          uv pip install ./dist/*.whl --system
+        else
+          echo "📦 Installing Red-DiscordBot from PyPI"
+          uv pip install Red-DiscordBot --system
+        fi
 
     - name: Verify installation
       shell: bash
