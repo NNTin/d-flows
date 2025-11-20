@@ -36,8 +36,26 @@ runs:
         LOG_PATH="${{ runner.temp }}/redbot-rpc.log"
         echo "📁 Writing Red-DiscordBot logs to ${LOG_PATH}"
 
-        TARGET_COG_DIR="/app/cogs"
-        mkdir -p "${TARGET_COG_DIR}"
+        INSTALL_PATH="$(python3 - <<'PY'
+import asyncio
+from redbot.core import data_manager
+from redbot.core._cog_manager import CogManager
+
+async def main():
+    data_manager.load_basic_configuration("tinkerer")
+    mgr = CogManager()
+    path = await mgr.install_path()
+    print(path)
+
+asyncio.run(main())
+PY
+)"
+        if [[ -z "${INSTALL_PATH}" ]]; then
+          echo "❌ Failed to determine cog install path"
+          exit 1
+        fi
+        echo "📁 Installing cogs to ${INSTALL_PATH}"
+        mkdir -p "${INSTALL_PATH}"
         IFS=',' read -ra RAW_COG_PATHS <<< "${COG_PATHS}"
         for raw in "${RAW_COG_PATHS[@]}"; do
           trimmed="$(echo "${raw}" | xargs || true)"
@@ -50,8 +68,12 @@ runs:
           fi
           src="$(realpath "${trimmed}")"
           cog_name="$(basename "${src}")"
-          dest="${TARGET_COG_DIR}/${cog_name}"
-          echo "📂 Syncing ${src} -> ${dest}"
+          dest="${INSTALL_PATH}/${cog_name}"
+          if [[ "${src}" == "${dest}" ]]; then
+            echo "ℹ️ Cog ${cog_name} already installed at ${dest}; skipping copy"
+            continue
+          fi
+          echo "📂 Installing ${src} -> ${dest}"
           rm -rf "${dest}"
           cp -a "${src}" "${dest}"
         done
