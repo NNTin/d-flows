@@ -34,16 +34,19 @@ runs:
         python-version: '3.11'
 
     - name: Install build & twine
+      shell: bash
       run: |
         python -m pip install --upgrade pip
         python -m pip install --upgrade build twine
 
     - name: Build Red-DiscordBot
+      shell: bash
       run: |
         cd Red-DiscordBot
         python -m build
 
     - name: Check distributions
+      shell: bash
       run: |
         cd Red-DiscordBot
         python -m twine check dist/*

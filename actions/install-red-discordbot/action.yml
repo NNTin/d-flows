@@ -18,6 +18,7 @@ runs:
 
     - name: Copy local artifact for act
       if: env.ACT == 'true'  # On act use local mounted artifact
+      shell: bash
       run: |
         # Use the mounted path inside container path\to\Red-DiscordBot\dist:/tmp/dist
         mkdir -p ./dist
