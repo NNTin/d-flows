@@ -1,8 +1,5 @@
-name: "Run Red-DiscordBot"
-description: "Sets up Red-DiscordBot configuration and runs the bot."
-
-# This is just a test. It makes no sense to run Red-DiscordBot in CI. It is useful for local testing with nektos/act.
-# We will create a new action to run actual Red-DiscordBot tests.
+name: "Setup Red-DiscordBot"
+description: "Sets up Red-DiscordBot configuration"
 
 inputs:
   token:
@@ -30,7 +27,7 @@ runs:
         CONFIG_JSON='{"tinkerer":{"DATA_PATH":"/app","COG_PATH_APPEND":"cogs","CORE_PATH_APPEND":"core","STORAGE_TYPE":"JSON","STORAGE_DETAILS":{}}}'
         echo "$CONFIG_JSON" > ~/.config/Red-DiscordBot/config.json
 
-    - name: Run Red-DiscordBot
+    - name: Dry-Run Red-DiscordBot
       shell: bash
       run: |
         echo "🚀 Starting Red-DiscordBot"
