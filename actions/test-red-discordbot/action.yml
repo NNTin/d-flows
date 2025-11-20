@@ -1,0 +1,81 @@
+name: "Test Red-DiscordBot cogs"
+description: "Loads and unloads cogs via RPC to verify they work inside Red-DiscordBot."
+
+inputs:
+  token:
+    description: "Discord bot token used when starting Red-DiscordBot"
+    required: true
+  cog_paths:
+    description: "Comma-separated list of cog directories to validate"
+    required: true
+  rpc_port:
+    description: "Port Red-DiscordBot RPC server listens on"
+    required: false
+    default: "6133"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install RPC client dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "📦 Installing aiohttp for RPC client"
+        python3 -m pip install --upgrade pip
+        python3 -m pip install --upgrade aiohttp
+
+    - name: Start Red-DiscordBot with RPC enabled
+      shell: bash
+      run: |
+        set -euo pipefail
+        LOG_PATH="${{ runner.temp }}/redbot-rpc.log"
+        echo "📁 Writing Red-DiscordBot logs to ${LOG_PATH}"
+        echo "LOG_PATH=${LOG_PATH}" >> "$GITHUB_ENV"
+
+        echo "🚀 Launching Red-DiscordBot in the background"
+        python3 -m redbot tinkerer \
+          --token "${{ inputs.token }}" \
+          --prefix "!" \
+          --rpc \
+          --rpc-port "${{ inputs.rpc_port }}" \
+          > "${LOG_PATH}" 2>&1 &
+        BOT_PID=$!
+        echo "BOT_PID=${BOT_PID}" >> "$GITHUB_ENV"
+
+        sleep 5
+        if ! ps -p "${BOT_PID}" > /dev/null; then
+          echo "❌ Red-DiscordBot did not stay running. Last log lines:"
+          tail -n 100 "${LOG_PATH}" || true
+          exit 1
+        fi
+        echo "✅ Red-DiscordBot is running with PID ${BOT_PID}"
+
+    - name: Run RPC cog tests
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+        COG_PATHS: ${{ inputs.cog_paths }}
+        RPC_PORT: ${{ inputs.rpc_port }}
+      run: |
+        set -euo pipefail
+        trap 'if [[ -n "${BOT_PID:-}" ]]; then echo "🛑 Stopping Red-DiscordBot (${BOT_PID})"; kill "${BOT_PID}" 2>/dev/null || true; wait "${BOT_PID}" 2>/dev/null || true; fi' EXIT
+
+        SCRIPT_PATH="${{ github.action_path }}/test_rpc_cogs.py"
+        if [[ ! -f "${SCRIPT_PATH}" ]]; then
+          echo "❌ Missing helper script at ${SCRIPT_PATH}"
+          exit 1
+        fi
+
+        set +e
+        python3 "${SCRIPT_PATH}"
+        status=$?
+        set -e
+
+        if [[ $status -ne 0 ]]; then
+          echo "🪵 Dumping Red-DiscordBot log tail after failure"
+          tail -n 200 "${LOG_PATH:-${{ runner.temp }}/redbot-rpc.log}" || true
+        else
+          echo "🎉 RPC cog tests passed"
+        fi
+
+        exit $status
