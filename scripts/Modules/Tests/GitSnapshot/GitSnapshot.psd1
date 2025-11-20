@@ -3,7 +3,7 @@
     # Module metadata
     # ──────────────────────────────
     RootModule           = 'GitSnapshot.psm1'
-    ModuleVersion        ='1.0.2'
+    ModuleVersion        ='1.1.0'
     GUID                 = '56a06e8b-29bd-4f64-b93d-c6175321f811'
     Author               = 'Tin Nguyen'
     CompanyName          = 'N/A'
