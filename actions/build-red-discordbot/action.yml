@@ -36,8 +36,10 @@ runs:
       shell: bash
       run: |
         cd Red-DiscordBot
-        echo "🧱 Installing build tool and building..."
+        echo "🧱 Installing Python 3.11 and build tool..."
+        uv tool install python@3.11
         uv tool install build
+        echo "🧱 Building Red-DiscordBot..."
         uvx python -m build
 
     # Step 4 — Validate distributions

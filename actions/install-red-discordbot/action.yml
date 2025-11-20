@@ -20,13 +20,19 @@ runs:
     - name: Install uv
       uses: astral-sh/setup-uv@v1
 
-    # Step 3 — Install the downloaded package
+    # Step 3 — Ensure Python 3.11 is available in uv
+    - name: Install Python 3.11 in uv
+      shell: bash
+      run: |
+        uv tool install python@3.11
+
+    # Step 4 — Install the downloaded package
     - name: Install Red-DiscordBot
       shell: bash
       run: |
         uv install ./dist/*
 
-    # Step 4 — Verify installation
+    # Step 5 — Verify installation
     - name: Verify installation
       shell: bash
       run: |
