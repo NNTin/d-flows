@@ -19,17 +19,16 @@ runs:
     - name: Set up Red-DiscordBot configuration
       shell: bash
       run: |
-        echo "📁 Creating ~/.config/Red-DiscordBot directory"
+        echo "📁 Creating Red-DiscordBot directories"
         mkdir -p ~/.config/Red-DiscordBot
-        mkdir -p /app/cogs
+
+        APP_DIR="$HOME/redbot-app"
+        mkdir -p "$APP_DIR/cogs"
 
         echo "📝 Writing config.json"
-        CONFIG_JSON='{"tinkerer":{"DATA_PATH":"/app","COG_PATH_APPEND":"cogs","CORE_PATH_APPEND":"core","STORAGE_TYPE":"JSON","STORAGE_DETAILS":{}}}'
-        
-        # Write to both possible config locations
-        echo "$CONFIG_JSON" > /home/runner/.config/Red-DiscordBot/config.json
+        CONFIG_JSON="{\"tinkerer\":{\"DATA_PATH\":\"$APP_DIR\",\"COG_PATH_APPEND\":\"cogs\",\"CORE_PATH_APPEND\":\"core\",\"STORAGE_TYPE\":\"JSON\",\"STORAGE_DETAILS\":{}}}"
+
         echo "$CONFIG_JSON" > ~/.config/Red-DiscordBot/config.json
-      continue-on-error: true  # TODO: on CI it complains: mkdir: cannot create directory ‘/app’: Permission denied
 
     - name: Dry-Run Red-DiscordBot
       shell: bash
