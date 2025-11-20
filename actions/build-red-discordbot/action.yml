@@ -5,6 +5,9 @@ inputs:
   red_commit:
     description: "Optional commit SHA for Red-DiscordBot. If omitted, main is used."
     required: false
+  artifact_name:
+    description: "Optional artifact name. Default: red-discordbot-build"
+    required: false
 
 runs:
   using: "composite"
@@ -33,8 +36,9 @@ runs:
       shell: bash
       run: |
         cd Red-DiscordBot
-        echo "🧱 Building Red-DiscordBot with uv..."
-        uv build
+        echo "🧱 Installing build tool and building..."
+        uv tool install build
+        uvx build
 
     # Step 4 — Validate distributions
     - name: Check distributions
@@ -44,9 +48,9 @@ runs:
         uv tool install twine
         uvx twine check dist/*
 
-    # Step 5 — Upload build artifacts
+    # Step 5 — Upload resulting build artifacts
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: red-discordbot-build
+        name: ${{ inputs.artifact_name || 'red-discordbot-build' }}
         path: Red-DiscordBot/dist
