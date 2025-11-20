@@ -16,6 +16,8 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # todo: for now the RPC client and Red-DiscordBot use the same Python installation
+    # should be separated, especially when Red-DiscordBot is installed with different Python versions
     - name: Install RPC client dependencies
       shell: bash
       run: |

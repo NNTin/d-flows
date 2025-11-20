@@ -28,11 +28,13 @@ runs:
           echo "📌 Using latest commit from default branch"
         fi
 
+    # building with fixed Python version is fine here, we are uploading it as an artifact
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
 
+    # todo: build with uv build
     - name: Install build & twine
       shell: bash
       run: |

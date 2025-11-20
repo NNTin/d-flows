@@ -30,6 +30,7 @@ runs:
 
         echo "$CONFIG_JSON" > ~/.config/Red-DiscordBot/config.json
 
+    # todo: add input for skipping --dry-run
     - name: Dry-Run Red-DiscordBot
       shell: bash
       run: |

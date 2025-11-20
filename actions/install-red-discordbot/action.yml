@@ -16,6 +16,7 @@ runs:
         name: ${{ inputs.artifact_name }}
         path: ./dist
 
+    # todo: on act there might be no mounted artifact, fail gracefully
     - name: Copy local artifact for act
       if: env.ACT == 'true'  # On act use local mounted artifact
       shell: bash
@@ -29,6 +30,7 @@ runs:
           exit 1
         fi
 
+    # todo: this is the python version used in the test-cogs workflow, should be configurable
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
@@ -37,6 +39,7 @@ runs:
     - name: Install uv
       uses: astral-sh/setup-uv@v1
 
+    # Red-DiscordBot is installed locally if ./dist contains built wheels else install from PyPI
     - name: Install Red-DiscordBot
       shell: bash
       run: |
