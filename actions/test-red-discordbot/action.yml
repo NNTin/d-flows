@@ -24,13 +24,17 @@ runs:
         python3 -m pip install --upgrade pip
         python3 -m pip install --upgrade aiohttp
 
-    - name: Start Red-DiscordBot with RPC enabled
+    - name: Start Red-DiscordBot and run RPC cog tests
       shell: bash
+      env:
+        COG_PATHS: ${{ inputs.cog_paths }}
+        RPC_PORT: ${{ inputs.rpc_port }}
       run: |
         set -euo pipefail
+        trap 'if [[ -n "${BOT_PID:-}" ]]; then echo "🛑 Stopping Red-DiscordBot (${BOT_PID})"; kill "${BOT_PID}" 2>/dev/null || true; wait "${BOT_PID}" 2>/dev/null || true; fi' EXIT
+
         LOG_PATH="${{ runner.temp }}/redbot-rpc.log"
         echo "📁 Writing Red-DiscordBot logs to ${LOG_PATH}"
-        echo "LOG_PATH=${LOG_PATH}" >> "$GITHUB_ENV"
 
         echo "🚀 Launching Red-DiscordBot in the background"
         python3 -m redbot tinkerer \
@@ -40,7 +44,6 @@ runs:
           --rpc-port "${{ inputs.rpc_port }}" \
           > "${LOG_PATH}" 2>&1 &
         BOT_PID=$!
-        echo "BOT_PID=${BOT_PID}" >> "$GITHUB_ENV"
 
         sleep 5
         if ! ps -p "${BOT_PID}" > /dev/null; then
@@ -49,15 +52,6 @@ runs:
           exit 1
         fi
         echo "✅ Red-DiscordBot is running with PID ${BOT_PID}"
-
-    - name: Run RPC cog tests
-      shell: bash
-      env:
-        COG_PATHS: ${{ inputs.cog_paths }}
-        RPC_PORT: ${{ inputs.rpc_port }}
-      run: |
-        set -euo pipefail
-        trap 'if [[ -n "${BOT_PID:-}" ]]; then echo "🛑 Stopping Red-DiscordBot (${BOT_PID})"; kill "${BOT_PID}" 2>/dev/null || true; wait "${BOT_PID}" 2>/dev/null || true; fi' EXIT
 
         SCRIPT_PATH="${{ github.action_path }}/test_rpc_cogs.py"
         if [[ ! -f "${SCRIPT_PATH}" ]]; then
@@ -72,7 +66,7 @@ runs:
 
         if [[ $status -ne 0 ]]; then
           echo "🪵 Dumping Red-DiscordBot log tail after failure"
-          tail -n 200 "${LOG_PATH:-${{ runner.temp }}/redbot-rpc.log}" || true
+          tail -n 200 "${LOG_PATH}" || true
         else
           echo "🎉 RPC cog tests passed"
         fi
