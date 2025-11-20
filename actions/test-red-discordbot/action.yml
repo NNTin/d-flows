@@ -52,8 +52,8 @@ runs:
           echo "❌ Failed to determine cog paths (base='${BASE_COG_PATH}', install='${INSTALL_PATH}')"
           exit 1
         fi
-        echo "📁 Installing cogs to ${BASE_COG_PATH} and ${INSTALL_PATH}"
-        mkdir -p "${BASE_COG_PATH}" "${INSTALL_PATH}"
+        echo "📁 Installing cogs to ${INSTALL_PATH}"
+        mkdir -p "${INSTALL_PATH}"
         IFS=',' read -ra RAW_COG_PATHS <<< "${COG_PATHS}"
         for raw in "${RAW_COG_PATHS[@]}"; do
           trimmed="$(echo "${raw}" | xargs || true)"
@@ -66,16 +66,14 @@ runs:
           fi
           src="$(realpath "${trimmed}")"
           cog_name="$(basename "${src}")"
-          for target in "${BASE_COG_PATH}" "${INSTALL_PATH}"; do
-            dest="${target}/${cog_name}"
-            if [[ "${src}" == "${dest}" ]]; then
-              echo "ℹ️ Cog ${cog_name} already installed at ${dest}; skipping copy"
-              continue
-            fi
-            echo "📂 Installing ${src} -> ${dest}"
-            rm -rf "${dest}"
-            cp -a "${src}" "${dest}"
-          done
+          dest="${INSTALL_PATH}/${cog_name}"
+          if [[ "${src}" == "${dest}" ]]; then
+            echo "ℹ️ Cog ${cog_name} already installed at ${dest}; skipping copy"
+            continue
+          fi
+          echo "📂 Installing ${src} -> ${dest}"
+          rm -rf "${dest}"
+          cp -a "${src}" "${dest}"
         done
 
         echo "🚀 Launching Red-DiscordBot in the background"
