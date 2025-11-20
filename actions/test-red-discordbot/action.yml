@@ -36,6 +36,26 @@ runs:
         LOG_PATH="${{ runner.temp }}/redbot-rpc.log"
         echo "📁 Writing Red-DiscordBot logs to ${LOG_PATH}"
 
+        TARGET_COG_DIR="/app/cogs"
+        mkdir -p "${TARGET_COG_DIR}"
+        IFS=',' read -ra RAW_COG_PATHS <<< "${COG_PATHS}"
+        for raw in "${RAW_COG_PATHS[@]}"; do
+          trimmed="$(echo "${raw}" | xargs || true)"
+          if [[ -z "${trimmed}" ]]; then
+            continue
+          fi
+          if [[ ! -d "${trimmed}" ]]; then
+            echo "❌ Cog path ${trimmed} does not exist"
+            exit 1
+          fi
+          src="$(realpath "${trimmed}")"
+          cog_name="$(basename "${src}")"
+          dest="${TARGET_COG_DIR}/${cog_name}"
+          echo "📂 Syncing ${src} -> ${dest}"
+          rm -rf "${dest}"
+          cp -a "${src}" "${dest}"
+        done
+
         echo "🚀 Launching Red-DiscordBot in the background"
         python3 -m redbot tinkerer \
           --token "${{ inputs.token }}" \
