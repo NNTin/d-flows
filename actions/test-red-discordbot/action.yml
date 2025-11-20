@@ -53,7 +53,6 @@ runs:
     - name: Run RPC cog tests
       shell: bash
       env:
-        TOKEN: ${{ inputs.token }}
         COG_PATHS: ${{ inputs.cog_paths }}
         RPC_PORT: ${{ inputs.rpc_port }}
       run: |

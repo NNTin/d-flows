@@ -14,7 +14,8 @@ from typing import List
 import aiohttp
 
 JSONRPC_VERSION = "2.0"
-RPC_URL_TEMPLATE = "ws://127.0.0.1:{port}/jsonrpc"
+# RPC server defined in redbot/core/_rpc.py binds websocket listener to "/"
+RPC_URL_TEMPLATE = "ws://127.0.0.1:{port}/"
 RPC_WAIT_TIMEOUT = 30
 RPC_WAIT_INTERVAL = 0.5
 
@@ -81,11 +82,7 @@ class JsonRpcClient:
         return response.get("result")
 
 
-def parse_env() -> tuple[str, List[Path], int]:
-    token = os.environ.get("TOKEN")
-    if not token:
-        raise RuntimeError("TOKEN environment variable is required")
-
+def parse_env() -> tuple[List[Path], int]:
     raw_paths = os.environ.get("COG_PATHS")
     if not raw_paths:
         raise RuntimeError("COG_PATHS environment variable must be provided")
@@ -109,7 +106,7 @@ def parse_env() -> tuple[str, List[Path], int]:
     if not cog_paths:
         raise RuntimeError("COG_PATHS did not contain any usable paths")
 
-    return token, cog_paths, port
+    return cog_paths, port
 
 
 async def wait_for_rpc(session: aiohttp.ClientSession, url: str) -> None:
@@ -132,12 +129,6 @@ def cog_name_from_path(path: Path) -> str:
     if not cog_name:
         raise RuntimeError(f"Could not derive cog name from {path}")
     return cog_name
-
-
-async def add_cog_path(client: JsonRpcClient, path: Path) -> None:
-    resolved = str(path)
-    print(f"➕ Adding cog path {resolved}")
-    await client.request("COGMANAGER__ADD_PATH", [resolved])
 
 
 async def load_cog(client: JsonRpcClient, cog_name: str) -> None:
@@ -163,18 +154,14 @@ async def unload_cog(client: JsonRpcClient, cog_name: str) -> None:
 
 async def exercise_cog(client: JsonRpcClient, path: Path) -> None:
     cog_name = cog_name_from_path(path)
-    await add_cog_path(client, path)
     await load_cog(client, cog_name)
     await unload_cog(client, cog_name)
 
 
 async def main_async() -> None:
-    token, cog_paths, port = parse_env()
+    cog_paths, port = parse_env()
     rpc_url = RPC_URL_TEMPLATE.format(port=port)
     print(f"🔌 Validating {len(cog_paths)} cog(s) against RPC at {rpc_url}")
-    # token is only used to ensure the environment is wired correctly. Keeping it around
-    _ = token
-
     async with aiohttp.ClientSession() as session:
         await wait_for_rpc(session, rpc_url)
         async with JsonRpcClient(session, rpc_url) as client:
