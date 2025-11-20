@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -169,8 +170,47 @@ async def unload_cog(client: JsonRpcClient, cog_name: str) -> None:
     print(f"♻️ Cog {cog_name} unloaded successfully")
 
 
+def read_cog_requirements(path: Path) -> list[str]:
+    info_path = path / "info.json"
+    if not info_path.is_file():
+        return []
+
+    try:
+        info_data = json.loads(info_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:  # pragma: no cover - guard for malformed metadata
+        raise RuntimeError(f"Invalid JSON in {info_path}: {exc}") from exc
+
+    requirements = info_data.get("requirements", [])
+    if not requirements:
+        return []
+    if not isinstance(requirements, list):
+        raise RuntimeError(f"'requirements' in {info_path} must be a list")
+
+    normalized = [str(req).strip() for req in requirements if str(req).strip()]
+    return normalized
+
+
+def install_requirements(requirements: list[str], cog_name: str) -> None:
+    if not requirements:
+        return
+
+    print(f"📦 Installing requirements for {cog_name}: {', '.join(requirements)}")
+    cmd = ["uv", "pip", "install", *requirements, "--system"]
+    try:
+        subprocess.run(cmd, check=True)
+    except FileNotFoundError as exc:  # pragma: no cover - runtime guard
+        raise RuntimeError(
+            "uv CLI is required to install cog requirements but was not found in PATH"
+        ) from exc
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(f"Failed to install requirements for {cog_name}") from exc
+
+
 async def exercise_cog(client: JsonRpcClient, path: Path) -> None:
     cog_name = cog_name_from_path(path)
+    requirements = read_cog_requirements(path)
+    if requirements:
+        await asyncio.to_thread(install_requirements, requirements, cog_name)
     await load_cog(client, cog_name)
     await unload_cog(client, cog_name)
 
