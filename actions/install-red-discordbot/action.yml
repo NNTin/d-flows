@@ -39,7 +39,7 @@ runs:
     - name: Install Red-DiscordBot
       shell: bash
       run: |
-        uv install ./dist/*
+        uv pip install ./dist/*
 
     - name: Verify installation
       shell: bash
