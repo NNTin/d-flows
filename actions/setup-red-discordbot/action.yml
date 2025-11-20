@@ -27,8 +27,9 @@ runs:
         CONFIG_JSON='{"tinkerer":{"DATA_PATH":"/app","COG_PATH_APPEND":"cogs","CORE_PATH_APPEND":"core","STORAGE_TYPE":"JSON","STORAGE_DETAILS":{}}}'
         
         # Write to both possible config locations
-        echo "$CONFIG_JSON" > ~/.config/Red-DiscordBot/config.json
         echo "$CONFIG_JSON" > /home/runner/.config/Red-DiscordBot/config.json
+        echo "$CONFIG_JSON" > ~/.config/Red-DiscordBot/config.json
+      continue-on-error: true  # TODO: on CI it complains: mkdir: cannot create directory ‘/app’: Permission denied
 
     - name: Dry-Run Red-DiscordBot
       shell: bash
