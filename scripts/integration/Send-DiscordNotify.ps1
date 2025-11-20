@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Test Discord notification workflows locally using act.
 
@@ -27,10 +27,6 @@
     Format: https://discord.com/api/webhooks/{id}/{token}
     When not provided, script attempts to read from .secrets file.
 
-.PARAMETER SkipCleanup
-    Skip cleanup of temporary directories (for debugging).
-    Default: $false. Preserves test artifacts for inspection when specified.
-
 .EXAMPLE
     # Test all Discord notification fixtures
     .\scripts\integration\Send-DiscordNotify.ps1
@@ -45,7 +41,7 @@
 
 .EXAMPLE
     # Debug mode: preserve temporary directories
-    .\scripts\integration\Send-DiscordNotify.ps1 -SkipCleanup
+    .\scripts\integration\Send-DiscordNotify.ps1
 
 .NOTES
     Requirements:
@@ -78,10 +74,7 @@ param(
     [string]$TestFixturePath,
 
     [Parameter(Mandatory = $false)]
-    [string]$WebhookUrl,
-
-    [Parameter(Mandatory = $false)]
-    [switch]$SkipCleanup
+    [string]$WebhookUrl
 )
 
 # ============================================================================
@@ -179,7 +172,7 @@ function Get-DiscordNotifyFixtures {
 
     if (-not (Test-Path $fullPath)) {
         Write-Message -Type "Error" "Fixtures directory not found: $fullPath"
-        return @()
+        return [string[]]@()
     }
 
     $fixtures = @(Get-ChildItem -Path $fullPath -File -Filter "*.json" -ErrorAction SilentlyContinue |
@@ -187,7 +180,7 @@ function Get-DiscordNotifyFixtures {
 
     Write-Message -Type "Debug" "Found $($fixtures.Count) Discord notification fixtures"
 
-    return $fixtures
+    return [string[]]$fixtures
 }
 
 <#
@@ -400,7 +393,7 @@ function Invoke-AllDiscordNotifyTests {
 
     if ($fixtures.Count -eq 0) {
         Write-Message -Type "Warning" "No test fixtures found in tests/discord-notify/"
-        return @()
+        return [hashtable[]]@()
     }
 
     $webhookUrl = Get-WebhookUrl -ProvidedUrl $WebhookUrl
@@ -421,7 +414,7 @@ function Invoke-AllDiscordNotifyTests {
         }
     }
 
-    return $results
+    return [hashtable[]]$results
 }
 
 <#
