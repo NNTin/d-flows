@@ -9,29 +9,32 @@ inputs:
 runs:
   using: "composite"
   steps:
-    # Step 1 — Download the artifact
     - name: Download Red-DiscordBot artifact
+      if: github.server_url == 'https://github.com'  # Only on GitHub
       uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.artifact_name || 'red-discordbot-build' }}
         path: ./dist
+
+    - name: Copy local artifact for act
+      if: github.server_url != 'https://github.com'
+      run: |
+        mkdir -p ./dist
+        cp ../Red-DiscordBot/dist/* ./dist/   # Adjust path to your built wheels
 
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
 
-    # Step 2 — Install uv
     - name: Install uv
       uses: astral-sh/setup-uv@v1
 
-    # Step 4 — Install the downloaded package
     - name: Install Red-DiscordBot
       shell: bash
       run: |
         uv install ./dist/*
 
-    # Step 5 — Verify installation
     - name: Verify installation
       shell: bash
       run: |
