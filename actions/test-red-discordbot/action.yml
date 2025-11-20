@@ -40,14 +40,17 @@ runs:
           echo "❌ Missing Red-DiscordBot config at ${CONFIG_FILE}"
           exit 1
         fi
-        INSTALL_PATH="$(python3 -c 'import json, os, sys; cfg=json.load(open(sys.argv[1])); inst=cfg.get("tinkerer",{}).get("DATA_PATH"); append=cfg.get("tinkerer",{}).get("COG_PATH_APPEND","cogs"); inst or sys.exit("Missing DATA_PATH for tinkerer instance"); print(os.path.join(inst, append))' "$CONFIG_FILE")"
+        PY_SCRIPT=$'import asyncio\nimport json\nimport os\nimport sys\nfrom redbot.core import data_manager\nfrom redbot.core._cog_manager import CogManager\ncfg = json.load(open(sys.argv[1]))\ninst = cfg.get("tinkerer", {}).get("DATA_PATH")\nappend = cfg.get("tinkerer", {}).get("COG_PATH_APPEND", "cogs")\nif not inst:\n    raise SystemExit("Missing DATA_PATH for tinkerer instance")\nbase = os.path.join(inst, append)\ndata_manager.load_basic_configuration("tinkerer")\nasync def main():\n    mgr = CogManager()\n    path = await mgr.install_path()\n    print(base)\n    print(path)\nasyncio.run(main())\n'
+        readarray -t COG_PATH_INFO < <(python3 -c "$PY_SCRIPT" "${CONFIG_FILE}")
+        BASE_COG_PATH="${COG_PATH_INFO[0]}"
+        INSTALL_PATH="${COG_PATH_INFO[1]}"
 
-        if [[ -z "${INSTALL_PATH}" ]]; then
-          echo "❌ Failed to determine cog install path"
+        if [[ -z "${BASE_COG_PATH}" || -z "${INSTALL_PATH}" ]]; then
+          echo "❌ Failed to determine cog paths (base='${BASE_COG_PATH}', install='${INSTALL_PATH}')"
           exit 1
         fi
-        echo "📁 Installing cogs to ${INSTALL_PATH}"
-        mkdir -p "${INSTALL_PATH}"
+        echo "📁 Installing cogs to ${BASE_COG_PATH} and ${INSTALL_PATH}"
+        mkdir -p "${BASE_COG_PATH}" "${INSTALL_PATH}"
         IFS=',' read -ra RAW_COG_PATHS <<< "${COG_PATHS}"
         for raw in "${RAW_COG_PATHS[@]}"; do
           trimmed="$(echo "${raw}" | xargs || true)"
@@ -60,14 +63,16 @@ runs:
           fi
           src="$(realpath "${trimmed}")"
           cog_name="$(basename "${src}")"
-          dest="${INSTALL_PATH}/${cog_name}"
-          if [[ "${src}" == "${dest}" ]]; then
-            echo "ℹ️ Cog ${cog_name} already installed at ${dest}; skipping copy"
-            continue
-          fi
-          echo "📂 Installing ${src} -> ${dest}"
-          rm -rf "${dest}"
-          cp -a "${src}" "${dest}"
+          for target in "${BASE_COG_PATH}" "${INSTALL_PATH}"; do
+            dest="${target}/${cog_name}"
+            if [[ "${src}" == "${dest}" ]]; then
+              echo "ℹ️ Cog ${cog_name} already installed at ${dest}; skipping copy"
+              continue
+            fi
+            echo "📂 Installing ${src} -> ${dest}"
+            rm -rf "${dest}"
+            cp -a "${src}" "${dest}"
+          done
         done
 
         echo "🚀 Launching Red-DiscordBot in the background"
