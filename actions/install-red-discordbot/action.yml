@@ -16,7 +16,6 @@ runs:
         name: ${{ inputs.artifact_name }}
         path: ./dist
 
-    # todo: on act there might be no mounted artifact, fail gracefully
     - name: Copy local artifact for act
       if: env.ACT == 'true'  # On act use local mounted artifact
       shell: bash
@@ -26,11 +25,10 @@ runs:
         if compgen -G "/tmp/dist/*" > /dev/null; then
           cp /tmp/dist/* ./dist/
         else
-          echo "❌ No files found in /tmp/dist. Did you mount the host folder correctly?"
-          exit 1
+          echo "❌ No files found in /tmp/dist. Installing from PyPI."
         fi
 
-    # todo: this is the python version used in the test-cogs workflow, should be configurable
+    # todo: python version should be configurable, skip if python is already setup
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:

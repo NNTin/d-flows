@@ -28,7 +28,7 @@ runs:
           echo "📌 Using latest commit from default branch"
         fi
 
-    # building with fixed Python version is fine here, we are uploading it as an artifact
+    # todo: python version should be configurable, skip if python is already setup
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
