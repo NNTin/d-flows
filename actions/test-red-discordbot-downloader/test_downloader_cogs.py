@@ -106,7 +106,7 @@ class JsonRpcClient:
         return response.get("result")
 
 
-def parse_env() -> tuple[List[Path], int, str, Path, str]:
+def parse_env() -> tuple[List[Path], int, str, Path | None, str, str | None]:
     raw_paths = os.environ.get("COG_PATHS")
     if not raw_paths:
         raise RuntimeError("COG_PATHS environment variable must be provided")
@@ -118,12 +118,18 @@ def parse_env() -> tuple[List[Path], int, str, Path, str]:
         raise RuntimeError(f"RPC_PORT must be an integer (received {port_raw!r})") from exc
 
     repo_name_raw = os.environ.get("REPO_NAME", "test-repo").strip()
-    repo_path_raw = os.environ.get("REPO_PATH")
-    if not repo_path_raw:
-        raise RuntimeError("REPO_PATH environment variable must be provided")
-    repo_path = Path(repo_path_raw).resolve()
-
+    repo_path_raw = os.environ.get("REPO_PATH", "").strip()
     repo_url_raw = os.environ.get("REPO_URL", "").strip()
+    repo_path: Path | None = None
+    if repo_url_raw:
+        if repo_path_raw:
+            repo_path = Path(repo_path_raw).resolve()
+    else:
+        if not repo_path_raw:
+            raise RuntimeError("REPO_PATH environment variable must be provided")
+        repo_path = Path(repo_path_raw).resolve()
+    repo_branch_raw = os.environ.get("REPO_BRANCH", "").strip()
+    repo_branch = repo_branch_raw or None
 
     cog_paths: List[Path] = []
     for chunk in raw_paths.split(","):
@@ -138,7 +144,7 @@ def parse_env() -> tuple[List[Path], int, str, Path, str]:
     if not cog_paths:
         raise RuntimeError("COG_PATHS did not contain any usable paths")
 
-    return cog_paths, port, repo_name_raw, repo_path, repo_url_raw
+    return cog_paths, port, repo_name_raw, repo_path, repo_url_raw, repo_branch
 
 
 async def wait_for_rpc(session: aiohttp.ClientSession, url: str) -> None:
@@ -199,14 +205,16 @@ async def setup_repo_manager() -> RepoManager:
     return manager
 
 
-async def add_test_repo(manager: RepoManager, name: str, url: str) -> Repo:
+async def add_test_repo(
+    manager: RepoManager, name: str, url: str, branch: str | None
+) -> Repo:
     normalized = normalize_repo_name(name)
     if manager.does_repo_exist(normalized):
         print(f"♻️ Removing pre-existing repo {normalized}")
         await manager.delete_repo(normalized)
     print(f"➕ Adding downloader repo {normalized} from {url}")
     try:
-        repo = await manager.add_repo(url=url, name=normalized, branch="master")
+        repo = await manager.add_repo(url=url, name=normalized, branch=branch)
     except downloader_errors.DownloaderException as exc:
         raise RuntimeError(f"Failed to add downloader repo {normalized}: {exc}") from exc
     return repo
@@ -281,8 +289,13 @@ def cleanup_installed_cogs(install_path: Path, names: Iterable[str]) -> None:
 
 
 async def main_async() -> None:
-    cog_paths, port, repo_name, repo_path, repo_url = parse_env()
-    repo_target = repo_url or str(repo_path)
+    cog_paths, port, repo_name, repo_path, repo_url, repo_branch = parse_env()
+    if repo_url:
+        repo_target = repo_url
+    elif repo_path is not None:
+        repo_target = str(repo_path)
+    else:  # pragma: no cover - defensive guard
+        raise RuntimeError("Neither repo_url nor repo_path was provided")
     expected_names = [cog_name_from_path(path) for path in cog_paths]
 
     repo_manager = await setup_repo_manager()
@@ -292,7 +305,7 @@ async def main_async() -> None:
     repo: Repo | None = None
     installed: List[str] = []
     try:
-        repo = await add_test_repo(repo_manager, repo_name, repo_target)
+        repo = await add_test_repo(repo_manager, repo_name, repo_target, repo_branch)
         installed = await install_cogs_from_repo(
             repo, install_path, requirements_path, expected_names
         )
@@ -311,7 +324,14 @@ async def main_async() -> None:
             try:
                 await repo_manager.delete_repo(repo.name)
             except downloader_errors.DownloaderException as exc:
-                print(f\"⚠️ Failed to remove downloader repo {repo.name}: {exc}\")
+                repo_path = repo_manager.repos_folder / repo.name
+                print(f"⚠️ Failed to remove downloader repo {repo.name} at {repo_path}: {exc}")
+                try:
+                    if repo_path.exists():
+                        shutil.rmtree(repo_path)
+                        print(f"🧽 Removed repo directory {repo_path} via fallback cleanup")
+                except Exception as cleanup_exc:  # pragma: no cover - best effort cleanup
+                    print(f"⚠️ Failed to remove repo directory {repo_path}: {cleanup_exc}")
 
 
 def main() -> None:

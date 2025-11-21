@@ -9,7 +9,8 @@ This composite action provisions a temporary git repository containing your cogs
 | `token` | ✅ | – | Discord bot token passed to `redbot tinkerer --token`. |
 | `cog_paths` | ✅ | – | Comma-separated list of paths to cog directories on the runner (e.g. `cogs/foo,cogs/bar`). Each directory must contain a valid `info.json`. |
 | `repo_name` | ❌ | `test-repo` | Friendly label used when the downloader registers the temporary repository. Must be unique per run; characters outside Python identifiers are converted automatically. |
-| `repo_url` | ❌ | `""` | Override repository URL if you want to install from an existing remote instead of the generated local repository. Leave empty for the auto-created local repo. |
+| `repo_url` | ❌ | `""` | When set, Downloader installs directly from this remote git URL and the action skips creating the temporary local repo. Leave empty to generate a throwaway repo from `cog_paths`. |
+| `repo_branch` | ❌ | `""` | Optional branch name to checkout after cloning. Leave empty to let Downloader detect the default branch or use the local repo's branch. |
 | `rpc_port` | ❌ | `6133` | Port the Red RPC server will listen on. Keep default unless you have networking conflicts. |
 
 ## Usage example
@@ -47,7 +48,7 @@ jobs:
 
 ## How it works
 1. The action installs the `aiohttp` dependency used by the RPC test client.
-2. A temporary working tree is created, all requested cogs are copied into it, and a git repository plus root-level `info.json` metadata file are committed.
+2. If `repo_url` is empty, the action creates a temporary working tree, copies all requested cogs into it, and commits git metadata. When `repo_url` is provided, this step is skipped and Downloader talks to your remote directly.
 3. Red-DiscordBot (`redbot tinkerer ... --rpc`) starts in the background and writes logs to `${{ runner.temp }}`.
 4. The helper script `test_downloader_cogs.py` loads Red's configuration, initializes the downloader `RepoManager`, and adds the temporary git repo via `repo add` semantics.
 5. Downloader installs each cog into Red's configured install path, ensuring requirements are installed into Downloader's library directory.
@@ -66,7 +67,9 @@ jobs:
 - **Requirement installation failures**: Review the action log to see which dependency pip command failed; you may need to add wheels or pin compatible versions.
 - **RPC timeout**: The helper waits 30 seconds for the websocket endpoint. Check the Red log tail dumped by the action when failures occur.
 - **Git errors**: Verify each cog directory includes necessary files and can be committed. Ensure your cogs don't include very large binaries or files requiring Git LFS.
-- **Known limitations**: The helper always targets the `master` branch when adding the repo and assumes Downloader installs requirements with pip; override `repo_url` if you must test other branches.
+- **Remote-only installs**: When `repo_url` is set the action does not mirror local files. Make sure the specified remote repo already contains the cogs you expect to load, and keep `cog_paths` aligned with those names so the RPC validation step knows what to exercise.
+- **Known limitations**: The helper assumes Downloader installs requirements with pip and the auto-generated local repo uses a `master` branch; specify `repo_branch` if your remote uses a different branch layout.
+- **Custom repo branches**: Use `repo_branch` when your remote's default branch isn't detected automatically (for example `main` or feature branches).
 
 ## Comparison with `test-red-discordbot`
 | Capability | `test-red-discordbot` | `test-red-discordbot-downloader` |

@@ -16,6 +16,10 @@ inputs:
     description: "Optional repository URL; leave empty to use the temporary local repo"
     required: false
     default: ""
+  repo_branch:
+    description: "Optional branch name to use when cloning the repository"
+    required: false
+    default: ""
   rpc_port:
     description: "Port Red-DiscordBot RPC server listens on"
     required: false
@@ -38,6 +42,7 @@ runs:
         RPC_PORT: ${{ inputs.rpc_port }}
         REPO_NAME: ${{ inputs.repo_name }}
         REPO_URL: ${{ inputs.repo_url }}
+        REPO_BRANCH: ${{ inputs.repo_branch }}
         DISCORD_TOKEN: ${{ inputs.token }}
       run: |
         set -euo pipefail
@@ -69,8 +74,6 @@ runs:
           exit 1
         fi
 
-        REPO_DIR="$(mktemp -d)"
-        echo "🗂️  Building temporary downloader repo at ${REPO_DIR}"
         IFS=',' read -ra RAW_COG_PATHS <<< "${COG_PATHS}"
         if [[ ${#RAW_COG_PATHS[@]} -eq 0 ]]; then
           echo "❌ No cog paths provided"
@@ -86,15 +89,27 @@ runs:
             echo "❌ Cog path ${trimmed} does not exist"
             exit 1
           fi
-          src="$(realpath "${trimmed}")"
-          cog_name="$(basename "${src}")"
-          dest="${REPO_DIR}/${cog_name}"
-          echo "📂 Copying ${src} -> ${dest}"
-          rm -rf "${dest}"
-          cp -a "${src}" "${dest}"
         done
 
-        cat > "${REPO_DIR}/info.json" <<'JSON'
+        REPO_DIR=""
+        if [[ -z "${REPO_URL}" ]]; then
+          REPO_DIR="$(mktemp -d)"
+          echo "🗂️  Building temporary downloader repo at ${REPO_DIR}"
+
+          for raw in "${RAW_COG_PATHS[@]}"; do
+            trimmed="$(echo "${raw}" | xargs || true)"
+            if [[ -z "${trimmed}" ]]; then
+              continue
+            fi
+            src="$(realpath "${trimmed}")"
+            cog_name="$(basename "${src}")"
+            dest="${REPO_DIR}/${cog_name}"
+            echo "📂 Copying ${src} -> ${dest}"
+            rm -rf "${dest}"
+            cp -a "${src}" "${dest}"
+          done
+
+          cat > "${REPO_DIR}/info.json" <<'JSON'
 {
   "name": "Local downloader test repo",
   "short": "local",
@@ -102,17 +117,23 @@ runs:
 }
 JSON
 
-        git -C "${REPO_DIR}" init -q
-        git -C "${REPO_DIR}" checkout -q -b master
-        git -C "${REPO_DIR}" config user.name "automation"
-        git -C "${REPO_DIR}" config user.email "actions@users.noreply.github.com"
-        git -C "${REPO_DIR}" add .
-        git -C "${REPO_DIR}" commit -q -m "Add test cogs"
+          git -C "${REPO_DIR}" init -q
+          git -C "${REPO_DIR}" checkout -q -b master
+          git -C "${REPO_DIR}" config user.name "automation"
+          git -C "${REPO_DIR}" config user.email "actions@users.noreply.github.com"
+          git -C "${REPO_DIR}" add .
+          git -C "${REPO_DIR}" commit -q -m "Add test cogs"
 
-        REPO_PATH="${REPO_DIR}"
+          REPO_PATH="${REPO_DIR}"
+        else
+          echo "🌐 Using remote repository URL ${REPO_URL}"
+          REPO_PATH=""
+        fi
+
         export REPO_PATH
         export REPO_NAME
         export RPC_PORT
+        export REPO_BRANCH
 
         echo "🚀 Launching Red-DiscordBot in the background"
         python3 -m redbot tinkerer \
