@@ -6,8 +6,8 @@ inputs:
     description: "Discord bot token used when starting Red-DiscordBot"
     required: true
   cog_paths:
-    description: "Comma-separated list of cog directories to validate"
-    required: true
+    description: "Comma-separated list of cog directories, empty takes all with info.json in repo"
+    required: false
   repo_name:
     description: "Name assigned to the temporary downloader repository"
     required: false
@@ -61,8 +61,27 @@ runs:
         trap cleanup EXIT
 
         if [[ -z "${COG_PATHS:-}" ]]; then
-          echo "❌ COG_PATHS input was empty"
-          exit 1
+          echo "🔍 No COG_PATHS provided; discovering cog directories containing info.json"
+          workspace="${GITHUB_WORKSPACE:-$PWD}"
+          readarray -t discovered_cogs < <(
+            find "${workspace}" -mindepth 1 -maxdepth 1 -type d -print0 \
+            | while IFS= read -r -d '' dir; do
+                dir="${dir%/}"
+                if [[ -f "${dir}/info.json" ]]; then
+                  rel="${dir#"${workspace%/}/"}"
+                  echo "${rel}"
+                fi
+              done
+          )
+
+          if [[ ${#discovered_cogs[@]} -eq 0 ]]; then
+            echo "❌ Could not locate any cog directories with info.json in ${workspace}"
+            exit 1
+          fi
+
+          COG_PATHS="$(IFS=','; printf '%s' "${discovered_cogs[*]}")"
+          export COG_PATHS
+          echo "🧭 Using discovered cog list: ${COG_PATHS}"
         fi
 
         LOG_PATH="${{ runner.temp }}/redbot-downloader.log"
