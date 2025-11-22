@@ -8,6 +8,7 @@ inputs:
   cog_paths:
     description: "Comma-separated list of cog directories, empty takes all with info.json in repo"
     required: false
+    default: ""
   repo_name:
     description: "Name assigned to the temporary downloader repository"
     required: false
