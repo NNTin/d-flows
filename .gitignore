@@ -9,3 +9,5 @@ pr-event.json
 /.chunkhound.json
 /.chunkhound/db
 /.vscode/mcp.json
+
+**/__pycache__/

@@ -1,0 +1,207 @@
+name: "Test Red-DiscordBot cogs via downloader"
+description: "Installs and validates cogs through Red's downloader cog using a temporary git repository."
+
+inputs:
+  token:
+    description: "Discord bot token used when starting Red-DiscordBot"
+    required: true
+  cog_paths:
+    description: "Comma-separated list of cog directories, empty takes all with info.json in repo"
+    required: false
+    default: ""
+  repo_name:
+    description: "Name assigned to the temporary downloader repository"
+    required: false
+    default: "test-repo"
+  repo_url:
+    description: "Optional repository URL; leave empty to use the temporary local repo"
+    required: false
+    default: ""
+  repo_branch:
+    description: "Optional branch name to use when cloning the repository"
+    required: false
+    default: ""
+  rpc_port:
+    description: "Port Red-DiscordBot RPC server listens on"
+    required: false
+    default: "6133"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install RPC client dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "📦 Ensuring aiohttp is available for RPC client"
+        python3 -m pip install "aiohttp>=3.9,<3.10"
+
+    - name: Create downloader test repo and validate cogs
+      shell: bash
+      env:
+        COG_PATHS: ${{ inputs.cog_paths }}
+        RPC_PORT: ${{ inputs.rpc_port }}
+        REPO_NAME: ${{ inputs.repo_name }}
+        REPO_URL: ${{ inputs.repo_url }}
+        REPO_BRANCH: ${{ inputs.repo_branch }}
+        DISCORD_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+
+        cleanup() {
+          if [[ -n "${BOT_PID:-}" ]]; then
+            echo "🛑 Stopping Red-DiscordBot (${BOT_PID})"
+            kill "${BOT_PID}" 2>/dev/null || true
+            wait "${BOT_PID}" 2>/dev/null || true
+          fi
+          if [[ -n "${REPO_DIR:-}" && -d "${REPO_DIR:-}" ]]; then
+            echo "🧹 Removing temporary repository at ${REPO_DIR}"
+            rm -rf "${REPO_DIR}"
+          fi
+        }
+        trap cleanup EXIT
+
+        SCRIPT_PATH="${{ github.action_path }}/test_downloader_cogs.py"
+        if [[ ! -f "${SCRIPT_PATH}" ]]; then
+          echo "❌ Missing helper script at ${SCRIPT_PATH}"
+          exit 1
+        fi
+
+        if [[ -z "${COG_PATHS:-}" ]]; then
+          if [[ -z "${REPO_URL}" ]]; then
+            echo "🔍 No COG_PATHS provided; discovering cog directories via helper script"
+            workspace="${GITHUB_WORKSPACE:-$PWD}"
+            workspace="${workspace%/}"
+            if ! discovered="$(python3 "${SCRIPT_PATH}" --discover-local "${workspace}")"; then
+              echo "❌ Failed to discover cog directories in ${workspace}"
+              exit 1
+            fi
+            discovered="${discovered//$'\n'/}"
+            if [[ -z "${discovered}" ]]; then
+              echo "❌ Helper script returned an empty cog list for ${workspace}"
+              exit 1
+            fi
+            COG_PATHS="${discovered}"
+            export COG_PATHS
+            echo "🧭 Using discovered cog list: ${COG_PATHS}"
+          else
+            echo "ℹ️ No COG_PATHS provided; will exercise every cog from ${REPO_URL}"
+          fi
+        fi
+
+        LOG_PATH="${{ runner.temp }}/redbot-downloader.log"
+        echo "📁 Writing Red-DiscordBot logs to ${LOG_PATH}"
+
+        CONFIG_FILE="${HOME}/.config/Red-DiscordBot/config.json"
+        INSTANCE_NAME="tinkerer"
+        USE_NO_INSTANCE=0
+        if [[ ! -f "${CONFIG_FILE}" ]]; then
+          echo "ℹ️ No Red-DiscordBot config found at ${CONFIG_FILE}; running Red with --no-instance"
+          USE_NO_INSTANCE=1
+          INSTANCE_NAME="temporary_red"
+        fi
+
+        IFS=',' read -ra RAW_COG_PATHS <<< "${COG_PATHS:-}"
+        if [[ ${#RAW_COG_PATHS[@]} -eq 0 ]]; then
+          if [[ -z "${REPO_URL}" ]]; then
+            echo "❌ No cog paths provided and no remote repo URL supplied"
+            exit 1
+          fi
+          echo "ℹ️ Cog path list is empty; all cogs found in ${REPO_URL} will be tested"
+        fi
+
+        if [[ ${#RAW_COG_PATHS[@]} -gt 0 ]]; then
+          for raw in "${RAW_COG_PATHS[@]}"; do
+            trimmed="$(echo "${raw}" | xargs || true)"
+            if [[ -z "${trimmed}" ]]; then
+              continue
+            fi
+            if [[ ! -d "${trimmed}" ]]; then
+              echo "❌ Cog path ${trimmed} does not exist"
+              exit 1
+            fi
+          done
+        fi
+
+        REPO_DIR=""
+        if [[ -z "${REPO_URL}" ]]; then
+          if [[ ${#RAW_COG_PATHS[@]} -eq 0 ]]; then
+            echo "❌ Cannot create temporary downloader repo without cog directories"
+            exit 1
+          fi
+          REPO_DIR="$(mktemp -d)"
+          echo "🗂️  Building temporary downloader repo at ${REPO_DIR}"
+
+          for raw in "${RAW_COG_PATHS[@]}"; do
+            trimmed="$(echo "${raw}" | xargs || true)"
+            if [[ -z "${trimmed}" ]]; then
+              continue
+            fi
+            src="$(realpath "${trimmed}")"
+            cog_name="$(basename "${src}")"
+            dest="${REPO_DIR}/${cog_name}"
+            echo "📂 Copying ${src} -> ${dest}"
+            rm -rf "${dest}"
+            cp -a "${src}" "${dest}"
+          done
+
+          echo '{"name": "Local downloader test repo", "short": "local", "description": "Temporary repository generated by test-red-discordbot-downloader action"}' > "${REPO_DIR}/info.json"
+
+          git -C "${REPO_DIR}" init -q
+          git -C "${REPO_DIR}" checkout -q -b master
+          git -C "${REPO_DIR}" config user.name "automation"
+          git -C "${REPO_DIR}" config user.email "actions@users.noreply.github.com"
+          git -C "${REPO_DIR}" add .
+          git -C "${REPO_DIR}" commit -q -m "Add test cogs"
+
+          REPO_PATH="${REPO_DIR}"
+        else
+          echo "🌐 Using remote repository URL ${REPO_URL}"
+          REPO_PATH=""
+        fi
+
+        export REPO_PATH
+        export REPO_NAME
+        export RPC_PORT
+        export REPO_BRANCH
+
+        export RED_INSTANCE_NAME="${INSTANCE_NAME}"
+
+        echo "🚀 Launching Red-DiscordBot in the background"
+        if [[ "${USE_NO_INSTANCE}" -eq 1 ]]; then
+          python3 -m redbot --no-instance \
+            --token "${DISCORD_TOKEN}" \
+            --prefix "!" \
+            --rpc \
+            --rpc-port "${RPC_PORT}" \
+            > "${LOG_PATH}" 2>&1 &
+        else
+          python3 -m redbot "${INSTANCE_NAME}" \
+            --token "${DISCORD_TOKEN}" \
+            --prefix "!" \
+            --rpc \
+            --rpc-port "${RPC_PORT}" \
+            > "${LOG_PATH}" 2>&1 &
+        fi
+        BOT_PID=$!
+
+        sleep 5
+        if ! ps -p "${BOT_PID}" > /dev/null; then
+          echo "❌ Red-DiscordBot did not stay running. Last log lines:"
+          tail -n 100 "${LOG_PATH}" || true
+          exit 1
+        fi
+        echo "✅ Red-DiscordBot is running with PID ${BOT_PID}"
+
+        set +e
+        python3 "${SCRIPT_PATH}"
+        status=$?
+        set -e
+
+        if [[ $status -ne 0 ]]; then
+          echo "🪵 Dumping Red-DiscordBot log tail after failure"
+          tail -n 200 "${LOG_PATH}" || true
+        else
+          echo "🎉 Downloader cog tests passed"
+        fi
+        exit $status
