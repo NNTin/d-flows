@@ -107,10 +107,7 @@ class JsonRpcClient:
 
 
 def parse_env() -> tuple[List[Path], int, str, Path | None, str, str | None]:
-    raw_paths = os.environ.get("COG_PATHS")
-    if not raw_paths:
-        raise RuntimeError("COG_PATHS environment variable must be provided")
-
+    raw_paths = os.environ.get("COG_PATHS", "")
     port_raw = os.environ.get("RPC_PORT", "6133")
     try:
         port = int(port_raw)
@@ -132,17 +129,18 @@ def parse_env() -> tuple[List[Path], int, str, Path | None, str, str | None]:
     repo_branch = repo_branch_raw or None
 
     cog_paths: List[Path] = []
-    for chunk in raw_paths.split(","):
-        candidate = chunk.strip()
-        if not candidate:
-            continue
-        candidate_path = Path(candidate).expanduser()
-        if not candidate_path.exists():
-            raise RuntimeError(f"Cog path does not exist: {candidate}")
-        cog_paths.append(candidate_path.resolve())
+    if raw_paths:
+        for chunk in raw_paths.split(","):
+            candidate = chunk.strip()
+            if not candidate:
+                continue
+            candidate_path = Path(candidate).expanduser()
+            if not candidate_path.exists():
+                raise RuntimeError(f"Cog path does not exist: {candidate}")
+            cog_paths.append(candidate_path.resolve())
 
-    if not cog_paths:
-        raise RuntimeError("COG_PATHS did not contain any usable paths")
+    if not repo_url_raw and not cog_paths:
+        raise RuntimeError("COG_PATHS must list at least one directory when REPO_URL is empty")
 
     return cog_paths, port, repo_name_raw, repo_path, repo_url_raw, repo_branch
 
@@ -296,7 +294,10 @@ async def main_async() -> None:
         repo_target = str(repo_path)
     else:  # pragma: no cover - defensive guard
         raise RuntimeError("Neither repo_url nor repo_path was provided")
-    expected_names = [cog_name_from_path(path) for path in cog_paths]
+    if cog_paths:
+        expected_names: List[str] | None = [cog_name_from_path(path) for path in cog_paths]
+    else:
+        expected_names = None
 
     repo_manager = await setup_repo_manager()
     install_path = await get_cog_install_path()
@@ -306,6 +307,14 @@ async def main_async() -> None:
     installed: List[str] = []
     try:
         repo = await add_test_repo(repo_manager, repo_name, repo_target, repo_branch)
+        if expected_names is None:
+            expected_names = sorted(cog.name for cog in repo.available_cogs)
+            if not expected_names:
+                raise RuntimeError(f"Repository {repo.name} does not contain any cogs to test")
+            print(
+                f"🧭 No COG_PATHS specified; exercising all {len(expected_names)} cogs from {repo.name}"
+            )
+        assert expected_names is not None
         installed = await install_cogs_from_repo(
             repo, install_path, requirements_path, expected_names
         )

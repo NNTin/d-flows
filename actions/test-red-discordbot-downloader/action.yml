@@ -78,13 +78,16 @@ runs:
           shopt -u nullglob dotglob
 
           if [[ ${#discovered_cogs[@]} -eq 0 ]]; then
-            echo "❌ Could not locate any cog directories with info.json in ${workspace}"
-            exit 1
+            if [[ -z "${REPO_URL}" ]]; then
+              echo "❌ Could not locate any cog directories with info.json in ${workspace}"
+              exit 1
+            fi
+            echo "ℹ️ No cog directories found in ${workspace}; all cogs from ${REPO_URL} will be exercised"
+          else
+            COG_PATHS="$(IFS=','; printf '%s' "${discovered_cogs[*]}")"
+            export COG_PATHS
+            echo "🧭 Using discovered cog list: ${COG_PATHS}"
           fi
-
-          COG_PATHS="$(IFS=','; printf '%s' "${discovered_cogs[*]}")"
-          export COG_PATHS
-          echo "🧭 Using discovered cog list: ${COG_PATHS}"
         fi
 
         LOG_PATH="${{ runner.temp }}/redbot-downloader.log"
@@ -96,25 +99,34 @@ runs:
           exit 1
         fi
 
-        IFS=',' read -ra RAW_COG_PATHS <<< "${COG_PATHS}"
+        IFS=',' read -ra RAW_COG_PATHS <<< "${COG_PATHS:-}"
         if [[ ${#RAW_COG_PATHS[@]} -eq 0 ]]; then
-          echo "❌ No cog paths provided"
-          exit 1
-        fi
-
-        for raw in "${RAW_COG_PATHS[@]}"; do
-          trimmed="$(echo "${raw}" | xargs || true)"
-          if [[ -z "${trimmed}" ]]; then
-            continue
-          fi
-          if [[ ! -d "${trimmed}" ]]; then
-            echo "❌ Cog path ${trimmed} does not exist"
+          if [[ -z "${REPO_URL}" ]]; then
+            echo "❌ No cog paths provided and no remote repo URL supplied"
             exit 1
           fi
-        done
+          echo "ℹ️ Cog path list is empty; all cogs found in ${REPO_URL} will be tested"
+        fi
+
+        if [[ ${#RAW_COG_PATHS[@]} -gt 0 ]]; then
+          for raw in "${RAW_COG_PATHS[@]}"; do
+            trimmed="$(echo "${raw}" | xargs || true)"
+            if [[ -z "${trimmed}" ]]; then
+              continue
+            fi
+            if [[ ! -d "${trimmed}" ]]; then
+              echo "❌ Cog path ${trimmed} does not exist"
+              exit 1
+            fi
+          done
+        fi
 
         REPO_DIR=""
         if [[ -z "${REPO_URL}" ]]; then
+          if [[ ${#RAW_COG_PATHS[@]} -eq 0 ]]; then
+            echo "❌ Cannot create temporary downloader repo without cog directories"
+            exit 1
+          fi
           REPO_DIR="$(mktemp -d)"
           echo "🗂️  Building temporary downloader repo at ${REPO_DIR}"
 
