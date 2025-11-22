@@ -138,8 +138,7 @@ def parse_env() -> tuple[List[Path], int, str, Path | None, str, str | None]:
             if not candidate_path.exists():
                 raise RuntimeError(f"Cog path does not exist: {candidate}")
             cog_paths.append(candidate_path.resolve())
-
-    if not repo_url_raw and not cog_paths:
+    elif not repo_url_raw:
         raise RuntimeError("COG_PATHS must list at least one directory when REPO_URL is empty")
 
     return cog_paths, port, repo_name_raw, repo_path, repo_url_raw, repo_branch
@@ -351,5 +350,39 @@ def main() -> None:
         sys.exit(1)
 
 
+def discover_local_cog_paths(base: Path) -> List[Path]:
+    base = base.expanduser().resolve()
+    if not base.exists():
+        raise RuntimeError(f"Workspace path does not exist: {base}")
+    if not base.is_dir():
+        raise RuntimeError(f"Workspace path is not a directory: {base}")
+    paths: List[Path] = []
+    for child in sorted(base.iterdir()):
+        if child.is_dir() and (child / "info.json").is_file():
+            paths.append(child.resolve())
+    return paths
+
+
+def run_discovery_cli(argv: Sequence[str]) -> None:
+    if len(argv) < 3:
+        print("Usage: test_downloader_cogs.py --discover-local <workspace>", file=sys.stderr)
+        sys.exit(2)
+    base = Path(argv[2])
+    try:
+        cogs = discover_local_cog_paths(base)
+    except Exception as exc:
+        print(f"❌ {exc}", file=sys.stderr)
+        sys.exit(1)
+    if not cogs:
+        print(f"❌ No cog directories with info.json were found in {base}", file=sys.stderr)
+        sys.exit(1)
+    root = base.expanduser().resolve()
+    rels = [cog.relative_to(root).as_posix() for cog in cogs]
+    print(",".join(rels))
+    sys.exit(0)
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "--discover-local":
+        run_discovery_cli(sys.argv)
     main()

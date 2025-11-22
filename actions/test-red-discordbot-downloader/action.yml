@@ -61,32 +61,31 @@ runs:
         }
         trap cleanup EXIT
 
-        if [[ -z "${COG_PATHS:-}" ]]; then
-          echo "🔍 No COG_PATHS provided; discovering cog directories containing info.json"
-          workspace="${GITHUB_WORKSPACE:-$PWD}"
-          workspace="${workspace%/}"
-          shopt -s nullglob dotglob
-          discovered_cogs=()
-          for dir in "${workspace}"/*; do
-            [[ -d "${dir}" ]] || continue
-            if [[ -f "${dir%/}/info.json" ]]; then
-              rel="${dir%/}"
-              rel="${rel#"${workspace}/"}"
-              discovered_cogs+=("${rel}")
-            fi
-          done
-          shopt -u nullglob dotglob
+        SCRIPT_PATH="${{ github.action_path }}/test_downloader_cogs.py"
+        if [[ ! -f "${SCRIPT_PATH}" ]]; then
+          echo "❌ Missing helper script at ${SCRIPT_PATH}"
+          exit 1
+        fi
 
-          if [[ ${#discovered_cogs[@]} -eq 0 ]]; then
-            if [[ -z "${REPO_URL}" ]]; then
-              echo "❌ Could not locate any cog directories with info.json in ${workspace}"
+        if [[ -z "${COG_PATHS:-}" ]]; then
+          if [[ -z "${REPO_URL}" ]]; then
+            echo "🔍 No COG_PATHS provided; discovering cog directories via helper script"
+            workspace="${GITHUB_WORKSPACE:-$PWD}"
+            workspace="${workspace%/}"
+            if ! discovered="$(python3 "${SCRIPT_PATH}" --discover-local "${workspace}")"; then
+              echo "❌ Failed to discover cog directories in ${workspace}"
               exit 1
             fi
-            echo "ℹ️ No cog directories found in ${workspace}; all cogs from ${REPO_URL} will be exercised"
-          else
-            COG_PATHS="$(IFS=','; printf '%s' "${discovered_cogs[*]}")"
+            discovered="${discovered//$'\n'/}"
+            if [[ -z "${discovered}" ]]; then
+              echo "❌ Helper script returned an empty cog list for ${workspace}"
+              exit 1
+            fi
+            COG_PATHS="${discovered}"
             export COG_PATHS
             echo "🧭 Using discovered cog list: ${COG_PATHS}"
+          else
+            echo "ℹ️ No COG_PATHS provided; will exercise every cog from ${REPO_URL}"
           fi
         fi
 
@@ -179,12 +178,6 @@ runs:
           exit 1
         fi
         echo "✅ Red-DiscordBot is running with PID ${BOT_PID}"
-
-        SCRIPT_PATH="${{ github.action_path }}/test_downloader_cogs.py"
-        if [[ ! -f "${SCRIPT_PATH}" ]]; then
-          echo "❌ Missing helper script at ${SCRIPT_PATH}"
-          exit 1
-        fi
 
         set +e
         python3 "${SCRIPT_PATH}"
