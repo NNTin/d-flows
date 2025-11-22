@@ -41,6 +41,9 @@ def _ws_timeout(seconds: float):
 WS_CONNECT_TIMEOUT = _ws_timeout(10)
 WS_WAIT_TIMEOUT = _ws_timeout(3)
 
+DEFAULT_INSTANCE_NAME = "tinkerer"
+TEMPORARY_INSTANCE_NAME = "temporary_red"
+
 
 class RPCError(RuntimeError):
     """Raised when the RPC server reports an error."""
@@ -139,7 +142,11 @@ def parse_env() -> tuple[List[Path], int, str, Path | None, str, str | None]:
                 raise RuntimeError(f"Cog path does not exist: {candidate}")
             cog_paths.append(candidate_path.resolve())
     elif not repo_url_raw:
-        raise RuntimeError("COG_PATHS must list at least one directory when REPO_URL is empty")
+        workspace_raw = os.environ.get("GITHUB_WORKSPACE") or os.getcwd()
+        workspace = Path(workspace_raw).expanduser()
+        cog_paths = discover_local_cog_paths(workspace)
+        if not cog_paths:
+            raise RuntimeError(f"No cog directories with info.json were found in {workspace}")
 
     return cog_paths, port, repo_name_raw, repo_path, repo_url_raw, repo_branch
 
@@ -195,8 +202,37 @@ def normalize_repo_name(name: str) -> str:
         raise RuntimeError(f"Invalid downloader repo name: {name}") from exc
 
 
+def resolved_instance_name() -> str:
+    candidate = os.environ.get("RED_INSTANCE_NAME", "").strip()
+    return candidate or DEFAULT_INSTANCE_NAME
+
+
+def ensure_basic_configuration(instance_hint: str) -> str:
+    config_path = Path(data_manager.config_file)
+    config_data: dict[str, object] = {}
+    if config_path.exists():
+        try:
+            with config_path.open(encoding="utf-8") as fp:
+                raw = json.load(fp)
+                if isinstance(raw, dict):
+                    config_data = raw
+        except json.JSONDecodeError:
+            config_data = {}
+    if not config_data:
+        print("ℹ️ No Red instance configuration detected; creating temporary instance for downloader tests")
+        data_manager.create_temp_config()
+        target = TEMPORARY_INSTANCE_NAME
+    else:
+        target = instance_hint if instance_hint in config_data else next(iter(config_data))
+        if target != instance_hint:
+            print(f"ℹ️ Using available instance '{target}' instead of '{instance_hint}'")
+    data_manager.load_basic_configuration(target)
+    return target
+
+
 async def setup_repo_manager() -> RepoManager:
-    data_manager.load_basic_configuration("tinkerer")
+    instance = ensure_basic_configuration(resolved_instance_name())
+    os.environ.setdefault("RED_INSTANCE_NAME", instance)
     manager = RepoManager()
     await manager.initialize()
     return manager

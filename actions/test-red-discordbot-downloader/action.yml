@@ -93,9 +93,12 @@ runs:
         echo "📁 Writing Red-DiscordBot logs to ${LOG_PATH}"
 
         CONFIG_FILE="${HOME}/.config/Red-DiscordBot/config.json"
+        INSTANCE_NAME="tinkerer"
+        USE_NO_INSTANCE=0
         if [[ ! -f "${CONFIG_FILE}" ]]; then
-          echo "❌ Missing Red-DiscordBot config at ${CONFIG_FILE}"
-          exit 1
+          echo "ℹ️ No Red-DiscordBot config found at ${CONFIG_FILE}; running Red with --no-instance"
+          USE_NO_INSTANCE=1
+          INSTANCE_NAME="temporary_red"
         fi
 
         IFS=',' read -ra RAW_COG_PATHS <<< "${COG_PATHS:-}"
@@ -162,13 +165,24 @@ runs:
         export RPC_PORT
         export REPO_BRANCH
 
+        export RED_INSTANCE_NAME="${INSTANCE_NAME}"
+
         echo "🚀 Launching Red-DiscordBot in the background"
-        python3 -m redbot tinkerer \
-          --token "${DISCORD_TOKEN}" \
-          --prefix "!" \
-          --rpc \
-          --rpc-port "${RPC_PORT}" \
-          > "${LOG_PATH}" 2>&1 &
+        if [[ "${USE_NO_INSTANCE}" -eq 1 ]]; then
+          python3 -m redbot --no-instance \
+            --token "${DISCORD_TOKEN}" \
+            --prefix "!" \
+            --rpc \
+            --rpc-port "${RPC_PORT}" \
+            > "${LOG_PATH}" 2>&1 &
+        else
+          python3 -m redbot "${INSTANCE_NAME}" \
+            --token "${DISCORD_TOKEN}" \
+            --prefix "!" \
+            --rpc \
+            --rpc-port "${RPC_PORT}" \
+            > "${LOG_PATH}" 2>&1 &
+        fi
         BOT_PID=$!
 
         sleep 5
