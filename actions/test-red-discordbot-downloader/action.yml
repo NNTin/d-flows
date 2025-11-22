@@ -64,16 +64,18 @@ runs:
         if [[ -z "${COG_PATHS:-}" ]]; then
           echo "🔍 No COG_PATHS provided; discovering cog directories containing info.json"
           workspace="${GITHUB_WORKSPACE:-$PWD}"
-          readarray -t discovered_cogs < <(
-            find "${workspace}" -mindepth 1 -maxdepth 1 -type d -print0 \
-            | while IFS= read -r -d '' dir; do
-                dir="${dir%/}"
-                if [[ -f "${dir}/info.json" ]]; then
-                  rel="${dir#"${workspace%/}/"}"
-                  echo "${rel}"
-                fi
-              done
-          )
+          workspace="${workspace%/}"
+          shopt -s nullglob dotglob
+          discovered_cogs=()
+          for dir in "${workspace}"/*; do
+            [[ -d "${dir}" ]] || continue
+            if [[ -f "${dir%/}/info.json" ]]; then
+              rel="${dir%/}"
+              rel="${rel#"${workspace}/"}"
+              discovered_cogs+=("${rel}")
+            fi
+          done
+          shopt -u nullglob dotglob
 
           if [[ ${#discovered_cogs[@]} -eq 0 ]]; then
             echo "❌ Could not locate any cog directories with info.json in ${workspace}"
