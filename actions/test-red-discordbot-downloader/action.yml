@@ -163,7 +163,8 @@ runs:
         export REPO_BRANCH
 
         echo "🚀 Launching Red-DiscordBot in the background"
-        python3 -m redbot tinkerer \
+        python3 -m redbot \
+          --no-instance \
           --token "${DISCORD_TOKEN}" \
           --prefix "!" \
           --rpc \
