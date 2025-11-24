@@ -1,0 +1,100 @@
+name: Documentation
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Deployment target"
+        required: true
+        default: latest
+        type: choice
+        options:
+          - latest
+          - stable
+      version:
+        description: "Version (required for stable deployments, e.g., 2.1.2)"
+        required: false
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-docs:
+    name: Deploy documentation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      deployed_version: ${{ steps.version.outputs.deployed_version }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch gh-pages branch
+        run: git fetch origin gh-pages:gh-pages || true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install MkDocs tooling
+        run: pip install mkdocs mkdocs-material mike
+
+      - name: Configure Git
+        run: |
+          git config user.name "nntin-bot"
+          git config user.email "48604375+nntin-bot@users.noreply.github.com"
+
+      - name: Determine version and deploy
+        id: deploy
+        env:
+          TARGET: ${{ github.event.inputs.target }}
+          VERSION: ${{ github.event.inputs.version }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+
+          target_input="${TARGET:-}"
+          version_input="${VERSION:-}"
+
+          if [[ "${EVENT_NAME}" != "workflow_dispatch" || -z "${target_input}" ]]; then
+            target_input="latest"
+          fi
+
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" && "${target_input}" == "stable" ]]; then
+            if [[ -z "${version_input}" ]]; then
+              echo "Version input is required for stable deployments." >&2
+              exit 1
+            fi
+
+            major="$(echo "${version_input}" | cut -d. -f1)"
+
+            echo "Deploying stable documentation for version ${version_input}"
+            mike deploy "${version_input}" stable --push --update-aliases
+
+            echo "Updating major alias v${major} -> ${version_input}"
+            mike alias "${version_input}" "v${major}" --push --update-aliases
+
+            echo "Setting stable as the default documentation"
+            mike set-default stable --push
+
+            deployed_version="${version_input}"
+          else
+            echo "Deploying latest documentation"
+            mike deploy edge latest --push --update-aliases
+            deployed_version="latest"
+          fi
+
+          echo "DEPLOYED_VERSION=${deployed_version}" >> "${GITHUB_ENV}"
+
+      - name: Set version output
+        id: version
+        run: echo "deployed_version=${DEPLOYED_VERSION}" >> "${GITHUB_OUTPUT}"
