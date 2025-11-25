@@ -338,6 +338,7 @@ jobs:
           # Trigger the docs workflow
           if gh workflow run docs.yml \
             --field version="$VERSION" \
+            --field target="stable" \
             --ref "$TARGET_BRANCH"; then
             echo "✅ Docs workflow triggered successfully" >> "$GITHUB_STEP_SUMMARY"
           else
