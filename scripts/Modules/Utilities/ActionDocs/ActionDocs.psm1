@@ -33,7 +33,7 @@ function Invoke-ActionDocs {
     $repoRoot = Get-RepositoryRoot
     Write-Message -Type Folder "Repository root detected at: $repoRoot"
 
-    $scriptRelativePath = 'scripts/Modules/Utilities/Documentation/generate_action_docs.py'
+    $scriptRelativePath = 'scripts/Modules/Utilities/ActionDocs/generate_action_docs.py'
     $scriptPath = Join-Path $repoRoot $scriptRelativePath
     if (-not (Test-Path -LiteralPath $scriptPath)) {
         Write-Message -Type Error "Action docs script missing at $scriptRelativePath"

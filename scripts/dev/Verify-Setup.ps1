@@ -5,49 +5,60 @@ $scriptDir = $PSScriptRoot
 $devDir = Split-Path -Parent $scriptDir
 $root = Split-Path -Parent $devDir
 
-# Add to PSModulePath only if not already present
-$projectModules = Join-Path $root 'scripts\Modules'
-$utilitiesModules = Join-Path $projectModules 'Utilities'
-$testModules = Join-Path $projectModules 'Tests'
+function Get-ModuleDirectoriesRecursively {
+    param([string]$Root)
 
-# Normalize paths (remove trailing backslashes)
-$allModulePaths = @($projectModules, $utilitiesModules, $testModules) | ForEach-Object { $_.TrimEnd('\') }
+    Get-ChildItem -Path $Root -Recurse -Directory | ForEach-Object {
+        $hasManifest = Get-ChildItem -Path $_.FullName -Filter '*.psd1' -File -ErrorAction Ignore
+        $hasModule = Get-ChildItem -Path $_.FullName -Filter '*.psm1' -File -ErrorAction Ignore
 
-# Unload any loaded module located in those folders or their subfolders
-Get-Module | ForEach-Object {
-    $modulePath = $_.ModuleBase.TrimEnd('\')
-    foreach ($path in $allModulePaths) {
-        # Add trailing backslash to ensure subfolder matches
-        if ($modulePath -like "$path*") {
-            Write-Host "Removing module $($_.Name) from $($_.ModuleBase)" -ForegroundColor Yellow
-            try {
-                Remove-Module -Name $_.Name -Force -ErrorAction Stop
-            }
-            catch {
-                Write-Warning "Failed to remove module $($_.Name): $_"
-            }
-            break  # Module matched, no need to check other paths
+        if ($hasManifest -or $hasModule) {
+            $_.FullName
         }
     }
 }
 
-Write-Host "After cleanup, Current Modules:" -ForegroundColor Cyan
-Get-Module
 
-# Function to prepend a path if missing
-function Add-ToPSModulePath {
-    param([string]$Path)
-    $separator = [System.IO.Path]::PathSeparator  # ✅ Cross-platform: ; on Windows, : on Linux
+function Unload-ModulesInPaths {
+    param([string[]]$ModulePaths)
 
-    if (-not ($env:PSModulePath -split $separator | ForEach-Object { $_.Trim() } | Where-Object { $_ -ieq $Path })) {
-        $env:PSModulePath = "$Path$separator$env:PSModulePath"
+    $normalized = $ModulePaths | ForEach-Object {
+        (Resolve-Path $_).Path.TrimEnd('\')
+    }
+
+    foreach ($m in Get-Module) {
+        if (-not $m.ModuleBase) { continue }
+
+        $base = $m.ModuleBase.TrimEnd('\')
+
+        if ($normalized | Where-Object { $base.StartsWith($_, 'OrdinalIgnoreCase') }) {
+            Write-Host "Unloading module $($m.Name)" -ForegroundColor Yellow
+            Remove-Module -Name $m.Name -Force -ErrorAction SilentlyContinue
+        }
     }
 }
 
-# Prepend both paths
-Add-ToPSModulePath $utilitiesModules
-Add-ToPSModulePath $projectModules
-Add-ToPSModulePath $testModules
+function Load-ModulesRecursively {
+    param([string[]]$Roots)
+
+    foreach ($root in $Roots) {
+        $dirs = Get-ModuleDirectoriesRecursively -Root $root |
+        Sort-Object { $_.Split('\').Count }
+
+        foreach ($d in $dirs) {
+            $moduleName = Split-Path $d -Leaf
+            Write-Host "Importing module: $moduleName" -ForegroundColor Green
+            Import-Module $d -Force -ErrorAction Continue
+        }
+    }
+}
+
+
+$projectModules = Join-Path $root 'scripts\Modules'
+
+Unload-ModulesInPaths -ModulePaths $projectModules
+Load-ModulesRecursively -ModulePaths $projectModules
+
 
 # --- Start d-flows Act Setup Verification ---
 Write-Message "`nd-flows Act Setup Verification"
@@ -130,9 +141,10 @@ Get-Module
 
 Write-Message -Type Info "From RepositoryUtils: $(New-TestStateDirectory)"
 
-Write-Message -Type Info "Test Modules: $testModules"
 Import-Module TestArtifacts -ErrorAction Stop
 Write-Message -Type Info "TestArtifacts Module Imported. Test State Directory: $TestStateDirectory"
 Write-Message -Type Info "Test Tags File: $TestTagsFile"
 
 Write-Message -Type Info "Test Commits Bundle: $TestCommitsBundle"
+
+Invoke-ActionDocs -ActionPath .\actions\discord-notify\action.yml -OutputPath "test.md"

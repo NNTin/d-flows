@@ -48,7 +48,11 @@ Prefer the PowerShell cmdlet when you already have the d-flows modules imported 
 
 1. Import the module:
    ```powershell
-   Import-Module "$PSScriptRoot/Modules/Utilities/Documentation/ActionDocs.psd1"
+   Import-Module ".\scripts\Modules\Utilities\Emojis\Emojis.psd1"
+   Import-Module ".\scripts\Modules\Utilities\Colors\Colors.psd1"
+   Import-Module ".\scripts\Modules\Utilities\MessageUtils\MessageUtils.psd1"
+   Import-Module ".\scripts\Modules\Utilities\RepositoryUtils\RepositoryUtils.psd1"
+   Import-Module ".\scripts\Modules\Utilities\Documentation\ActionDocs.psd1"
    ```
 2. Invoke the generator:
    ```powershell
