@@ -36,6 +36,7 @@ theme:
 nav:
   - Home: index.md
   - Developer Guide: developer.md
+  - MkDocs Usage: MKDOCS_USAGE.md
   - GitHub Actions:
       - Overview: actions.md
       - Discord:
