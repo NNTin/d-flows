@@ -18,6 +18,10 @@ function Invoke-ActionDocs {
 
     .PARAMETER PythonExecutable
         Optional override for the Python executable (defaults to python3/python).
+
+    .EXAMPLE
+        Invoke-ActionDocs -ActionPath "actions/discord-notify/action.yml" `
+                          -OutputPath "docs/actions/discord-notify.md"
     #>
     [CmdletBinding()]
     param(

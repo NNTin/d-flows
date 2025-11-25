@@ -18,8 +18,8 @@ function Get-ModuleDirectoriesRecursively {
     }
 }
 
-
-function Unload-ModulesInPaths {
+function Remove-ModulesInPaths {
+    [CmdletBinding(SupportsShouldProcess)]
     param([string[]]$ModulePaths)
 
     $normalized = $ModulePaths | ForEach-Object {
@@ -32,13 +32,16 @@ function Unload-ModulesInPaths {
         $base = $m.ModuleBase.TrimEnd('\')
 
         if ($normalized | Where-Object { $base.StartsWith($_, 'OrdinalIgnoreCase') }) {
-            Write-Host "Unloading module $($m.Name)" -ForegroundColor Yellow
-            Remove-Module -Name $m.Name -Force -ErrorAction SilentlyContinue
+
+            if ($PSCmdlet.ShouldProcess($m.Name, "Remove loaded module")) {
+                Write-Host "Unloading module $($m.Name)" -ForegroundColor Yellow
+                Remove-Module -Name $m.Name -Force -ErrorAction SilentlyContinue
+            }
         }
     }
 }
 
-function Load-ModulesRecursively {
+function Import-ModulesRecursively {
     param([string[]]$Roots)
 
     foreach ($root in $Roots) {
@@ -56,8 +59,8 @@ function Load-ModulesRecursively {
 
 $projectModules = Join-Path $root 'scripts\Modules'
 
-Unload-ModulesInPaths -ModulePaths $projectModules
-Load-ModulesRecursively -ModulePaths $projectModules
+Remove-ModulesInPaths -ModulePaths $projectModules
+Import-ModulesRecursively -ModulePaths $projectModules
 
 
 # --- Start d-flows Act Setup Verification ---
