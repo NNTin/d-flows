@@ -1,28 +1,28 @@
 name: "Test Red-DiscordBot cogs via downloader"
-description: "Installs and validates cogs through Red's downloader cog using a temporary git repository."
+description: "Exercises cogs installed through Red's downloader by cloning a repo (local or remote), installing the targets, and running RPC smoke tests."
 
 inputs:
   token:
-    description: "Discord bot token used when starting Red-DiscordBot"
+    description: "Token injected into the downloader-driven `redbot` run so the bot can authenticate with Discord."
     required: true
   cog_paths:
-    description: "Comma-separated list of cog directories, empty takes all with info.json in repo"
+    description: "Comma-separated list of local cog directories to mirror into the temporary downloader repo; leave empty to auto-discover (local) or test every cog in the remote repo."
     required: false
     default: ""
   repo_name:
-    description: "Name assigned to the temporary downloader repository"
+    description: "Display name passed to the downloader helpers and logs; defaults to 'test-repo'."
     required: false
     default: "test-repo"
   repo_url:
-    description: "Optional repository URL; leave empty to use the temporary local repo"
+    description: "Remote Git repository cloned before invoking downloader; when blank the action builds a throwaway repo from the provided cog_paths."
     required: false
     default: ""
   repo_branch:
-    description: "Optional branch name to use when cloning the repository"
+    description: "Branch or ref to checkout when repo_url is provided; blank means use the default branch advertised by the remote."
     required: false
     default: ""
   rpc_port:
-    description: "Port Red-DiscordBot RPC server listens on"
+    description: "TCP port exposed via `--rpc-port`; defaults to 6133 when not specified."
     required: false
     default: "6133"
 

@@ -1,15 +1,15 @@
 name: "Setup Red-DiscordBot"
-description: "Sets up Red-DiscordBot configuration"
+description: "Creates the tinkerer instance config and runs a dry-run to validate authentication before other Red-DiscordBot steps."
 
 inputs:
   token:
-    description: "Discord bot token"
+    description: "Token passed to `redbot tinkerer --token`; required so the dry-run can authenticate against the Discord API."
     required: true
   prefix:
-    description: "Command prefix for the bot"
+    description: "Command prefix supplied to the dry-run invocation; defaults to '!'."
     default: "!"
   optional_args:
-    description: "Optional extra arguments for redbot"
+    description: "Additional CLI switches appended to the dry-run command (for example `--log-level debug`); blank by default."
     required: false
     default: ""
 
