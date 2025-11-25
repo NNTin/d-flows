@@ -36,11 +36,14 @@ theme:
 nav:
   - Home: index.md
   - Developer Guide: developer.md
-  - GitHub Actions: actions.md
-  - Versioning Strategy: VERSIONING.md
-  - ACT Testing:
-      - Setup Guide: ACT_SETUP_GUIDE.md
-      - Usage Guide: ACT_USAGE.md
+  - GitHub Actions:
+      - Overview: actions.md
+      - Discord:
+          - Discord Notify: actions/discord-notify.md
+  # - Versioning Strategy: VERSIONING.md
+  # - ACT Testing:
+  #     - Setup Guide: ACT_SETUP_GUIDE.md
+  #     - Usage Guide: ACT_USAGE.md
 
 plugins:
   - search
