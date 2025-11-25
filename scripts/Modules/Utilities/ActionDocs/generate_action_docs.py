@@ -65,7 +65,7 @@ def parse_action_yaml(path: Path) -> ActionMetadata:
     current_input: Optional[ActionInput] = None
     in_inputs = False
 
-    for raw_line in path.read_text().splitlines():
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
         if not raw_line.strip() or raw_line.strip().startswith("#"):
             continue
 
@@ -153,7 +153,7 @@ def merge_with_existing(output_path: Path, generated_section: str) -> str:
     if not output_path.exists():
         return generated_section + "## Usage\n\n<!-- Add usage examples below -->\n"
 
-    existing = output_path.read_text()
+    existing = output_path.read_text(encoding="utf-8")
     if AUTOGEN_START not in existing or AUTOGEN_END not in existing:
         raise RuntimeError(
             f"{output_path} exists but is missing autogen markers ({AUTOGEN_START} / {AUTOGEN_END})."
@@ -161,7 +161,11 @@ def merge_with_existing(output_path: Path, generated_section: str) -> str:
 
     before, _, rest = existing.partition(AUTOGEN_START)
     _, _, after = rest.partition(AUTOGEN_END)
-    return before + generated_section + after
+    normalized_generated = generated_section.rstrip("\n")
+    normalized_after = after.lstrip("\n")
+    if normalized_after:
+        return f"{before}{normalized_generated}\n\n{normalized_after}"
+    return f"{before}{normalized_generated}\n"
 
 
 def main() -> None:
@@ -178,7 +182,7 @@ def main() -> None:
     final_content = merge_with_existing(output_path, generated_section)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(final_content)
+    output_path.write_text(final_content, encoding="utf-8")
 
 
 if __name__ == "__main__":

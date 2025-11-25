@@ -147,4 +147,4 @@ Write-Message -Type Info "Test Tags File: $TestTagsFile"
 
 Write-Message -Type Info "Test Commits Bundle: $TestCommitsBundle"
 
-Invoke-ActionDocs -ActionPath .\actions\discord-notify\action.yml -OutputPath "test.md"
+Invoke-ActionDocs -ActionPath .\actions\discord-notify\action.yml -OutputPath .\docs\actions\discord-notify.md
