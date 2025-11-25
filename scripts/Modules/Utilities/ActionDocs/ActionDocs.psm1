@@ -1,4 +1,4 @@
-# ActionDocs.psm1
+﻿# ActionDocs.psm1
 # Wraps the Python-based action documentation generator with repository-aware helpers.
 
 function Get-ActionDocsRelativePath {

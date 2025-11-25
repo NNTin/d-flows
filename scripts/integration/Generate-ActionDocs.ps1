@@ -1,4 +1,4 @@
-<#!
+﻿<#!
 .SYNOPSIS
     Generates Markdown documentation for every composite action.
 

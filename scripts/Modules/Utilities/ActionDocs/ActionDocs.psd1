@@ -3,7 +3,7 @@
     # Module metadata
     # ──────────────────────────────
     RootModule           = 'ActionDocs.psm1'
-    ModuleVersion        = '1.1.2'
+    ModuleVersion        ='1.2.0'
     GUID                 = '3707fb61-1682-404b-80c2-7b70408553f2'
     Author               = 'Tin Nguyen'
     CompanyName          = 'N/A'
