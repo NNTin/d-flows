@@ -61,7 +61,7 @@ $files = Get-ChildItem -Path $root -Recurse -Include *.ps1, *.psm1, *.psd1
 
 foreach ($file in $files) {
     try {
-        Write-Message -Type "Info" "Processing $($file.FullName)..."
+        Write-Message -Type Info "Processing $($file.FullName)..."
 
         # Read the file content
         $content = Get-Content -Path $file.FullName -Raw
@@ -70,8 +70,8 @@ foreach ($file in $files) {
         [System.IO.File]::WriteAllText($file.FullName, $content, [System.Text.Encoding]::UTF8)
     }
     catch {
-        Write-Message -Type "Warning" "Failed to process $($file.FullName): $_"
+        Write-Message -Type Warning "Failed to process $($file.FullName): $_"
     }
 }
 
-Write-Message -Type "Success" "All files processed. BOM encoding applied where necessary."
+Write-Message -Type Success "All files processed. BOM encoding applied where necessary."

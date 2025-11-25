@@ -171,7 +171,7 @@ Get-Module | ForEach-Object {
                 Remove-Module -Name $_.Name -Force -ErrorAction Stop
             }
             catch {
-                Write-Message -Type "Error" "Failed to remove module $($_.Name): $_"
+                Write-Message -Type Error "Failed to remove module $($_.Name): $_"
             }
             break  # Module matched, no need to check other paths
         }
@@ -256,21 +256,21 @@ function Remove-TestStateDirectory {
 
     try {
         if (Test-Path $Path) {
-            Write-Message -Type "Debug" "Removing test state directory: $Path"
+            Write-Message -Type Debug "Removing test state directory: $Path"
 
             if ($PSCmdlet.ShouldProcess("$Path", "Remove-Item")) {
                 Remove-Item -Path $Path -Recurse -Force -ErrorAction Stop
             }
-            Write-Message -Type "Debug" "Test state directory removed successfully"
+            Write-Message -Type Debug "Test state directory removed successfully"
             return $true
         }
         else {
-            Write-Message -Type "Debug" "Test state directory does not exist: $Path"
+            Write-Message -Type Debug "Test state directory does not exist: $Path"
             return $true
         }
     }
     catch {
-        Write-Message -Type "Warning" "Failed to remove test state directory: $_"
+        Write-Message -Type Warning "Failed to remove test state directory: $_"
         return $false
     }
 }
@@ -338,7 +338,7 @@ function ConvertTo-DockerMountPath {
     try {
         # Get full absolute path
         $fullPath = [System.IO.Path]::GetFullPath($Path)
-        Write-Message -Type "Debug" "Converting path for Docker: $fullPath"
+        Write-Message -Type Debug "Converting path for Docker: $fullPath"
 
         # Detect if running on Windows
         $IsOnWindows = if ($PSVersionTable.PSVersion.Major -ge 6) {
@@ -352,7 +352,7 @@ function ConvertTo-DockerMountPath {
             # Handle UNC paths (network paths like \\server\share)
             if ($fullPath -match '^\\\\') {
                 $dockerPath = $fullPath -replace '\\', '/' -replace '^//', '//'
-                Write-Message -Type "Debug" "Converted UNC path to Docker format: $dockerPath"
+                Write-Message -Type Debug "Converted UNC path to Docker format: $dockerPath"
                 return $dockerPath
             }
 
@@ -361,7 +361,7 @@ function ConvertTo-DockerMountPath {
                 $driveLetter = [char]::ToLower([char]($matches[1]))
                 $pathWithoutDrive = $fullPath.Substring(2)
                 $dockerPath = "/$driveLetter$($pathWithoutDrive -replace '\\', '/')"
-                Write-Message -Type "Debug" "Converted Windows path to Docker format: $dockerPath"
+                Write-Message -Type Debug "Converted Windows path to Docker format: $dockerPath"
                 return $dockerPath
             }
 
@@ -369,12 +369,12 @@ function ConvertTo-DockerMountPath {
         }
         else {
             # On Linux, path should already be in correct format
-            Write-Message -Type "Debug" "Linux path already in Docker format: $fullPath"
+            Write-Message -Type Debug "Linux path already in Docker format: $fullPath"
             return $fullPath
         }
     }
     catch {
-        Write-Message -Type "Error" "Failed to convert path to Docker format: $_"
+        Write-Message -Type Error "Failed to convert path to Docker format: $_"
         throw $_
     }
 }
@@ -406,14 +406,14 @@ function Write-TestHeader {
 
     Write-Message ""
     Write-Message "═══════════════════════════════════════════════════════════════════════"
-    Write-Message -Type "Test" "$TestName"
+    Write-Message -Type Test "$TestName"
     if ($TestDescription) {
-        Write-Message -Type "Info" "   $TestDescription"
+        Write-Message -Type Info "   $TestDescription"
     }
     Write-Message "═══════════════════════════════════════════════════════════════════════"
     Write-Message ""
 
-    Write-Message -Type "Debug" "Starting test: $TestName"
+    Write-Message -Type Debug "Starting test: $TestName"
 }
 
 <#
@@ -461,7 +461,7 @@ function Write-TestResult {
     Write-Message "Test ${status}: $TestName ($durationText)"
 
     if ($Message) {
-        Write-Message -Type "Info" "   $Message"
+        Write-Message -Type Info "   $Message"
     }
 
     Write-Message ""
@@ -494,7 +494,7 @@ function Get-FixtureContent {
         [string]$FixturePath
     )
 
-    Write-Message -Type "Debug" "Parsing fixture: $FixturePath"
+    Write-Message -Type Debug "Parsing fixture: $FixturePath"
 
     # Validate file exists
     if (-not (Test-Path $FixturePath)) {
@@ -509,7 +509,7 @@ function Get-FixtureContent {
         # Add file path to fixture object
         $fixture | Add-Member -NotePropertyName "FilePath" -NotePropertyValue $FixturePath -Force
 
-        Write-Message -Type "Debug" "Parsed fixture: $($fixture.name) with $($fixture.steps.Count) steps"
+        Write-Message -Type Debug "Parsed fixture: $($fixture.name) with $($fixture.steps.Count) steps"
 
         return $fixture
     }
@@ -530,7 +530,7 @@ function Get-FixtureContent {
 
 .EXAMPLE
     $fixtures = Get-AllIntegrationTestFixtures
-    Write-Message -Type "Info" "Found $($fixtures.Count) fixtures"
+    Write-Message -Type Info "Found $($fixtures.Count) fixtures"
 
 .NOTES
     Returns array of fixture objects with file paths.
@@ -541,7 +541,7 @@ function Get-AllIntegrationTestFixtures {
         [string]$TestsDirectory = $IntegrationTestsDirectory
     )
 
-    Write-Message -Type "Debug" "Scanning for fixtures in: $TestsDirectory"
+    Write-Message -Type Debug "Scanning for fixtures in: $TestsDirectory"
 
     $repoRoot = Get-RepositoryRoot
     $fullTestsPath = Join-Path $repoRoot $TestsDirectory
@@ -559,12 +559,12 @@ function Get-AllIntegrationTestFixtures {
             $fixtures += $fixture
         }
         catch {
-            Write-Message -Type "Warning" "Failed to parse fixture '$($file.Name)': $_"
+            Write-Message -Type Warning "Failed to parse fixture '$($file.Name)': $_"
             continue
         }
     }
 
-    Write-Message -Type "Debug" "Found $($fixtures.Count) valid fixtures"
+    Write-Message -Type Debug "Found $($fixtures.Count) valid fixtures"
 
     return $fixtures
 }
@@ -597,7 +597,7 @@ function Find-FixtureByName {
         [string]$TestsDirectory = $IntegrationTestsDirectory
     )
 
-    Write-Message -Type "Debug" "Searching for fixture with name: $TestName"
+    Write-Message -Type Debug "Searching for fixture with name: $TestName"
 
     $fixtures = Get-AllIntegrationTestFixtures -TestsDirectory $TestsDirectory
 
@@ -609,7 +609,7 @@ function Find-FixtureByName {
         throw "No fixture found matching name: $TestName"
     }
 
-    Write-Message -Type "Debug" "Found fixture: $($matchingFixture.name)"
+    Write-Message -Type Debug "Found fixture: $($matchingFixture.name)"
 
     return $matchingFixture
 }
@@ -626,28 +626,28 @@ function Find-FixtureByName {
     Executes 'act --version' to verify act is installed.
 
 .EXAMPLE
-    if (Test-ActAvailable) { Write-Message -Type "Info" "act is available" }
+    if (Test-ActAvailable) { Write-Message -Type Info "act is available" }
 
 .NOTES
     Returns $true if available, $false otherwise.
     Provides installation instructions if not found.
 #>
 function Test-ActAvailable {
-    Write-Message -Type "Debug" "Checking if act is available"
+    Write-Message -Type Debug "Checking if act is available"
 
     try {
         $actVersion = & $ActCommand --version 2>&1
         if ($LASTEXITCODE -eq 0) {
-            Write-Message -Type "Debug" "act version: $actVersion"
+            Write-Message -Type Debug "act version: $actVersion"
             return $true
         }
     }
     catch {
-        Write-Message -Type "Error" "act not found. Install using: winget install nektos.act"
+        Write-Message -Type Error "act not found. Install using: winget install nektos.act"
         return $false
     }
 
-    Write-Message -Type "Error" "act not found. Install using: winget install nektos.act"
+    Write-Message -Type Error "act not found. Install using: winget install nektos.act"
     return $false
 }
 
@@ -659,28 +659,28 @@ function Test-ActAvailable {
     Executes 'docker ps' to verify Docker daemon is accessible.
 
 .EXAMPLE
-    if (Test-DockerRunning) { Write-Message -Type "Info" "Docker is running" }
+    if (Test-DockerRunning) { Write-Message -Type Info "Docker is running" }
 
 .NOTES
     Returns $true if running, $false otherwise.
 #>
 function Test-DockerRunning {
-    Write-Message -Type "Debug" "Checking if Docker is running"
+    Write-Message -Type Debug "Checking if Docker is running"
 
     try {
         $dockerPs = docker ps 2>&1
         if ($LASTEXITCODE -eq 0) {
-            Write-Message -Type "Debug" "Docker is running"
-            Write-Message -Type "Debug" "$dockerPs"
+            Write-Message -Type Debug "Docker is running"
+            Write-Message -Type Debug "$dockerPs"
             return $true
         }
     }
     catch {
-        Write-Message -Type "Error" "Docker is not running. Start Docker Desktop and try again."
+        Write-Message -Type Error "Docker is not running. Start Docker Desktop and try again."
         return $false
     }
 
-    Write-Message -Type "Error" "Docker is not running. Start Docker Desktop and try again."
+    Write-Message -Type Error "Docker is not running. Start Docker Desktop and try again."
     return $false
 }
 
@@ -738,7 +738,7 @@ function Invoke-ActWorkflow {
         [bool]$CaptureOutput = $true
     )
 
-    Write-Message -Type "Workflow" "Preparing to run workflow: $WorkflowFile"
+    Write-Message -Type Workflow "Preparing to run workflow: $WorkflowFile"
 
     # Build act command
     $actArgs = @(
@@ -783,8 +783,8 @@ function Invoke-ActWorkflow {
     # Mount test state directory into container for test tag access
     try {
         $dockerTestStatePath = ConvertTo-DockerMountPath -Path $TestStateDirectory
-        Write-Message -Type "Debug" "Mounting volume: $TestStateDirectory -> $containerTestStatePath"
-        Write-Message -Type "Debug" "Docker path: $dockerTestStatePath"
+        Write-Message -Type Debug "Mounting volume: $TestStateDirectory -> $containerTestStatePath"
+        Write-Message -Type Debug "Docker path: $dockerTestStatePath"
 
         $mountOption = "--mount type=bind,src=$dockerTestStatePath,dst=$containerTestStatePath"
 
@@ -795,31 +795,31 @@ function Invoke-ActWorkflow {
             try {
                 $hostUid = & id -u
                 $hostGid = & id -g
-                Write-Message -Type "Debug" "Running on Linux. Setting container user: $($hostUid):$($hostGid)"
+                Write-Message -Type Debug "Running on Linux. Setting container user: $($hostUid):$($hostGid)"
                 $mountOption += " --user $($hostUid):$($hostGid)"
             }
             catch {
-                Write-Message -Type "Warning" "Failed to determine host UID/GID. Container may run as root."
+                Write-Message -Type Warning "Failed to determine host UID/GID. Container may run as root."
             }
         }
         else {
-            Write-Message -Type "Debug" "Running on Windows. Skipping --user option."
+            Write-Message -Type Debug "Running on Windows. Skipping --user option."
         }
 
         $actArgs += "--container-options"
         $actArgs += $mountOption
     }
     catch {
-        Write-Message -Type "Warning" "Failed to convert test state path for Docker mount: $_"
-        Write-Message -Type "Info" "Continuing without volume mount (workflows may not access test state)"
+        Write-Message -Type Warning "Failed to convert test state path for Docker mount: $_"
+        Write-Message -Type Info "Continuing without volume mount (workflows may not access test state)"
     }
 
     # Execute act and capture output
     $startTime = Get-Date
 
     try {
-        Write-Message -Type "Debug" "ActCommand: $ActCommand"
-        Write-Message -Type "Debug" "actArgs: $actArgs"
+        Write-Message -Type Debug "ActCommand: $ActCommand"
+        Write-Message -Type Debug "actArgs: $actArgs"
         if ($CaptureOutput) {
             $output = & $ActCommand @actArgs 2>&1 | Out-String
         }
@@ -832,7 +832,7 @@ function Invoke-ActWorkflow {
         $endTime = Get-Date
         $duration = $endTime - $startTime
 
-        Write-Message -Type "Debug" "Act execution completed in $($duration.TotalSeconds) seconds with exit code: $exitCode"
+        Write-Message -Type Debug "Act execution completed in $($duration.TotalSeconds) seconds with exit code: $exitCode"
 
         # Parse outputs from workflow
         $outputs = Get-ActOutput -Output $output
@@ -846,7 +846,7 @@ function Invoke-ActWorkflow {
         }
     }
     catch {
-        Write-Message -Type "Error" "Act execution failed: $_"
+        Write-Message -Type Error "Act execution failed: $_"
         throw $_
     }
 }
@@ -874,7 +874,7 @@ function Get-ActOutput {
         [string]$Output
     )
 
-    Write-Message -Type "Debug" "Parsing act output for OUTPUT: markers"
+    Write-Message -Type Debug "Parsing act output for OUTPUT: markers"
 
     $outputs = @{}
     $lines = $Output -split "`n"
@@ -884,11 +884,11 @@ function Get-ActOutput {
             $key = $matches[1].Trim()
             $value = $matches[2].Trim()
             $outputs[$key] = $value
-            Write-Message -Type "Debug" "Found output: $key = $value"
+            Write-Message -Type Debug "Found output: $key = $value"
         }
     }
 
-    Write-Message -Type "Debug" "Parsed $($outputs.Count) outputs"
+    Write-Message -Type Debug "Parsed $($outputs.Count) outputs"
 
     return $outputs
 }
@@ -930,7 +930,7 @@ function Invoke-ValidationCheck {
     )
 
     $checkType = $Check.type
-    Write-Message -Type "Validation" "Executing validation: $checkType"
+    Write-Message -Type Validation "Executing validation: $checkType"
 
     try {
         switch ($checkType) {
@@ -1054,7 +1054,7 @@ function Invoke-SetupGitState {
 
     $scenario = $Step.scenario
 
-    Write-Message -Type "Debug" "Applying scenario: $scenario"
+    Write-Message -Type Debug "Applying scenario: $scenario"
 
     try {
         # Call Invoke-TestScenario from Setup-TestScenario.ps1
@@ -1069,7 +1069,7 @@ function Invoke-SetupGitState {
             }
         }
 
-        Write-Message -Type "Debug" "Scenario '$scenario' applied successfully"
+        Write-Message -Type Debug "Scenario '$scenario' applied successfully"
 
         return @{
             Success         = $true
@@ -1123,7 +1123,7 @@ function Invoke-RunWorkflow {
     $expectedFailure = if ($Step.expectedFailure) { $Step.expectedFailure } else { $false }
     $expectedErrorMessage = $Step.expectedErrorMessage
 
-    Write-Message -Type "Workflow" "Running workflow: $workflow with fixture: $fixture"
+    Write-Message -Type Workflow "Running workflow: $workflow with fixture: $fixture"
 
     try {
         # Call Invoke-ActWorkflow
@@ -1188,49 +1188,49 @@ function Invoke-RunWorkflow {
             }
         }
 
-        Write-Message -Type "Debug" "Workflow execution result: $success"
+        Write-Message -Type Debug "Workflow execution result: $success"
 
         # Update test state files after workflow execution
-        Write-Message -Type "Debug" "Updating test state files after workflow execution"
+        Write-Message -Type Debug "Updating test state files after workflow execution"
 
         # Calculate test-only tags (exclude production tags)
         $productionTags = if ($TestContext -and $TestContext.ProductionTags) { $TestContext.ProductionTags } else { @() }
         $allCurrentTags = @(git tag -l)
         $testTags = @($allCurrentTags | Where-Object { $_ -notin $productionTags })
-        Write-Message -Type "Debug" "Filtering tags: $($allCurrentTags.Count) total, $($productionTags.Count) production, $($testTags.Count) test tags to export"
+        Write-Message -Type Debug "Filtering tags: $($allCurrentTags.Count) total, $($productionTags.Count) production, $($testTags.Count) test tags to export"
 
         # Get all current branches
         $allCurrentBranches = @(git branch -l | ForEach-Object { $_.TrimStart('*').Trim() } | Where-Object { $_ -and $_ -notmatch '^\(HEAD' })
-        Write-Message -Type "Debug" "Found $($allCurrentBranches.Count) branches to export"
+        Write-Message -Type Debug "Found $($allCurrentBranches.Count) branches to export"
 
         # Export current tags to test-tags.txt (only test tags)
         try {
             $tagsOutputPath = Export-TestTagsFile -Tags $testTags -OutputPath (Join-Path $TestStateDirectory "test-tags.txt")
-            Write-Message -Type "Debug" "Test tags file updated: $tagsOutputPath"
+            Write-Message -Type Debug "Test tags file updated: $tagsOutputPath"
         }
         catch {
-            Write-Message -Type "Warning" "Failed to update test-tags.txt: $_"
+            Write-Message -Type Warning "Failed to update test-tags.txt: $_"
         }
 
         # Export current branches to test-branches.txt
         try {
             $branchesOutputPath = Export-TestBranchesFile -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory "test-branches.txt")
-            Write-Message -Type "Debug" "Test branches file updated: $branchesOutputPath"
+            Write-Message -Type Debug "Test branches file updated: $branchesOutputPath"
         }
         catch {
-            Write-Message -Type "Warning" "Failed to update test-branches.txt: $_"
+            Write-Message -Type Warning "Failed to update test-branches.txt: $_"
         }
 
         # Export commit bundle to test-commits.bundle (only commits referenced by test tags and branches)
         try {
             $bundleOutputPath = Export-TestCommitsBundle -Tags $testTags -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory $TestCommitsBundle)
-            Write-Message -Type "Debug" "Test commits bundle updated: $bundleOutputPath"
+            Write-Message -Type Debug "Test commits bundle updated: $bundleOutputPath"
         }
         catch {
-            Write-Message -Type "Warning" "Failed to update test-commits.bundle: $_"
+            Write-Message -Type Warning "Failed to update test-commits.bundle: $_"
         }
 
-        Write-Message -Type "Debug" "Test state synchronization completed"
+        Write-Message -Type Debug "Test state synchronization completed"
 
         return @{
             Success           = $success
@@ -1285,13 +1285,13 @@ function Invoke-ValidateState {
 
     $checks = $Step.checks
 
-    Write-Message -Type "Validation" "Performing $($checks.Count) validation checks"
+    Write-Message -Type Validation "Performing $($checks.Count) validation checks"
 
     # Extract ActResult from test context if available
     $lastActResult = $null
     if ($TestContext -and $TestContext.ContainsKey('LastActResult')) {
         $lastActResult = $TestContext.LastActResult
-        Write-Message -Type "Debug" "Using ActResult from test context"
+        Write-Message -Type Debug "Using ActResult from test context"
     }
 
     $checkResults = @()
@@ -1308,7 +1308,7 @@ function Invoke-ValidateState {
             }
             else {
                 $failedCount++
-                Write-Message -Type "Warning" "Validation failed: $($result.Message)"
+                Write-Message -Type Warning "Validation failed: $($result.Message)"
             }
         }
         catch {
@@ -1324,7 +1324,7 @@ function Invoke-ValidateState {
     $success = ($failedCount -eq 0)
     $message = "Validation: $passedCount passed, $failedCount failed"
 
-    Write-Message -Type "Debug" "$message"
+    Write-Message -Type Debug "$message"
 
     return @{
         Success      = $success
@@ -1353,8 +1353,8 @@ function Invoke-ValidateState {
 
 .EXAMPLE
     $result = Invoke-StepCommand "git commit --allow-empty -m 'Trigger release v0.2.1'"
-    Write-Message -Type "Debug" "Exit code: $($result.ExitCode)"
-    Write-Message -Type "Info" "Output: $($result.Output)"
+    Write-Message -Type Debug "Exit code: $($result.ExitCode)"
+    Write-Message -Type Info "Output: $($result.Output)"
 
 .EXAMPLE
     Invoke-StepCommand "docker build -t myimage ." -VerboseOutput
@@ -1384,7 +1384,7 @@ function Invoke-StepCommand {
     }
 
     if ($VerboseOutput) {
-        Write-Message -Type "Debug" "Executing: $exe $($argsCommand -join ' ')"
+        Write-Message -Type Debug "Executing: $exe $($argsCommand -join ' ')"
     }
 
     # Execute command, capture stdout + stderr
@@ -1392,8 +1392,8 @@ function Invoke-StepCommand {
     $exitCode = $LASTEXITCODE
 
     if ($VerboseOutput) {
-        Write-Message -Type "Debug" "Exit code: $exitCode"
-        Write-Message -Type "Debug" "Output: $output"
+        Write-Message -Type Debug "Exit code: $exitCode"
+        Write-Message -Type Debug "Output: $output"
     }
 
     return [PSCustomObject]@{
@@ -1441,7 +1441,7 @@ function Invoke-ExecuteCommand {
         Write-Message -Type Debug "Windows OS detected. Skipping chmod."
     }
 
-    Write-Message -Type "Debug" "Executing command: $command"
+    Write-Message -Type Debug "Executing command: $command"
 
     try {
         $result = Invoke-StepCommand $command -VerboseOutput
@@ -1451,49 +1451,49 @@ function Invoke-ExecuteCommand {
 
         $success = ($exitCode -eq 0)
 
-        Write-Message -Type "Debug" "Command completed with exit code: $exitCode"
+        Write-Message -Type Debug "Command completed with exit code: $exitCode"
 
         # Update test state files after command execution
-        Write-Message -Type "Debug" "Updating test state files after command execution"
+        Write-Message -Type Debug "Updating test state files after command execution"
 
         # Calculate test-only tags (exclude production tags)
         $productionTags = if ($TestContext -and $TestContext.ProductionTags) { $TestContext.ProductionTags } else { @() }
         $allCurrentTags = @(git tag -l)
         $testTags = @($allCurrentTags | Where-Object { $_ -notin $productionTags })
-        Write-Message -Type "Debug" "Filtering tags: $($allCurrentTags.Count) total, $($productionTags.Count) production, $($testTags.Count) test tags to export"
+        Write-Message -Type Debug "Filtering tags: $($allCurrentTags.Count) total, $($productionTags.Count) production, $($testTags.Count) test tags to export"
 
         # Get all current branches
         $allCurrentBranches = @(git branch -l | ForEach-Object { $_.TrimStart('*').Trim() } | Where-Object { $_ -and $_ -notmatch '^\(HEAD' })
-        Write-Message -Type "Debug" "Found $($allCurrentBranches.Count) branches to export"
+        Write-Message -Type Debug "Found $($allCurrentBranches.Count) branches to export"
 
         # Export current tags to test-tags.txt (only test tags)
         try {
             $tagsOutputPath = Export-TestTagsFile -Tags $testTags -OutputPath (Join-Path $TestStateDirectory "test-tags.txt")
-            Write-Message -Type "Debug" "Test tags file updated: $tagsOutputPath"
+            Write-Message -Type Debug "Test tags file updated: $tagsOutputPath"
         }
         catch {
-            Write-Message -Type "Warning" "Failed to update test-tags.txt: $_"
+            Write-Message -Type Warning "Failed to update test-tags.txt: $_"
         }
 
         # Export current branches to test-branches.txt
         try {
             $branchesOutputPath = Export-TestBranchesFile -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory "test-branches.txt")
-            Write-Message -Type "Debug" "Test branches file updated: $branchesOutputPath"
+            Write-Message -Type Debug "Test branches file updated: $branchesOutputPath"
         }
         catch {
-            Write-Message -Type "Warning" "Failed to update test-branches.txt: $_"
+            Write-Message -Type Warning "Failed to update test-branches.txt: $_"
         }
 
         # Export commit bundle to test-commits.bundle (only commits referenced by test tags and branches)
         try {
             $bundleOutputPath = Export-TestCommitsBundle -Tags $testTags -Branches $allCurrentBranches -OutputPath (Join-Path $TestStateDirectory $TestCommitsBundle)
-            Write-Message -Type "Debug" "Test commits bundle updated: $bundleOutputPath"
+            Write-Message -Type Debug "Test commits bundle updated: $bundleOutputPath"
         }
         catch {
-            Write-Message -Type "Warning" "Failed to update test-commits.bundle: $_"
+            Write-Message -Type Warning "Failed to update test-commits.bundle: $_"
         }
 
-        Write-Message -Type "Debug" "Test state synchronization completed"
+        Write-Message -Type Debug "Test state synchronization completed"
 
         return @{
             Success  = $success
@@ -1535,7 +1535,7 @@ function Invoke-Comment {
 
     $skip = if ($Step.skip) { $Step.skip } else { $false }
 
-    Write-Message -Type "Info" $text
+    Write-Message -Type Info $text
 
     return @{
         Success = $true
@@ -1588,7 +1588,7 @@ function Invoke-TestStep {
 
     $action = $Step.action
 
-    Write-Message -Type "Debug" "Executing step $StepIndex ($action)"
+    Write-Message -Type Debug "Executing step $StepIndex ($action)"
 
     try {
         $result = switch ($action) {
@@ -1613,12 +1613,12 @@ function Invoke-TestStep {
             }
         }
 
-        Write-Message -Type "Debug" "Step $StepIndex completed: $($result.Success)"
+        Write-Message -Type Debug "Step $StepIndex completed: $($result.Success)"
 
         return $result
     }
     catch {
-        Write-Message -Type "Error" "Step $StepIndex failed: $_"
+        Write-Message -Type Error "Step $StepIndex failed: $_"
         return @{
             Success = $false
             Message = "Step execution error: $_"
@@ -1648,14 +1648,14 @@ function Invoke-TestCleanup {
 
     $action = $Cleanup.action
 
-    Write-Message -Type "Cleanup" "Executing cleanup: $action"
+    Write-Message -Type Cleanup "Executing cleanup: $action"
 
     try {
         if ($action -eq "reset-git-state") {
             # Call Clear-GitState from Setup-TestScenario.ps1
             Clear-GitState -DeleteTags $true -DeleteBranches $true
 
-            Write-Message -Type "Debug" "Cleanup completed"
+            Write-Message -Type Debug "Cleanup completed"
 
             return @{
                 Success = $true
@@ -1670,7 +1670,7 @@ function Invoke-TestCleanup {
         }
     }
     catch {
-        Write-Message -Type "Warning" "Cleanup failed: $_"
+        Write-Message -Type Warning "Cleanup failed: $_"
         return @{
             Success = $false
             Message = "Cleanup error: $_"
@@ -1731,19 +1731,19 @@ function Invoke-IntegrationTest {
         # Display test header
         Write-TestHeader -TestName $fixture.name -TestDescription $fixture.description
 
-        Write-Message -Type "Debug" "Test configuration: SkipBackup=$SkipBackup, SkipCleanup=$SkipCleanup"
+        Write-Message -Type Debug "Test configuration: SkipBackup=$SkipBackup, SkipCleanup=$SkipCleanup"
 
         # Initialize test execution context for sharing state between steps
         $testContext = @{ LastActResult = $null; ProductionTags = @() }
-        Write-Message -Type "Debug" "Initialized test execution context (tracking production tags)"
+        Write-Message -Type Debug "Initialized test execution context (tracking production tags)"
 
         # Backup git state
         # Integration with GitSnapshot module: Call Backup-GitState before each test
         if (-not $SkipBackup) {
-            Write-Message -Type "Debug" "Backing up git state"
+            Write-Message -Type Debug "Backing up git state"
             $backup = Backup-GitState
             $backupName = $backup.BackupName
-            Write-Message -Type "Debug" "Backup created: $backupName"
+            Write-Message -Type Debug "Backup created: $backupName"
         }
 
         # Execute test steps
@@ -1758,28 +1758,28 @@ function Invoke-IntegrationTest {
             # Store ActResult in context if this was a run-workflow step
             if ($stepResult.ActResult) {
                 $testContext.LastActResult = $stepResult.ActResult
-                Write-Message -Type "Debug" "Stored ActResult in test context for step $stepIndex"
+                Write-Message -Type Debug "Stored ActResult in test context for step $stepIndex"
             }
 
             # Store production tags if this was a setup-git-state step
             if ($step.action -eq 'setup-git-state' -and $stepResult.State -and $stepResult.State.ProductionTagsDeleted) {
                 $testContext.ProductionTags = $stepResult.State.ProductionTagsDeleted
-                Write-Message -Type "Debug" "Captured $($testContext.ProductionTags.Count) production tags from setup-git-state step"
+                Write-Message -Type Debug "Captured $($testContext.ProductionTags.Count) production tags from setup-git-state step"
             }
 
             if ($step.Skip) {
                 # for tests we only have two states: success and failure
                 # future todo to have "skipped" state, for now treat as success but log as skipped
-                Write-Message -Type "Warning" "Step $stepIndex is skipping test execution"
+                Write-Message -Type Warning "Step $stepIndex is skipping test execution"
                 break
             }
 
             if (-not $stepResult.Success) {
                 $allStepsPassed = $false
-                Write-Message -Type "Warning" "Step $stepIndex failed: $($stepResult.Message)"
+                Write-Message -Type Warning "Step $stepIndex failed: $($stepResult.Message)"
 
                 if ($StopOnFailure) {
-                    Write-Message -Type "Debug" "Stopping test execution (StopOnFailure=true)"
+                    Write-Message -Type Debug "Stopping test execution (StopOnFailure=true)"
                     break
                 }
             }
@@ -1789,7 +1789,7 @@ function Invoke-IntegrationTest {
         if (-not $SkipCleanup -and $fixture.cleanup) {
             $cleanupResult = Invoke-TestCleanup -Cleanup $fixture.cleanup
             if (-not $cleanupResult.Success) {
-                Write-Message -Type "Warning" "Cleanup failed: $($cleanupResult.Message)"
+                Write-Message -Type Warning "Cleanup failed: $($cleanupResult.Message)"
             }
         }
 
@@ -1809,7 +1809,7 @@ function Invoke-IntegrationTest {
 
     }
     catch {
-        Write-Message -Type "Error" "Test execution error: $_"
+        Write-Message -Type Error "Test execution error: $_"
 
         return @{
             TestName    = if ($fixture) { $fixture.name } else { "Unknown" }
@@ -1823,14 +1823,14 @@ function Invoke-IntegrationTest {
         # Restore git state
         # Integration with GitSnapshot module: Call Restore-GitState after each test
         if (-not $SkipBackup -and $backupName) {
-            Write-Message -Type "Restore" "Restoring git state from backup: $backupName"
+            Write-Message -Type Restore "Restoring git state from backup: $backupName"
             try {
                 $null = Restore-GitState -BackupName $backupName -Force $true -DeleteExistingTags $true
-                Write-Message -Type "Debug" "Git state restored"
+                Write-Message -Type Debug "Git state restored"
             }
             catch {
-                Write-Message -Type "Error" "Failed to restore git state: $_"
-                Write-Message -Type "Warning" "Manual recovery may be needed. Use Get-AvailableBackups to list backups."
+                Write-Message -Type Error "Failed to restore git state: $_"
+                Write-Message -Type Warning "Manual recovery may be needed. Use Get-AvailableBackups to list backups."
             }
         }
 
@@ -1881,11 +1881,11 @@ function Invoke-AllIntegrationTests {
         [bool]$SkipCleanup = $false
     )
 
-    Write-Message -Type "Info" "Starting all integration tests"
+    Write-Message -Type Info "Starting all integration tests"
 
     $fixtures = Get-AllIntegrationTestFixtures -TestsDirectory $TestsDirectory
 
-    Write-Message -Type "Info" "Found $($fixtures.Count) tests to run"
+    Write-Message -Type Info "Found $($fixtures.Count) tests to run"
 
     $testResults = @()
 
@@ -1894,7 +1894,7 @@ function Invoke-AllIntegrationTests {
         $testResults += $result
 
         if (-not $result.Success -and $StopOnFailure) {
-            Write-Message -Type "Warning" "Stopping test execution (StopOnFailure=true)"
+            Write-Message -Type Warning "Stopping test execution (StopOnFailure=true)"
             break
         }
     }
@@ -1968,18 +1968,18 @@ function Write-TestSummary {
         Write-Message "Failed Tests:" -ForegroundColor Red
         foreach ($result in $TestResults) {
             if (-not $result.Success) {
-                Write-Message -Type "Error" "  $($result.TestName)"
-                Write-Message -Type "Info" "     $($result.Message)" -ForegroundColor Gray
+                Write-Message -Type Error "  $($result.TestName)"
+                Write-Message -Type Info "     $($result.Message)" -ForegroundColor Gray
             }
         }
     }
 
     # Overall result
     if ($failedTests -eq 0) {
-        Write-Message -Type "Success" "ALL TESTS PASSED"
+        Write-Message -Type Success "ALL TESTS PASSED"
     }
     else {
-        Write-Message -Type "Error" "SOME TESTS FAILED"
+        Write-Message -Type Error "SOME TESTS FAILED"
     }
 
     Write-Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
@@ -1995,30 +1995,30 @@ if ($MyInvocation.InvocationName -ne ".") {
     Write-Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
     Write-Message "  Act Integration Test Runner" -ForegroundColor Cyan
     Write-Message "═══════════════════════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Message -Type "Info" "Purpose: Orchestrate integration tests for d-flows workflows using act" -ForegroundColor Gray
+    Write-Message -Type Info "Purpose: Orchestrate integration tests for d-flows workflows using act" -ForegroundColor Gray
 
     # Validate prerequisites
-    Write-Message -Type "Info" "Validating prerequisites..."
+    Write-Message -Type Info "Validating prerequisites..."
 
     # Check repository
     try {
         $repoRoot = Get-RepositoryRoot
-        Write-Message -Type "Debug" "Repository root: $repoRoot"
+        Write-Message -Type Debug "Repository root: $repoRoot"
     }
     catch {
-        Write-Message -Type "Error" $_
+        Write-Message -Type Error $_
         exit 1
     }
 
     # Check act availability
     if (-not (Test-ActAvailable)) {
-        Write-Message -Type "Error" "act is not available. Please install it before running tests."
+        Write-Message -Type Error "act is not available. Please install it before running tests."
         exit 1
     }
 
     # Check Docker
     if (-not (Test-DockerRunning)) {
-        Write-Message -Type "Error" "Docker is not running. Please start Docker Desktop before running tests."
+        Write-Message -Type Error "Docker is not running. Please start Docker Desktop before running tests."
         exit 1
     }
 
@@ -2027,25 +2027,25 @@ if ($MyInvocation.InvocationName -ne ".") {
 
     # Dot-source required scripts
     # Integration with GitSnapshot module and Setup-TestScenario.ps1
-    Write-Message -Type "Debug" "Loading required scripts"
+    Write-Message -Type Debug "Loading required scripts"
 
     try {
         $scenarioScriptPath = Join-Path $repoRoot "scripts\integration\Setup-TestScenario.ps1"
 
         . $scenarioScriptPath
 
-        Write-Message -Type "Debug" "Required scripts loaded"
+        Write-Message -Type Debug "Required scripts loaded"
     }
     catch {
-        Write-Message -Type "Error" "Failed to load required scripts: $_"
+        Write-Message -Type Error "Failed to load required scripts: $_"
         exit 1
     }
 
     # Display configuration
-    Write-Message -Type "Info" "Configuration:" -ForegroundColor Yellow
-    Write-Message -Type "Info" "  Skip Backup:   $SkipBackup" -ForegroundColor Gray
-    Write-Message -Type "Info" "  Skip Cleanup:  $SkipCleanup" -ForegroundColor Gray
-    Write-Message -Type "Info" "  Stop On Failure: $StopOnFailure" -ForegroundColor Gray
+    Write-Message -Type Info "Configuration:" -ForegroundColor Yellow
+    Write-Message -Type Info "  Skip Backup:   $SkipBackup" -ForegroundColor Gray
+    Write-Message -Type Info "  Skip Cleanup:  $SkipCleanup" -ForegroundColor Gray
+    Write-Message -Type Info "  Stop On Failure: $StopOnFailure" -ForegroundColor Gray
 
     # Determine execution mode and run tests
     $testResults = @()
@@ -2054,14 +2054,14 @@ if ($MyInvocation.InvocationName -ne ".") {
         if ($TestFixturePath) {
             # Run specific test by path
             # How to run single test: Run-ActTests -TestFixturePath "tests/integration/v0-to-v1-release-cycle.json"
-            Write-Message -Type "Info" "Running single test: $TestFixturePath"
+            Write-Message -Type Info "Running single test: $TestFixturePath"
             $fullPath = Join-Path $repoRoot $TestFixturePath
             $result = Invoke-IntegrationTest -FixturePath $fullPath -SkipBackup $SkipBackup -SkipCleanup $SkipCleanup
             $testResults += $result
         }
         elseif ($TestName) {
             # Run specific test by name
-            Write-Message -Type "Info" "Searching for test: $TestName"
+            Write-Message -Type Info "Searching for test: $TestName"
             $fixture = Find-FixtureByName -TestName $TestName
             $result = Invoke-IntegrationTest -FixturePath $fixture.FilePath -SkipBackup $SkipBackup -SkipCleanup $SkipCleanup
             $testResults += $result
@@ -2069,21 +2069,21 @@ if ($MyInvocation.InvocationName -ne ".") {
         elseif ($RunAll) {
             # Run all tests
             # How to run all tests: Run-ActTests -RunAll
-            Write-Message -Type "Info" "Running all integration tests"
+            Write-Message -Type Info "Running all integration tests"
             $testResults = Invoke-AllIntegrationTests -StopOnFailure $StopOnFailure -SkipBackup $SkipBackup -SkipCleanup $SkipCleanup
         }
         else {
             # No execution mode specified
-            Write-Message -Type "Warning" "No test execution mode specified. Use -RunAll to run all tests, -TestFixturePath for a specific test, or -TestName to search for a test."
-            Write-Message -Type "Info" "Usage:" -ForegroundColor Yellow
-            Write-Message -Type "Info" "  .\scripts\integration\Run-ActTests.ps1 -RunAll                                                      # Run all tests" -ForegroundColor Gray
-            Write-Message -Type "Info" "  .\scripts\integration\Run-ActTests.ps1 -TestFixturePath 'tests/integration/v0-to-v1-release-cycle.json'  # Run specific test" -ForegroundColor Gray
-            Write-Message -Type "Info" "  .\scripts\integration\Run-ActTests.ps1 -TestName 'Test Name'                                       # Search for and run test" -ForegroundColor Gray
+            Write-Message -Type Warning "No test execution mode specified. Use -RunAll to run all tests, -TestFixturePath for a specific test, or -TestName to search for a test."
+            Write-Message -Type Info "Usage:" -ForegroundColor Yellow
+            Write-Message -Type Info "  .\scripts\integration\Run-ActTests.ps1 -RunAll                                                      # Run all tests" -ForegroundColor Gray
+            Write-Message -Type Info "  .\scripts\integration\Run-ActTests.ps1 -TestFixturePath 'tests/integration/v0-to-v1-release-cycle.json'  # Run specific test" -ForegroundColor Gray
+            Write-Message -Type Info "  .\scripts\integration\Run-ActTests.ps1 -TestName 'Test Name'                                       # Search for and run test" -ForegroundColor Gray
             exit 0
         }
     }
     catch {
-        Write-Message -Type "Error" "Test execution failed: $_"
+        Write-Message -Type Error "Test execution failed: $_"
         exit 1
     }
 
@@ -2093,7 +2093,7 @@ if ($MyInvocation.InvocationName -ne ".") {
     # Write test statistics to GITHUB_OUTPUT for downstream jobs
     if ($env:GITHUB_OUTPUT) {
         try {
-            Write-Message -Type "Info" -Message "Writing test statistics to GITHUB_OUTPUT"
+            Write-Message -Type Info -Message "Writing test statistics to GITHUB_OUTPUT"
 
             # Calculate statistics from test results
             $totalTests = $testResults.Count
@@ -2124,14 +2124,14 @@ if ($MyInvocation.InvocationName -ne ".") {
             "total_duration=$("{0:N2}" -f $totalDuration)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
             "average_duration=$("{0:N2}" -f $avgDuration)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-            Write-Message -Type "Success" -Message "Test statistics written to GITHUB_OUTPUT"
+            Write-Message -Type Success -Message "Test statistics written to GITHUB_OUTPUT"
         }
         catch {
-            Write-Message -Type "Warning" -Message "Failed to write to GITHUB_OUTPUT: $_"
+            Write-Message -Type Warning -Message "Failed to write to GITHUB_OUTPUT: $_"
         }
     }
     else {
-        Write-Message -Type "Debug" "GITHUB_OUTPUT not set; skipping writing test statistics to GitHub Actions output"
+        Write-Message -Type Debug "GITHUB_OUTPUT not set; skipping writing test statistics to GitHub Actions output"
     }
 
     # Export report
@@ -2140,17 +2140,17 @@ if ($MyInvocation.InvocationName -ne ".") {
 
     # Cleanup test state directory
     if (-not $SkipCleanup) {
-        Write-Message -Type "Cleanup" "Cleaning up test state directory"
+        Write-Message -Type Cleanup "Cleaning up test state directory"
         $cleanupResult = Remove-TestStateDirectory
         if ($cleanupResult) {
-            Write-Message -Type "Success" "Test state directory cleaned up successfully"
+            Write-Message -Type Success "Test state directory cleaned up successfully"
         }
         else {
-            Write-Message -Type "Warning" "Failed to clean up test state directory - may require manual removal"
+            Write-Message -Type Warning "Failed to clean up test state directory - may require manual removal"
         }
     }
     else {
-        Write-Message -Type "Info" "Test state directory preserved for debugging: $TestStateDirectory"
+        Write-Message -Type Info "Test state directory preserved for debugging: $TestStateDirectory"
     }
 
     # Exit with appropriate code

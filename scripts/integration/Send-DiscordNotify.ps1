@@ -171,14 +171,14 @@ function Get-DiscordNotifyFixtures {
     $fullPath = Join-Path (Get-Location) $FixturesPath
 
     if (-not (Test-Path $fullPath)) {
-        Write-Message -Type "Error" "Fixtures directory not found: $fullPath"
+        Write-Message -Type Error "Fixtures directory not found: $fullPath"
         return [string[]]@()
     }
 
     $fixtures = @(Get-ChildItem -Path $fullPath -File -Filter "*.json" -ErrorAction SilentlyContinue |
         Select-Object -ExpandProperty FullName)
 
-    Write-Message -Type "Debug" "Found $($fixtures.Count) Discord notification fixtures"
+    Write-Message -Type Debug "Found $($fixtures.Count) Discord notification fixtures"
 
     return [string[]]$fixtures
 }
@@ -229,7 +229,7 @@ function Get-WebhookUrl {
     )
 
     if (-not [string]::IsNullOrWhiteSpace($ProvidedUrl)) {
-        Write-Message -Type "Debug" "Using webhook URL from parameter"
+        Write-Message -Type Debug "Using webhook URL from parameter"
         return $ProvidedUrl
     }
 
@@ -240,23 +240,23 @@ function Get-WebhookUrl {
             if ($secretsContent -match 'webhook_url=(.+?)(?:`n|$)') {
                 $url = $matches[1].Trim()
                 if (-not [string]::IsNullOrWhiteSpace($url)) {
-                    Write-Message -Type "Debug" "Using webhook URL from .secrets file"
+                    Write-Message -Type Debug "Using webhook URL from .secrets file"
                     return $url
                 }
             }
         }
         catch {
-            Write-Message -Type "Warning" "Failed to read .secrets file: $_"
+            Write-Message -Type Warning "Failed to read .secrets file: $_"
         }
     }
 
     $envUrl = $env:WEBHOOK_URL
     if (-not [string]::IsNullOrWhiteSpace($envUrl)) {
-        Write-Message -Type "Debug" "Using webhook URL from environment variable WEBHOOK_URL"
+        Write-Message -Type Debug "Using webhook URL from environment variable WEBHOOK_URL"
         return $envUrl
     }
 
-    Write-Message -Type "Debug" "No webhook URL found in parameter, .secrets file, or environment variable"
+    Write-Message -Type Debug "No webhook URL found in parameter, .secrets file, or environment variable"
     return $null
 }
 
@@ -324,8 +324,8 @@ function Invoke-DiscordNotifyTest {
         $actArgs += "webhook_url=$WebhookUrl"
     }
 
-    Write-Message -Type "Debug" "ActCommand: $ActCommand"
-    Write-Message -Type "Debug" "ActArgs: $actArgs"
+    Write-Message -Type Debug "ActCommand: $ActCommand"
+    Write-Message -Type Debug "ActArgs: $actArgs"
 
     # Execute act and capture output
     $startTime = Get-Date
@@ -336,7 +336,7 @@ function Invoke-DiscordNotifyTest {
         $endTime = Get-Date
         $duration = $endTime - $startTime
 
-        Write-Message -Type "Debug" "Execution completed in $($duration.TotalSeconds) seconds with exit code: $exitCode"
+        Write-Message -Type Debug "Execution completed in $($duration.TotalSeconds) seconds with exit code: $exitCode"
 
         return @{
             Success     = ($exitCode -eq 0)
@@ -347,7 +347,7 @@ function Invoke-DiscordNotifyTest {
         }
     }
     catch {
-        Write-Message -Type "Error" "Act execution failed: $_"
+        Write-Message -Type Error "Act execution failed: $_"
         return @{
             Success     = $false
             ExitCode    = -1
@@ -392,7 +392,7 @@ function Invoke-AllDiscordNotifyTests {
     $fixtures = Get-DiscordNotifyFixtures
 
     if ($fixtures.Count -eq 0) {
-        Write-Message -Type "Warning" "No test fixtures found in tests/discord-notify/"
+        Write-Message -Type Warning "No test fixtures found in tests/discord-notify/"
         return [hashtable[]]@()
     }
 
@@ -401,16 +401,16 @@ function Invoke-AllDiscordNotifyTests {
 
     foreach ($fixture in $fixtures) {
         $fixtureName = Split-Path -Leaf $fixture
-        Write-Message -Type "Info" "Testing fixture: $fixtureName"
+        Write-Message -Type Info "Testing fixture: $fixtureName"
 
         $result = Invoke-DiscordNotifyTest -FixturePath $fixture -WebhookUrl $webhookUrl
         $results += $result
 
         if ($result.Success) {
-            Write-Message -Type "Success" "Fixture passed: $fixtureName"
+            Write-Message -Type Success "Fixture passed: $fixtureName"
         }
         else {
-            Write-Message -Type "Error" "Fixture failed: $fixtureName (exit code: $($result.ExitCode))"
+            Write-Message -Type Error "Fixture failed: $fixtureName (exit code: $($result.ExitCode))"
         }
     }
 
@@ -454,7 +454,7 @@ function Write-TestSummary {
     )
 
     if ($null -eq $TestResults -or $TestResults.Count -eq 0) {
-        Write-Message -Type "Warning" "No test results to summarize"
+        Write-Message -Type Warning "No test results to summarize"
         return $true
     }
 
@@ -463,19 +463,19 @@ function Write-TestSummary {
     $failedTests = $totalTests - $passedTests
     $passRate = [math]::Round(($passedTests / $totalTests) * 100, 2)
 
-    Write-Message -Type "Info" "═"
-    Write-Message -Type "Info" "Test Summary"
-    Write-Message -Type "Info" "═"
-    Write-Message -Type "Info" "Total Tests:  $totalTests"
-    Write-Message -Type "Info" "Passed Tests: $passedTests"
-    Write-Message -Type "Info" "Failed Tests: $failedTests"
-    Write-Message -Type "Info" "Pass Rate:    $passRate%"
-    Write-Message -Type "Info" "═"
+    Write-Message -Type Info "═"
+    Write-Message -Type Info "Test Summary"
+    Write-Message -Type Info "═"
+    Write-Message -Type Info "Total Tests:  $totalTests"
+    Write-Message -Type Info "Passed Tests: $passedTests"
+    Write-Message -Type Info "Failed Tests: $failedTests"
+    Write-Message -Type Info "Pass Rate:    $passRate%"
+    Write-Message -Type Info "═"
 
     if ($failedTests -gt 0) {
-        Write-Message -Type "Error" "Failed tests:"
+        Write-Message -Type Error "Failed tests:"
         $TestResults | Where-Object { -not $_.Success } | ForEach-Object {
-            Write-Message -Type "Error" "  - $($_.FixtureName) (exit code: $($_.ExitCode))"
+            Write-Message -Type Error "  - $($_.FixtureName) (exit code: $($_.ExitCode))"
         }
         return $false
     }
@@ -491,35 +491,35 @@ function Write-TestSummary {
 try {
     $repoRoot = Get-RepositoryRoot
     Set-Location $repoRoot
-    Write-Message -Type "Debug" "Repository root: $repoRoot"
+    Write-Message -Type Debug "Repository root: $repoRoot"
 }
 catch {
-    Write-Message -Type "Error" "Failed to determine repository root: $_"
+    Write-Message -Type Error "Failed to determine repository root: $_"
     exit 1
 }
 
 # Display script header
-Write-Message -Type "Info" "Discord Notification Workflow Test"
-Write-Message -Type "Info" "═"
+Write-Message -Type Info "Discord Notification Workflow Test"
+Write-Message -Type Info "═"
 
 # Single fixture test
 if (-not [string]::IsNullOrWhiteSpace($TestFixturePath)) {
     if (-not (Test-Path $TestFixturePath)) {
-        Write-Message -Type "Error" "Test fixture not found: $TestFixturePath"
+        Write-Message -Type Error "Test fixture not found: $TestFixturePath"
         exit 1
     }
 
-    Write-Message -Type "Info" "Testing single fixture: $TestFixturePath"
+    Write-Message -Type Info "Testing single fixture: $TestFixturePath"
     $webhookUrl = Get-WebhookUrl -ProvidedUrl $WebhookUrl
     $result = Invoke-DiscordNotifyTest -FixturePath $TestFixturePath -WebhookUrl $webhookUrl
 
     if ($result.Success) {
-        Write-Message -Type "Success" "Test passed!"
+        Write-Message -Type Success "Test passed!"
         exit 0
     }
     else {
-        Write-Message -Type "Error" "Test failed with exit code: $($result.ExitCode)"
-        Write-Message -Type "Debug" "Output: $($result.Output)"
+        Write-Message -Type Error "Test failed with exit code: $($result.ExitCode)"
+        Write-Message -Type Debug "Output: $($result.Output)"
         exit 1
     }
 }

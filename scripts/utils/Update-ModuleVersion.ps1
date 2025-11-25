@@ -72,7 +72,7 @@ $psd1Files = Get-ChildItem -Path $root -Recurse -Filter '*.psd1' | Where-Object 
 }
 
 foreach ($file in $psd1Files) {
-    Write-Message -Type "Info" "Updating $($file.FullName) to version $Version"
+    Write-Message -Type Info "Updating $($file.FullName) to version $Version"
 
     # Read the content
     $content = Get-Content $file.FullName
@@ -84,4 +84,4 @@ foreach ($file in $psd1Files) {
     Set-Content -Path $file.FullName -Value $newContent
 }
 
-Write-Message -Type "Success" "All module manifests updated successfully."
+Write-Message -Type Success "All module manifests updated successfully."
