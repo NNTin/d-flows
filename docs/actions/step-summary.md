@@ -16,4 +16,28 @@ Write markdown content to GitHub Step Summary
 
 ## Usage
 
-<!-- Add usage examples below -->
+**Render cog validation results in the workflow summary** ([`.github/workflows/check-pr.yml`](https://github.com/NNTin/d-flows/blob/main/.github/workflows/check-pr.yml)):
+```yaml
+test-step-summary:
+  name: Test Step Summary
+  uses: ./.github/workflows/step-summary.yml
+  needs: [run-integration-tests]
+  if: always()
+  with:
+    title: "Integration Test Results"
+    markdown: |
+      ${{ needs.run-integration-tests.outputs.failed_tests == '0' && '✅ All tests passed!' || '❌ Some tests failed' }}
+      
+      | Metric | Value |
+      |--------|-------|
+      | **Total Tests** | ${{ needs.run-integration-tests.outputs.total_tests }} |
+      | **Passed Tests** | ✅ ${{ needs.run-integration-tests.outputs.passed_tests }} |
+      | **Failed Tests** | ${{ needs.run-integration-tests.outputs.failed_tests == '0' && '✅' || '❌' }} ${{ needs.run-integration-tests.outputs.failed_tests }} |
+      | **Total Duration** | ${{ needs.run-integration-tests.outputs.total_duration }}s |
+      | **Average Duration** | ${{ needs.run-integration-tests.outputs.average_duration }}s |
+      
+      ---
+      
+      **Test Status**: ${{ needs.run-integration-tests.result == 'success' && '✅ Completed Successfully' || '⚠️ Completed with Issues' }}
+    overwrite: false
+```

@@ -14,7 +14,7 @@ GitHub workflow automation and release management for PowerShell-centric project
 - **Getting Started** — Dive into the [Developer Guide](developer.md) to set up tooling and run local tests
 - **Versioning Strategy** — Review [VERSIONING.md](VERSIONING.md) for semantic release rules and bump automation
 - **ACT Testing** — Follow the [ACT Setup Guide](ACT_SETUP_GUIDE.md) and [ACT Usage Guide](ACT_USAGE.md) for local workflow execution
-- **GitHub Actions** — Future home for workflow reference material (coming soon)
+- **GitHub Actions** — Browse the [Actions Reference](actions.md) for quick links into every composite action doc under `docs/actions/`
 
 !!! note "Need a TL;DR?"
     Run `act --list` to see every locally runnable workflow before jumping into deeper guides.
@@ -39,7 +39,6 @@ GitHub workflow automation and release management for PowerShell-centric project
 
 ## 💡 Getting Help
 - [Open an issue](https://github.com/nntin/d-flows/issues) for bugs, feature requests, or workflow regressions
-- [Start a discussion](https://github.com/nntin/d-flows/discussions) to propose ideas or share best practices
 - Browse the [repository](https://github.com/nntin/d-flows) for source code, scripts, and documentation
 
 !!! tip "Documentation versions"

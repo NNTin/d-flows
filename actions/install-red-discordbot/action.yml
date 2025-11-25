@@ -3,7 +3,7 @@ description: "Downloads a Red-DiscordBot build artifact and installs it using uv
 
 inputs:
   artifact_name:
-    description: "Optional artifact name to download. Default: red-discordbot-build"
+    description: "Optional artifact name to download. If not provided, installation will be done from PyPI."
     required: false
 
 runs:

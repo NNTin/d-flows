@@ -15,4 +15,11 @@ Clones Red-DiscordBot at optional commit, builds it using uv, and uploads the ar
 
 ## Usage
 
-<!-- Add usage examples below -->
+**Build artifact for downstream cog tests** ([`ben-cogs/.github/workflows/check-cogs.yml`](https://github.com/BenCos17/ben-cogs/blob/main/.github/workflows/check-cogs.yml)):
+```yaml
+- name: Build Red-DiscordBot
+  uses: nntin/d-flows/actions/build-red-discordbot@v1
+  with:
+    red_commit: ""
+    artifact_name: ${{ env.BUILD_ARTIFACT_NAME }}
+```

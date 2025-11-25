@@ -16,4 +16,15 @@ Loads and unloads cogs via RPC to verify they work inside Red-DiscordBot.
 
 ## Usage
 
-<!-- Add usage examples below -->
+!!! caution
+    A redbot configuration for the instance "tinkerer" is required. Refer to [setup-red-discordbot](./setup-red-discordbot.md) to create the necessary configuration.
+
+**Validate local cog folders through RPC** ([`ben-cogs/.github/workflows/check-cogs.yml`](https://github.com/BenCos17/ben-cogs/blob/main/.github/workflows/check-cogs.yml)):
+```yaml
+- name: Test cogs via RPC
+  uses: nntin/d-flows/actions/test-red-discordbot@v1
+  with:
+    token: ${{ secrets.DISCORD_BOT_TOKEN }}
+    cog_paths: ${{ env.COG_PATHS }}
+    rpc_port: ${{ env.RPC_PORT }}
+```

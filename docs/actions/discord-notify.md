@@ -28,45 +28,66 @@ Send Discord notifications via webhook
 
 ## Usage
 
-**Embed notification with dynamic fields** (`.github/workflows/check-pr.yml`):
+**Embed notification with dynamic fields** ([`.github/workflows/check-pr.yml`](https://github.com/NNTin/d-flows/blob/main/.github/workflows/check-pr.yml)):
 ```yaml
+build-discord-fields-completion:
+  name: Build Discord Fields
+  runs-on: ubuntu-latest
+  needs: [run-integration-tests]
+  if: always()
+  outputs:
+    discord_fields: ${{ steps.discord_fields.outputs.fields }}
+  
+  steps:
+    - name: Build Discord Fields
+      id: discord_fields
+      run: |
+        SUMMARY_STATUS="${{ needs['run-integration-tests'].result }}"
+        
+        # Build JSON fields with readable formatting
+        FIELDS=$(jq -n \
+          --arg summary_status "$SUMMARY_STATUS" \
+          --arg pr_number "${{ github.event.pull_request.number }}" \
+          --arg pr_url "${{ github.event.pull_request.html_url }}" \
+          --arg actor "${{ github.actor }}" \
+          --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+          --arg total_tests "${{ needs.run-integration-tests.outputs.total_tests }}" \
+          --arg passed_tests "${{ needs.run-integration-tests.outputs.passed_tests }}" \
+          --arg failed_tests "${{ needs.run-integration-tests.outputs.failed_tests }}" \
+          --arg total_duration "${{ needs.run-integration-tests.outputs.total_duration }}" \
+          --arg average_duration "${{ needs.run-integration-tests.outputs.average_duration }}" \
+          '[
+            {"name": "Step Summary Test", "value": (($summary_status == "success" and "✅ Passed" or "❌ Failed")), "inline": true},
+            {"name": "Total Tests", "value": $total_tests, "inline": true},
+            {"name": "Passed Tests", "value": ("✅ " + $passed_tests), "inline": true},
+            {"name": "Failed Tests", "value": ((($failed_tests == "0") | if . then "✅ " else "❌ " end) + ($failed_tests | tostring)), "inline": true},
+            {"name": "Total Duration", "value": ($total_duration + "s"), "inline": false},
+            {"name": "Average Duration", "value": ($average_duration + "s"), "inline": false},
+            {"name": "PR Details", "value": ("[#" + $pr_number + "](" + $pr_url + ") by @" + $actor), "inline": false},
+            {"name": "Run Details", "value": ("[View Full Run](" + $run_url + ")"), "inline": false}
+          ]')
+        
+        # Use delimiter to safely output the multiline JSON
+        delimiter="$(openssl rand -hex 8)"
+        {
+          echo "fields<<${delimiter}"
+          echo "$FIELDS"
+          echo "${delimiter}"
+        } >> "$GITHUB_OUTPUT"
+
 notify-completion:
+  name: Notify Discord
+  uses: ./.github/workflows/discord-notify.yml
   needs: [build-discord-fields-completion, run-integration-tests]
   if: always()
-  uses: ./.github/workflows/discord-notify.yml
   secrets:
     webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
   with:
-    message_type: embed
+    message_type: "embed"
     title: ${{ needs['run-integration-tests'].result == 'success' && '✅ PR CI Workflow Completed Successfully' || '⚠️ PR CI Workflow Completed with Issues' }}
-    description: >-
-      ${{ needs['run-integration-tests'].result == 'success' &&
-          'All validation checks and tests passed successfully. The pull request is ready for review.' ||
-          'The workflow completed but some checks failed. Please review the results and address any issues.' }}
+    description: ${{ needs['run-integration-tests'].result == 'success' && 'All validation checks and tests passed successfully. The pull request is ready for review.' || 'The workflow completed but some checks failed. Please review the results and address any issues.' }}
     color: ${{ needs['run-integration-tests'].result == 'success' && '3066993' || '16776960' }}
     fields: ${{ needs.build-discord-fields-completion.outputs.discord_fields }}
-```
-
-**Building fields with `jq`** (`check-pr.yml` lines 97‑140):
-```bash
-FIELDS=$(jq -n '
-  [
-    {"name": "Step Summary Test", "value": (($summary_status == "success" and "✅ Passed" or "❌ Failed")), "inline": true},
-    {"name": "Total Tests", "value": $total_tests, "inline": true},
-    {"name": "Run Details", "value": ("[View Full Run](" + $run_url + ")"), "inline": false}
-  ]')
-```
-Export the multiline JSON via `$GITHUB_OUTPUT` and feed it into `fields` for polished embeds.
-
-**Reusable action usage** (`bz-cogs/.github/workflows/check-cogs.yml`):
-```yaml
-- name: Send Discord Notification
-  uses: nntin/d-flows/actions/discord-notify@v1
-  with:
-    webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-    message_type: embed
-    color: ${{ needs.build-validation-fields.outputs.validation_result == 'success' && '3066993' || '16776960' }}
-    fields: ${{ needs.build-validation-fields.outputs.discord_fields }}
 ```
 
 !!! note "Field payloads"

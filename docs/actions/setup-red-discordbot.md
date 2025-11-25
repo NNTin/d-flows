@@ -16,4 +16,14 @@ Sets up Red-DiscordBot configuration
 
 ## Usage
 
-<!-- Add usage examples below -->
+!!! note
+    This creates a redbot configuration for the instance "tinkerer".
+
+**Provision a Red-DiscordBot instance** ([`ben-cogs/.github/workflows/check-cogs.yml`](https://github.com/BenCos17/ben-cogs/blob/main/.github/workflows/check-cogs.yml)):
+```yaml
+- name: Configure Red-DiscordBot
+  uses: nntin/d-flows/actions/setup-red-discordbot@v1
+  with:
+    token: ${{ secrets.DISCORD_BOT_TOKEN }}
+    optional_args: "--no-cogs"
+```

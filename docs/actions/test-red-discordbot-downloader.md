@@ -19,4 +19,21 @@ Installs and validates cogs through Red's downloader cog using a temporary git r
 
 ## Usage
 
-<!-- Add usage examples below -->
+**Minimal invocation that auto-discovers cog folders** ([`bz-cogs/.github/workflows/check-cogs.yml`](https://github.com/zhaobenny/bz-cogs/blob/main/.github/workflows/check-cogs.yml)):
+```yaml
+- name: Test cogs via Downloader
+  uses: nntin/d-flows/actions/test-red-discordbot-downloader@v1
+  with:
+    token: ${{ secrets.DISCORD_BOT_TOKEN }}
+    # Leave cog_paths empty to let the action probe every cog in the repo
+```
+
+**Exercise cogs from a remote repository/branch** ([`SeaCogs/.forgejo/workflows/actions.yaml`](https://c.csw.im/cswimr/SeaCogs/src/branch/main/.forgejo/workflows/actions.yaml)):
+```yaml
+- name: Test Cogs
+  uses: nntin/d-flows/actions/test-red-discordbot-downloader@v1
+  with:
+    token: ${{ secrets.DISCORD_BOT_TOKEN }}
+    repo_url: ${{ forge.server_url }}/${{ forge.repository }}
+    repo_branch: ${{ forge.event_name != 'pull_request' && forge.event_name != 'pull_request_target' && forge.ref_name || forge.head_ref }}
+```
