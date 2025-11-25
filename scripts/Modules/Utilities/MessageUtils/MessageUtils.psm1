@@ -57,7 +57,7 @@ function Write-Message {
         If specified, the message will not end with a newline.
 
     .EXAMPLE
-        Write-Message -Type "INFO" "Starting scenario application" -ForegroundColor Cyan
+        Write-Message -Type Info "Starting scenario application" -ForegroundColor Cyan
     #>
     param(
         [Parameter(Position = 0)]

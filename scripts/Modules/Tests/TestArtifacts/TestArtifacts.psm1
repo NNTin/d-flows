@@ -69,11 +69,11 @@ function Export-TestReport {
     # Export to JSON
     try {
         $report | ConvertTo-Json -Depth 10 | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
-        Write-Message -Type "Info" "Test report exported to: $OutputPath"
+        Write-Message -Type Info "Test report exported to: $OutputPath"
         return $OutputPath
     }
     catch {
-        Write-Message -Type "Warning" "Failed to export test report: $_"
+        Write-Message -Type Warning "Failed to export test report: $_"
         return $null
     }
 }
@@ -110,13 +110,13 @@ function Export-TestTagsFile {
             $OutputPath = Join-Path $testStateDir $TestTagsFile
         }
 
-        Write-Message -Type "Info" "Generating test-tags.txt file"
-        Write-Message -Type "Debug" "Output path: $OutputPath"
+        Write-Message -Type Info "Generating test-tags.txt file"
+        Write-Message -Type Debug "Output path: $OutputPath"
 
         # If no tags specified, get all tags
         if (-not $Tags -or $Tags.Count -eq 0) {
             $Tags = @(git tag -l)
-            Write-Message -Type "Debug" "No tags specified, using all repository tags: $($Tags.Count) tags"
+            Write-Message -Type Debug "No tags specified, using all repository tags: $($Tags.Count) tags"
         }
 
         # Build file content
@@ -128,14 +128,14 @@ function Export-TestTagsFile {
 
                 if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($sha)) {
                     $fileContent += "$tag $sha"
-                    Write-Message -Type "Tag" "Exporting tag: $tag -> $sha"
+                    Write-Message -Type Tag "Exporting tag: $tag -> $sha"
                 }
                 else {
-                    Write-Message -Type "Warning" "Failed to get SHA for tag: $tag"
+                    Write-Message -Type Warning "Failed to get SHA for tag: $tag"
                 }
             }
             catch {
-                Write-Message -Type "Warning" "Error exporting tag '$tag': $_"
+                Write-Message -Type Warning "Error exporting tag '$tag': $_"
                 continue
             }
         }
@@ -144,19 +144,19 @@ function Export-TestTagsFile {
         $outputDir = Split-Path $OutputPath -Parent
         if (-not (Test-Path $outputDir)) {
             New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-            Write-Message -Type "Debug" "Created output directory: $outputDir"
+            Write-Message -Type Debug "Created output directory: $outputDir"
         }
 
         # Write to file
         $fileContent | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
 
-        Write-Message -Type "Success" "Test-tags.txt generated with $($fileContent.Count) tags"
-        Write-Message -Type "Debug" "File path: $OutputPath"
+        Write-Message -Type Success "Test-tags.txt generated with $($fileContent.Count) tags"
+        Write-Message -Type Debug "File path: $OutputPath"
 
         return $OutputPath
     }
     catch {
-        Write-Message -Type "Error" "Failed to export test tags file: $_"
+        Write-Message -Type Error "Failed to export test tags file: $_"
         throw $_
     }
 }
@@ -210,8 +210,8 @@ function Export-TestBranchesFile {
             $OutputPath = Join-Path $testStateDir $TestBranchesFile
         }
 
-        Write-Message -Type "Info" "Generating test-branches.txt file"
-        Write-Message -Type "Debug" "Output path: $OutputPath"
+        Write-Message -Type Info "Generating test-branches.txt file"
+        Write-Message -Type Debug "Output path: $OutputPath"
 
         # If no branches specified, get all branches
         if (-not $Branches -or $Branches.Count -eq 0) {
@@ -225,7 +225,7 @@ function Export-TestBranchesFile {
                     $Branches += $cleanBranch
                 }
             }
-            Write-Message -Type "Debug" "No branches specified, using all repository branches: $($Branches.Count) branches"
+            Write-Message -Type Debug "No branches specified, using all repository branches: $($Branches.Count) branches"
         }
 
         # Build file content
@@ -237,14 +237,14 @@ function Export-TestBranchesFile {
 
                 if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($sha)) {
                     $fileContent += "$branch $sha"
-                    Write-Message -Type "Branch" "Exporting branch: $branch -> $sha"
+                    Write-Message -Type Branch "Exporting branch: $branch -> $sha"
                 }
                 else {
-                    Write-Message -Type "Warning" "Failed to get SHA for branch: $branch"
+                    Write-Message -Type Warning "Failed to get SHA for branch: $branch"
                 }
             }
             catch {
-                Write-Message -Type "Warning" "Error exporting branch '$branch': $_"
+                Write-Message -Type Warning "Error exporting branch '$branch': $_"
                 continue
             }
         }
@@ -253,19 +253,19 @@ function Export-TestBranchesFile {
         $outputDir = Split-Path $OutputPath -Parent
         if (-not (Test-Path $outputDir)) {
             New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-            Write-Message -Type "Debug" "Created output directory: $outputDir"
+            Write-Message -Type Debug "Created output directory: $outputDir"
         }
 
         # Write to file
         $fileContent | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
 
-        Write-Message -Type "Success" "Test-branches.txt generated with $($fileContent.Count) branches"
-        Write-Message -Type "Debug" "File path: $OutputPath"
+        Write-Message -Type Success "Test-branches.txt generated with $($fileContent.Count) branches"
+        Write-Message -Type Debug "File path: $OutputPath"
 
         return $OutputPath
     }
     catch {
-        Write-Message -Type "Error" "Failed to export test branches file: $_"
+        Write-Message -Type Error "Failed to export test branches file: $_"
         throw $_
     }
 }
@@ -327,7 +327,7 @@ function Export-TestCommitsBundle {
             $OutputPath = Join-Path $testStateDir $TestCommitsBundle
         }
 
-        Write-Message -Type "Info" "Generating test-commits.bundle file"
+        Write-Message -Type Info "Generating test-commits.bundle file"
 
         # Collect all refs to bundle
         $allRefs = @()
@@ -337,12 +337,12 @@ function Export-TestCommitsBundle {
             $gitTags = @(git tag -l 2>$null)
             if ($gitTags.Count -gt 0) {
                 $allRefs += $gitTags
-                Write-Message -Type "Tag" "Including $($gitTags.Count) tags in bundle"
+                Write-Message -Type Tag "Including $($gitTags.Count) tags in bundle"
             }
         }
         else {
             $allRefs += $Tags
-            Write-Message -Type "Tag" "Including $($Tags.Count) specified tags in bundle"
+            Write-Message -Type Tag "Including $($Tags.Count) specified tags in bundle"
         }
 
         # If no branches specified, get all branches
@@ -359,24 +359,24 @@ function Export-TestCommitsBundle {
             }
             if ($cleanBranches.Count -gt 0) {
                 $allRefs += $cleanBranches
-                Write-Message -Type "Branch" "Including $($cleanBranches.Count) branches in bundle"
+                Write-Message -Type Branch "Including $($cleanBranches.Count) branches in bundle"
             }
         }
         else {
             $allRefs += $Branches
-            Write-Message -Type "Branch" "Including $($Branches.Count) specified branches in bundle"
+            Write-Message -Type Branch "Including $($Branches.Count) specified branches in bundle"
         }
 
         # Handle empty repository (no refs to bundle)
         if ($allRefs.Count -eq 0) {
-            Write-Message -Type "Warning" "No refs found to bundle (empty repository or no tags/branches)"
+            Write-Message -Type Warning "No refs found to bundle (empty repository or no tags/branches)"
             # Create an empty file to maintain backup structure
             "" | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
-            Write-Message -Type "Debug" "Created empty bundle file: $OutputPath"
+            Write-Message -Type Debug "Created empty bundle file: $OutputPath"
             return $OutputPath
         }
 
-        Write-Message -Type "Debug" "Bundling $($allRefs.Count) refs"
+        Write-Message -Type Debug "Bundling $($allRefs.Count) refs"
 
         # Create git bundle with explicit ref list
         $bundleArgs = @('bundle', 'create', $OutputPath) + $allRefs
@@ -386,18 +386,18 @@ function Export-TestCommitsBundle {
 
         if ($exitCode -ne 0) {
             # If failed, write the captured output to the console
-            $gitOutput | ForEach-Object { Write-Message -Type "Error" $_ }
-            Write-Message -Type "Error" "Error calling git $bundleArgs"
+            $gitOutput | ForEach-Object { Write-Message -Type Error $_ }
+            Write-Message -Type Error "Error calling git $bundleArgs"
             throw "Git bundle create failed with exit code: $exitCode"
         }
 
-        Write-Message -Type "Success" "Test-commits.bundle generated with $($allRefs.Count) refs"
-        Write-Message -Type "Debug" "File path: $OutputPath"
+        Write-Message -Type Success "Test-commits.bundle generated with $($allRefs.Count) refs"
+        Write-Message -Type Debug "File path: $OutputPath"
 
         return $OutputPath
     }
     catch {
-        Write-Message -Type "Error" "Failed to export test commits bundle: $_"
+        Write-Message -Type Error "Failed to export test commits bundle: $_"
         throw $_
     }
 }
@@ -414,10 +414,10 @@ $TestStateDirectory = Get-TestStateBasePath
 $TestLogsDirectory = Join-Path (Get-TestStateBasePath) "logs"
 $BackupDirectory = Get-BackupBasePath
 
-Write-Message -Type "Debug" "Test State Directory: $TestStateDirectory"
-Write-Message -Type "Debug" "Files: $TestTagsFile $TestBranchesFile $TestCommitsBundle"
-Write-Message -Type "Debug" "Test Logs Directory: $TestLogsDirectory"
-Write-Message -Type "Debug" "Integration Tests Directory: $IntegrationTestsDirectory"
-Write-Message -Type "Debug" "Backup Directory: $BackupDirectory"
+Write-Message -Type Debug "Test State Directory: $TestStateDirectory"
+Write-Message -Type Debug "Files: $TestTagsFile $TestBranchesFile $TestCommitsBundle"
+Write-Message -Type Debug "Test Logs Directory: $TestLogsDirectory"
+Write-Message -Type Debug "Integration Tests Directory: $IntegrationTestsDirectory"
+Write-Message -Type Debug "Backup Directory: $BackupDirectory"
 
 Export-ModuleMember -Function * -Variable 'TestStateDirectory', 'TestTagsFile', 'TestBranchesFile', 'TestCommitsBundle', 'IntegrationTestsDirectory', 'TestLogsDirectory', 'BackupDirectory'

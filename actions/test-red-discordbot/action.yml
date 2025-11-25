@@ -1,16 +1,16 @@
 name: "Test Red-DiscordBot cogs"
-description: "Loads and unloads cogs via RPC to verify they work inside Red-DiscordBot."
+description: "Boots a local tinkerer instance, copies the requested cog folders into Red, and exercises them over RPC to ensure they load cleanly."
 
 inputs:
   # todo: do a check whether token was supplied or not, furthermore sanitize inputs (trailing whitespace, ..) 
   token:
-    description: "Discord bot token used when starting Red-DiscordBot"
+    description: "Token passed to the background `redbot tinkerer` process for Discord authentication."
     required: true
   cog_paths:
-    description: "Comma-separated list of cog directories to validate"
+    description: "Comma-separated list of local directories that are copied into the cog install path before RPC tests run."
     required: true
   rpc_port:
-    description: "Port Red-DiscordBot RPC server listens on"
+    description: "TCP port exposed via `--rpc-port`; defaults to 6133 when not specified."
     required: false
     default: "6133"
 

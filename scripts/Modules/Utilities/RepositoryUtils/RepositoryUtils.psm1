@@ -63,11 +63,11 @@ function Get-RepositoryRoot {
     )
 
     while ($Path -ne (Split-Path $Path)) {
-        Write-Message -Type "Debug" "Searching for .git in: $Path"
+        Write-Message -Type Debug "Searching for .git in: $Path"
 
         $gitPath = Join-Path $Path ".git"
         if (Test-Path $gitPath) {
-            Write-Message -Type "Debug" "Found repository root: $Path"
+            Write-Message -Type Debug "Found repository root: $Path"
             return $Path
         }
 
@@ -89,7 +89,7 @@ function Get-RepositoryRoot {
 
 .EXAMPLE
     $testStateDir = New-TestStateDirectory
-    Write-Message -Type "Info" "Test state directory: $testStateDir"
+    Write-Message -Type Info "Test state directory: $testStateDir"
 
 .NOTES
     Returns the full path to the test state directory in temp.
@@ -111,21 +111,21 @@ function New-TestStateDirectory {
 
     if ($PSCmdlet.ShouldProcess($testStatePath, "Create test state directory")) {
         if (-not (Test-Path $testStatePath)) {
-            Write-Message -Type "Debug" "Creating temp test state directory: $testStatePath"
+            Write-Message -Type Debug "Creating temp test state directory: $testStatePath"
             New-Item -ItemType Directory -Path $testStatePath -Force | Out-Null
-            Write-Message -Type "Debug" "Test state directory created"
+            Write-Message -Type Debug "Test state directory created"
         }
         else {
-            Write-Message -Type "Debug" "Test state directory already exists: $testStatePath"
+            Write-Message -Type Debug "Test state directory already exists: $testStatePath"
         }
 
         if (-not (Test-Path $testLogsPath)) {
-            Write-Message -Type "Debug" "Creating temp test logs directory: $testLogsPath"
+            Write-Message -Type Debug "Creating temp test logs directory: $testLogsPath"
             New-Item -ItemType Directory -Path $testLogsPath -Force | Out-Null
-            Write-Message -Type "Debug" "Test logs directory created"
+            Write-Message -Type Debug "Test logs directory created"
         }
         else {
-            Write-Message -Type "Debug" "Test logs directory already exists: $testLogsPath"
+            Write-Message -Type Debug "Test logs directory already exists: $testLogsPath"
         }
     }
 

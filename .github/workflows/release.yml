@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: release-workflow
@@ -320,6 +321,30 @@ jobs:
         shell: bash
         run: |
           git push origin "v$MAJOR_VERSION" --force
+      
+      - name: Trigger docs workflow
+        if: ${{ !env.ACT }} # only run if NOT running under act
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          
+          TARGET_BRANCH="${{ inputs.target_branch }}"
+          VERSION="${{ inputs.version }}"
+
+          echo "🚀 Triggering docs workflow for v$VERSION on $TARGET_BRANCH" >> "$GITHUB_STEP_SUMMARY"
+
+          # Trigger the docs workflow
+          if gh workflow run docs.yml \
+            --field version="$VERSION" \
+            --ref "$TARGET_BRANCH"; then
+            echo "✅ Docs workflow triggered successfully" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "❌ Error: Failed to trigger docs workflow" >&2
+            echo "❌ **Error:** Failed to trigger docs workflow" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       - name: Update step summary with major tag information
         shell: bash

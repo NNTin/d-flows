@@ -1,15 +1,15 @@
 name: 'GitHub Step Summary'
-description: 'Write markdown content to GitHub Step Summary'
+description: 'Writes Markdown into the $GITHUB_STEP_SUMMARY file, optionally clearing previous content first.'
 
 inputs:
   title:
-    description: 'Optional heading for the summary'
+    description: 'Optional heading rendered as an H2 before the markdown body; omitted when left blank.'
     required: false
   markdown:
-    description: 'Markdown content to display'
+    description: 'Body text appended to the step summary exactly as provided.'
     required: true
   overwrite:
-    description: 'Whether to overwrite existing summary or append'
+    description: "Set to 'true' to truncate $GITHUB_STEP_SUMMARY before writing; defaults to 'false' so content is appended."
     required: false
     default: 'false'
 

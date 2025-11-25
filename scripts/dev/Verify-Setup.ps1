@@ -5,49 +5,52 @@ $scriptDir = $PSScriptRoot
 $devDir = Split-Path -Parent $scriptDir
 $root = Split-Path -Parent $devDir
 
-# Add to PSModulePath only if not already present
-$projectModules = Join-Path $root 'scripts\Modules'
-$utilitiesModules = Join-Path $projectModules 'Utilities'
-$testModules = Join-Path $projectModules 'Tests'
+function Remove-ModulesInPaths {
+    [CmdletBinding(SupportsShouldProcess)]
+    param([string[]]$ModulePaths)
 
-# Normalize paths (remove trailing backslashes)
-$allModulePaths = @($projectModules, $utilitiesModules, $testModules) | ForEach-Object { $_.TrimEnd('\') }
+    $resolvedPaths = $ModulePaths | ForEach-Object {
+        (Resolve-Path $_ -ErrorAction Stop).Path.TrimEnd('\')
+    }
 
-# Unload any loaded module located in those folders or their subfolders
-Get-Module | ForEach-Object {
-    $modulePath = $_.ModuleBase.TrimEnd('\')
-    foreach ($path in $allModulePaths) {
-        # Add trailing backslash to ensure subfolder matches
-        if ($modulePath -like "$path*") {
-            Write-Host "Removing module $($_.Name) from $($_.ModuleBase)" -ForegroundColor Yellow
-            try {
-                Remove-Module -Name $_.Name -Force -ErrorAction Stop
+    $modules = Get-Module | Where-Object { $_.ModuleBase }
+    foreach ($module in $modules) {
+        $basePath = $module.ModuleBase.TrimEnd('\')
+        if ($resolvedPaths | Where-Object { $basePath.StartsWith($_, 'OrdinalIgnoreCase') }) {
+            if ($PSCmdlet.ShouldProcess($module.Name, "Remove loaded module")) {
+                Write-Host "Unloading module $($module.Name)" -ForegroundColor Yellow
+                Remove-Module -Name $module.Name -Force -ErrorAction SilentlyContinue
             }
-            catch {
-                Write-Warning "Failed to remove module $($_.Name): $_"
-            }
-            break  # Module matched, no need to check other paths
         }
     }
 }
 
-Write-Host "After cleanup, Current Modules:" -ForegroundColor Cyan
-Get-Module
+function Add-ModulePath {
+    param([Parameter(Mandatory)][string]$Path)
 
-# Function to prepend a path if missing
-function Add-ToPSModulePath {
-    param([string]$Path)
-    $separator = [System.IO.Path]::PathSeparator  # ✅ Cross-platform: ; on Windows, : on Linux
-
-    if (-not ($env:PSModulePath -split $separator | ForEach-Object { $_.Trim() } | Where-Object { $_ -ieq $Path })) {
-        $env:PSModulePath = "$Path$separator$env:PSModulePath"
+    $resolved = (Resolve-Path $Path -ErrorAction Stop).Path
+    $separator = [System.IO.Path]::PathSeparator
+    $currentPaths = $env:PSModulePath -split [System.IO.Path]::PathSeparator | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+    if (-not ($currentPaths | Where-Object { $_ -ieq $resolved })) {
+        $env:PSModulePath = "$resolved$separator$env:PSModulePath"
+        Write-Host "Added module path: $resolved" -ForegroundColor Cyan
     }
 }
 
-# Prepend both paths
-Add-ToPSModulePath $utilitiesModules
-Add-ToPSModulePath $projectModules
-Add-ToPSModulePath $testModules
+$projectModules = Join-Path $root 'scripts\Modules'
+$utilitiesModules = Join-Path $projectModules 'Utilities'
+$testsModules = Join-Path $projectModules 'Tests'
+
+Remove-ModulesInPaths -ModulePaths $projectModules
+Add-ModulePath -Path $utilitiesModules
+Add-ModulePath -Path $testsModules
+
+Import-Module Colors -Force -ErrorAction Stop
+Import-Module Emojis -Force -ErrorAction Stop
+Import-Module MessageUtils -Force -ErrorAction Stop
+Import-Module RepositoryUtils -Force -ErrorAction Stop
+Import-Module ActionDocs -Force -ErrorAction Stop
+
 
 # --- Start d-flows Act Setup Verification ---
 Write-Message "`nd-flows Act Setup Verification"
@@ -130,9 +133,10 @@ Get-Module
 
 Write-Message -Type Info "From RepositoryUtils: $(New-TestStateDirectory)"
 
-Write-Message -Type Info "Test Modules: $testModules"
 Import-Module TestArtifacts -ErrorAction Stop
 Write-Message -Type Info "TestArtifacts Module Imported. Test State Directory: $TestStateDirectory"
 Write-Message -Type Info "Test Tags File: $TestTagsFile"
 
 Write-Message -Type Info "Test Commits Bundle: $TestCommitsBundle"
+
+Invoke-AllActionDocs

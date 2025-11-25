@@ -156,14 +156,14 @@ function Get-FixtureContent {
             throw "Fixture file not found: $FixturePath"
         }
 
-        Write-Message -Type "Fixture" "Reading fixture file: $FixturePath"
+        Write-Message -Type Fixture "Reading fixture file: $FixturePath"
         $content = Get-Content -Path $FixturePath -Raw -Encoding UTF8 | ConvertFrom-Json
 
-        Write-Message -Type "Debug" "Fixture parsed successfully"
+        Write-Message -Type Debug "Fixture parsed successfully"
         return $content
     }
     catch {
-        Write-Message -Type "Error" "Failed to parse fixture file: $_"
+        Write-Message -Type Error "Failed to parse fixture file: $_"
         throw $_
     }
 }
@@ -181,7 +181,7 @@ function Get-FixtureContent {
 
 .EXAMPLE
     $scenario = Get-ScenarioFromFixture -FixtureContent $fixture
-    Write-Message -Type "Info" "Scenario: $scenario"
+    Write-Message -Type Info "Scenario: $scenario"
 
 .NOTES
     Returns scenario name or $null if not found.
@@ -197,7 +197,7 @@ function Get-ScenarioFromFixture {
         if ($FixtureContent.steps) {
             foreach ($step in $FixtureContent.steps) {
                 if ($step.action -eq "setup-git-state" -and $step.scenario) {
-                    Write-Message -Type "Scenario" "Found scenario in integration test: $($step.scenario)"
+                    Write-Message -Type Scenario "Found scenario in integration test: $($step.scenario)"
                     return $step.scenario
                 }
             }
@@ -208,16 +208,16 @@ function Get-ScenarioFromFixture {
             # Pattern: "Setup: Run 'setup-test-git-state.ps1 -Scenario <ScenarioName>'"
             if ($FixtureContent._comment -match "Scenario\s+(\w+)") {
                 $scenario = $matches[1]
-                Write-Message -Type "Scenario" "Found scenario in comment: $scenario"
+                Write-Message -Type Scenario "Found scenario in comment: $scenario"
                 return $scenario
             }
         }
 
-        Write-Message -Type "Debug" "No scenario found in fixture"
+        Write-Message -Type Debug "No scenario found in fixture"
         return $null
     }
     catch {
-        Write-Message -Type "Warning" "Error extracting scenario: $_"
+        Write-Message -Type Warning "Error extracting scenario: $_"
         return $null
     }
 }
@@ -249,7 +249,7 @@ function Get-ExpectedStateFromFixture {
         if ($FixtureContent.steps) {
             foreach ($step in $FixtureContent.steps) {
                 if ($step.action -eq "setup-git-state" -and $step.expectedState) {
-                    Write-Message -Type "Debug" "Found expectedState in integration test"
+                    Write-Message -Type Debug "Found expectedState in integration test"
                     return $step.expectedState
                 }
             }
@@ -258,7 +258,7 @@ function Get-ExpectedStateFromFixture {
         return $null
     }
     catch {
-        Write-Message -Type "Warning" "Error extracting expected state: $_"
+        Write-Message -Type Warning "Error extracting expected state: $_"
         return $null
     }
 }
@@ -275,7 +275,7 @@ function Get-ExpectedStateFromFixture {
 
 .EXAMPLE
     $scenarios = Get-FixtureScenarios
-    $scenarios | ForEach-Object { Write-Message -Type "Info" $_.ScenarioName }
+    $scenarios | ForEach-Object { Write-Message -Type Info $_.ScenarioName }
 
 .EXAMPLE
     $scenario = Get-FixtureScenarios -FixturePath "tests/bump-version/major-bump-main.json"
@@ -289,14 +289,14 @@ function Get-FixtureScenarios {
     )
 
     try {
-        Write-Message -Type "Info" "Scanning for scenarios in fixture files"
+        Write-Message -Type Info "Scanning for scenarios in fixture files"
 
         $scenarios = @()
         $processedScenarios = @{}
 
         if ($FixturePath) {
             # Process single fixture
-            Write-Message -Type "Fixture" "Processing single fixture: $FixturePath"
+            Write-Message -Type Fixture "Processing single fixture: $FixturePath"
             $content = Get-FixtureContent -FixturePath $FixturePath
             $scenario = Get-ScenarioFromFixture -FixtureContent $content
 
@@ -315,7 +315,7 @@ function Get-FixtureScenarios {
 
             # Scan integration fixtures
             if (Test-Path $integrationDir) {
-                Write-Message -Type "Debug" "Scanning integration fixtures: $integrationDir"
+                Write-Message -Type Debug "Scanning integration fixtures: $integrationDir"
                 $integrationFixtures = Get-ChildItem -Path $integrationDir -Filter "*.json" -ErrorAction SilentlyContinue
 
                 foreach ($fixture in $integrationFixtures) {
@@ -332,14 +332,14 @@ function Get-FixtureScenarios {
                         }
                     }
                     catch {
-                        Write-Message -Type "Debug" "Skipping fixture due to error: $($fixture.Name)"
+                        Write-Message -Type Debug "Skipping fixture due to error: $($fixture.Name)"
                     }
                 }
             }
 
             # Scan bump-version fixtures
             if (Test-Path $bumpVersionDir) {
-                Write-Message -Type "Debug" "Scanning bump-version fixtures: $bumpVersionDir"
+                Write-Message -Type Debug "Scanning bump-version fixtures: $bumpVersionDir"
                 $bumpVersionFixtures = Get-ChildItem -Path $bumpVersionDir -Filter "*.json" -ErrorAction SilentlyContinue
 
                 foreach ($fixture in $bumpVersionFixtures) {
@@ -356,23 +356,23 @@ function Get-FixtureScenarios {
                         }
                     }
                     catch {
-                        Write-Message -Type "Debug" "Skipping fixture due to error: $($fixture.Name)"
+                        Write-Message -Type Debug "Skipping fixture due to error: $($fixture.Name)"
                     }
                 }
             }
         }
 
         if ($scenarios.Count -gt 0) {
-            Write-Message -Type "Success" "Found $($scenarios.Count) scenarios"
+            Write-Message -Type Success "Found $($scenarios.Count) scenarios"
         }
         else {
-            Write-Message -Type "Info" "No scenarios found"
+            Write-Message -Type Info "No scenarios found"
         }
 
         return $scenarios
     }
     catch {
-        Write-Message -Type "Error" "Failed to scan fixtures: $_"
+        Write-Message -Type Error "Failed to scan fixtures: $_"
         throw $_
     }
 }
@@ -419,7 +419,7 @@ function Invoke-Scenario {
     )
 
     try {
-        Write-Message -Type "Info" "Applying scenario: $ScenarioName"
+        Write-Message -Type Info "Applying scenario: $ScenarioName"
 
         # Validate scenario exists
         if (-not $ScenarioDefinitions.ContainsKey($ScenarioName)) {
@@ -428,15 +428,15 @@ function Invoke-Scenario {
         }
 
         $scenario = $ScenarioDefinitions[$ScenarioName]
-        Write-Message -Type "Scenario" "Scenario description: $($scenario.Description)"
+        Write-Message -Type Scenario "Scenario description: $($scenario.Description)"
 
         # Apply expectedState overrides if provided
         if ($ExpectedState) {
-            Write-Message -Type "Debug" "Applying expectedState overrides from fixture"
+            Write-Message -Type Debug "Applying expectedState overrides from fixture"
 
             # Override tags if specified in expectedState
             if ($ExpectedState.tags) {
-                Write-Message -Type "Debug" "Overriding tags from fixture: $($ExpectedState.tags -join ', ')"
+                Write-Message -Type Debug "Overriding tags from fixture: $($ExpectedState.tags -join ', ')"
                 $scenario.Tags = @()
                 foreach ($tagName in $ExpectedState.tags) {
                     $scenario.Tags += @{ Name = $tagName; CommitMessage = "Release $tagName" }
@@ -445,17 +445,17 @@ function Invoke-Scenario {
 
             # Override branches if specified in expectedState
             if ($ExpectedState.branches) {
-                Write-Message -Type "Debug" "Overriding branches from fixture: $($ExpectedState.branches -join ', ')"
+                Write-Message -Type Debug "Overriding branches from fixture: $($ExpectedState.branches -join ', ')"
                 $scenario.Branches = $ExpectedState.branches
             }
 
             # Override currentBranch if specified in expectedState
             if ($ExpectedState.currentBranch) {
-                Write-Message -Type "Debug" "Overriding currentBranch from fixture: $($ExpectedState.currentBranch)"
+                Write-Message -Type Debug "Overriding currentBranch from fixture: $($ExpectedState.currentBranch)"
                 $scenario.CurrentBranch = $ExpectedState.currentBranch
             }
 
-            Write-Message -Type "Info" "Fixture-specific state overrides applied to scenario"
+            Write-Message -Type Info "Fixture-specific state overrides applied to scenario"
         }
 
         # Clean state if requested
@@ -468,11 +468,11 @@ function Invoke-Scenario {
         $firstSha = $null
         try {
             $firstSha = Get-CurrentCommitSha
-            Write-Message -Type "Debug" "Repository has existing commits, starting from SHA: $firstSha"
+            Write-Message -Type Debug "Repository has existing commits, starting from SHA: $firstSha"
             $hasCommits = $true
         }
         catch {
-            Write-Message -Type "Debug" "Repository appears to be empty, will create initial commit"
+            Write-Message -Type Debug "Repository appears to be empty, will create initial commit"
             $hasCommits = $false
         }
 
@@ -493,7 +493,7 @@ function Invoke-Scenario {
                 }
             }
             catch {
-                Write-Message -Type "Warning" "Failed to create tag $($tag.Name): $_"
+                Write-Message -Type Warning "Failed to create tag $($tag.Name): $_"
                 continue
             }
         }
@@ -505,7 +505,7 @@ function Invoke-Scenario {
                 # Skip if branch already exists and not force
                 if (Test-GitBranchExists -BranchName $branch) {
                     if (-not $Force) {
-                        Write-Message -Type "Branch" "Branch already exists, skipping: $branch"
+                        Write-Message -Type Branch "Branch already exists, skipping: $branch"
                         continue
                     }
                 }
@@ -536,7 +536,7 @@ function Invoke-Scenario {
                 }
             }
             catch {
-                Write-Message -Type "Warning" "Failed to create branch ${branch}: $_"
+                Write-Message -Type Warning "Failed to create branch ${branch}: $_"
                 continue
             }
         }
@@ -546,11 +546,11 @@ function Invoke-Scenario {
             try {
                 $checkoutSuccess = Set-GitBranch -BranchName $scenario.CurrentBranch
                 if (-not $checkoutSuccess) {
-                    Write-Message -Type "Warning" "Failed to checkout current branch, continuing anyway"
+                    Write-Message -Type Warning "Failed to checkout current branch, continuing anyway"
                 }
             }
             catch {
-                Write-Message -Type "Warning" "Error checking out current branch: $_"
+                Write-Message -Type Warning "Error checking out current branch: $_"
             }
         }
 
@@ -563,7 +563,7 @@ function Invoke-Scenario {
             $testTagsPath = Export-TestTagsFile -Tags $tagsCreated
         }
 
-        Write-Message -Type "Success" "Scenario applied successfully: $ScenarioName"
+        Write-Message -Type Success "Scenario applied successfully: $ScenarioName"
 
         return @{
             ScenarioName    = $ScenarioName
@@ -574,7 +574,7 @@ function Invoke-Scenario {
         }
     }
     catch {
-        Write-Message -Type "Error" "Failed to apply scenario: $_"
+        Write-Message -Type Error "Failed to apply scenario: $_"
         throw $_
     }
 }
@@ -630,32 +630,32 @@ function Invoke-TestFixtures {
         }
 
         if ($FixturePath -and $Scenario) {
-            Write-Message -Type "Warning" "Both FixturePath and Scenario provided, Scenario will be ignored"
+            Write-Message -Type Warning "Both FixturePath and Scenario provided, Scenario will be ignored"
             $Scenario = $null
         }
 
-        Write-Message -Type "Info" "Starting test fixture application"
+        Write-Message -Type Info "Starting test fixture application"
 
         $scenarioToApply = $null
         $fixtureOverrides = $null
 
         # Extract scenario from fixture if provided
         if ($FixturePath) {
-            Write-Message -Type "Fixture" "Processing fixture file: $FixturePath"
+            Write-Message -Type Fixture "Processing fixture file: $FixturePath"
 
             $content = Get-FixtureContent -FixturePath $FixturePath
             $scenarioToApply = Get-ScenarioFromFixture -FixtureContent $content
 
             if (-not $scenarioToApply) {
-                Write-Message -Type "Warning" "No scenario found in fixture file: $FixturePath"
-                Write-Message -Type "Info" "Fixture content available but scenario extraction failed"
+                Write-Message -Type Warning "No scenario found in fixture file: $FixturePath"
+                Write-Message -Type Info "Fixture content available but scenario extraction failed"
                 return $null
             }
 
             # Extract expected state from fixture if present
             $expectedState = Get-ExpectedStateFromFixture -FixtureContent $content
             if ($expectedState) {
-                Write-Message -Type "Debug" "Found expectedState in fixture - applying overrides"
+                Write-Message -Type Debug "Found expectedState in fixture - applying overrides"
                 $fixtureOverrides = $expectedState
             }
         }
@@ -665,7 +665,7 @@ function Invoke-TestFixtures {
 
         # Apply scenario with optional fixture overrides
         if ($fixtureOverrides) {
-            Write-Message -Type "Debug" "Applying fixture-specific state overrides to scenario '$scenarioToApply'"
+            Write-Message -Type Debug "Applying fixture-specific state overrides to scenario '$scenarioToApply'"
             if ($OutputPath) {
                 $result = Invoke-Scenario -ScenarioName $scenarioToApply -CleanState $CleanState -Force $Force -ExpectedState $fixtureOverrides -OutputPath $OutputPath
             }
@@ -685,14 +685,14 @@ function Invoke-TestFixtures {
         # Update output path if specified (already handled in Invoke-Scenario if OutputPath provided)
         # This is kept for backward compatibility but shouldn't regenerate if already done
         if ($OutputPath -and $result -and -not $result.TestTagsFile) {
-            Write-Message -Type "Debug" "Regenerating test-tags.txt at custom path (fallback)"
+            Write-Message -Type Debug "Regenerating test-tags.txt at custom path (fallback)"
             $result.TestTagsFile = Export-TestTagsFile -OutputPath $OutputPath -Tags $result.TagsCreated
         }
 
         return $result
     }
     catch {
-        Write-Message -Type "Error" "Failed to apply test fixtures: $_"
+        Write-Message -Type Error "Failed to apply test fixtures: $_"
         throw $_
     }
 }
@@ -714,7 +714,7 @@ function Invoke-TestFixtures {
 .EXAMPLE
     $result = Test-ScenarioState -ScenarioName "MajorBumpV0ToV1"
     if ($result.IsValid) {
-        Write-Message -Type "Success" "State matches scenario"
+        Write-Message -Type Success "State matches scenario"
     }
 
 .NOTES
@@ -727,7 +727,7 @@ function Test-ScenarioState {
     )
 
     try {
-        Write-Message -Type "Info" "Validating scenario state: $ScenarioName"
+        Write-Message -Type Info "Validating scenario state: $ScenarioName"
 
         # Validate scenario exists
         if (-not $ScenarioDefinitions.ContainsKey($ScenarioName)) {
@@ -743,7 +743,7 @@ function Test-ScenarioState {
         foreach ($tag in $scenario.Tags) {
             if (-not (Test-GitTagExists -TagName $tag.Name)) {
                 $missingTags += $tag.Name
-                Write-Message -Type "Tag" "Missing tag: $($tag.Name)"
+                Write-Message -Type Tag "Missing tag: $($tag.Name)"
             }
         }
 
@@ -751,7 +751,7 @@ function Test-ScenarioState {
         foreach ($branch in $scenario.Branches) {
             if (-not (Test-GitBranchExists -BranchName $branch)) {
                 $missingBranches += $branch
-                Write-Message -Type "Branch" "Missing branch: $branch"
+                Write-Message -Type Branch "Missing branch: $branch"
             }
         }
 
@@ -759,16 +759,16 @@ function Test-ScenarioState {
         $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
         if ($currentBranch -ne $scenario.CurrentBranch) {
             $currentBranchMismatch = $true
-            Write-Message -Type "Debug" "Current branch mismatch: expected '$($scenario.CurrentBranch)', got '$currentBranch'"
+            Write-Message -Type Debug "Current branch mismatch: expected '$($scenario.CurrentBranch)', got '$currentBranch'"
         }
 
         $isValid = ($missingTags.Count -eq 0 -and $missingBranches.Count -eq 0 -and -not $currentBranchMismatch)
 
         if ($isValid) {
-            Write-Message -Type "Success" "Git state matches scenario: $ScenarioName"
+            Write-Message -Type Success "Git state matches scenario: $ScenarioName"
         }
         else {
-            Write-Message -Type "Warning" "Git state does not match scenario"
+            Write-Message -Type Warning "Git state does not match scenario"
         }
 
         return @{
@@ -781,7 +781,7 @@ function Test-ScenarioState {
         }
     }
     catch {
-        Write-Message -Type "Error" "Error validating scenario state: $_"
+        Write-Message -Type Error "Error validating scenario state: $_"
         throw $_
     }
 }
@@ -812,47 +812,47 @@ function Show-ScenarioDefinition {
         # Validate scenario exists
         if (-not $ScenarioDefinitions.ContainsKey($ScenarioName)) {
             $availableScenarios = $ScenarioDefinitions.Keys -join ", "
-            Write-Message -Type "Error" "Unknown scenario: $ScenarioName. Available: $availableScenarios"
+            Write-Message -Type Error "Unknown scenario: $ScenarioName. Available: $availableScenarios"
             return
         }
 
         $scenario = $ScenarioDefinitions[$ScenarioName]
 
-        Write-Message -Type "Info" "==============================================================================" -ForegroundColor Cyan
-        Write-Message -Type "Info" "  Scenario: $ScenarioName" -ForegroundColor Cyan
-        Write-Message -Type "Info" "==============================================================================" -ForegroundColor Cyan
-        Write-Message -Type "Info" "Description:" -ForegroundColor Yellow
-        Write-Message -Type "Info" "  $($scenario.Description)" -ForegroundColor Gray
-        Write-Message -Type "Info" "Tags:" -ForegroundColor Yellow
+        Write-Message -Type Info "==============================================================================" -ForegroundColor Cyan
+        Write-Message -Type Info "  Scenario: $ScenarioName" -ForegroundColor Cyan
+        Write-Message -Type Info "==============================================================================" -ForegroundColor Cyan
+        Write-Message -Type Info "Description:" -ForegroundColor Yellow
+        Write-Message -Type Info "  $($scenario.Description)" -ForegroundColor Gray
+        Write-Message -Type Info "Tags:" -ForegroundColor Yellow
         if ($scenario.Tags.Count -eq 0) {
-            Write-Message -Type "Info" "  (none)" -ForegroundColor Gray
+            Write-Message -Type Info "  (none)" -ForegroundColor Gray
         }
         else {
             foreach ($tag in $scenario.Tags) {
-                Write-Message -Type "Tag" "  $($tag.Name) - $($tag.CommitMessage)"
+                Write-Message -Type Tag "  $($tag.Name) - $($tag.CommitMessage)"
             }
         }
-        Write-Message -Type "Info" "Branches:" -ForegroundColor Yellow
+        Write-Message -Type Info "Branches:" -ForegroundColor Yellow
         if ($scenario.Branches.Count -eq 0) {
-            Write-Message -Type "Info" "  (none)" -ForegroundColor Gray
+            Write-Message -Type Info "  (none)" -ForegroundColor Gray
         }
         else {
             foreach ($branch in $scenario.Branches) {
-                Write-Message -Type "Branch" "  $branch"
+                Write-Message -Type Branch "  $branch"
             }
         }
-        Write-Message -Type "Info" "Current Branch:" -ForegroundColor Yellow
-        Write-Message -Type "Info" "  $($scenario.CurrentBranch)" -ForegroundColor Cyan
+        Write-Message -Type Info "Current Branch:" -ForegroundColor Yellow
+        Write-Message -Type Info "  $($scenario.CurrentBranch)" -ForegroundColor Cyan
         if ($scenario.Notes) {
-            Write-Message -Type "Info" "Notes:" -ForegroundColor Yellow
-            Write-Message -Type "Info" "  $($scenario.Notes)" -ForegroundColor Gray
+            Write-Message -Type Info "Notes:" -ForegroundColor Yellow
+            Write-Message -Type Info "  $($scenario.Notes)" -ForegroundColor Gray
         }
 
-        Write-Message -Type "Info" "==============================================================================" -ForegroundColor Cyan
+        Write-Message -Type Info "==============================================================================" -ForegroundColor Cyan
         return $scenario
     }
     catch {
-        Write-Message -Type "Error" "Error displaying scenario: $_"
+        Write-Message -Type Error "Error displaying scenario: $_"
         throw $_
     }
 }
@@ -864,25 +864,25 @@ function Show-ScenarioDefinition {
 # Check if script is being dot-sourced or executed directly
 if ($MyInvocation.InvocationName -ne ".") {
     # Script is being executed directly
-    Write-Message -Type "Info" "==============================================================================" -ForegroundColor Cyan
-    Write-Message -Type "Info" "  Test Fixtures Application Script" -ForegroundColor Cyan
-    Write-Message -Type "Info" "==============================================================================" -ForegroundColor Cyan
-    Write-Message -Type "Info" "This script applies test fixtures to set up git state for act integration testing." -ForegroundColor Gray
+    Write-Message -Type Info "==============================================================================" -ForegroundColor Cyan
+    Write-Message -Type Info "  Test Fixtures Application Script" -ForegroundColor Cyan
+    Write-Message -Type Info "==============================================================================" -ForegroundColor Cyan
+    Write-Message -Type Info "This script applies test fixtures to set up git state for act integration testing." -ForegroundColor Gray
 
-    Write-Message -Type "Info" "Available Functions:" -ForegroundColor Yellow
-    Write-Message -Type "Info" "  Invoke-TestFixtures [-FixturePath | -Scenario] - Apply fixture or scenario" -ForegroundColor Cyan
-    Write-Message -Type "Info" "  Invoke-Scenario [-ScenarioName]              - Apply scenario directly" -ForegroundColor Cyan
-    Write-Message -Type "Info" "  Get-FixtureScenarios                        - List scenarios from fixtures" -ForegroundColor Cyan
-    Write-Message -Type "Info" "  Show-ScenarioDefinition [-ScenarioName]     - Display scenario details" -ForegroundColor Cyan
-    Write-Message -Type "Info" "  Test-ScenarioState [-ScenarioName]          - Validate git state" -ForegroundColor Cyan
-    Write-Message -Type "Info" "  Export-TestTagsFile                         - Generate test-tags.txt" -ForegroundColor Cyan
-    Write-Message -Type "Info" "  Clear-GitState                              - Clean existing git state" -ForegroundColor Cyan
+    Write-Message -Type Info "Available Functions:" -ForegroundColor Yellow
+    Write-Message -Type Info "  Invoke-TestFixtures [-FixturePath | -Scenario] - Apply fixture or scenario" -ForegroundColor Cyan
+    Write-Message -Type Info "  Invoke-Scenario [-ScenarioName]              - Apply scenario directly" -ForegroundColor Cyan
+    Write-Message -Type Info "  Get-FixtureScenarios                        - List scenarios from fixtures" -ForegroundColor Cyan
+    Write-Message -Type Info "  Show-ScenarioDefinition [-ScenarioName]     - Display scenario details" -ForegroundColor Cyan
+    Write-Message -Type Info "  Test-ScenarioState [-ScenarioName]          - Validate git state" -ForegroundColor Cyan
+    Write-Message -Type Info "  Export-TestTagsFile                         - Generate test-tags.txt" -ForegroundColor Cyan
+    Write-Message -Type Info "  Clear-GitState                              - Clean existing git state" -ForegroundColor Cyan
 
-    Write-Message -Type "Info" "Available Scenarios:" -ForegroundColor Yellow
+    Write-Message -Type Info "Available Scenarios:" -ForegroundColor Yellow
     foreach ($scenarioName in $ScenarioDefinitions.Keys) {
         $scenario = $ScenarioDefinitions[$scenarioName]
-        Write-Message -Type "Scenario" "  $scenarioName"
-        Write-Message -Type "Info" "      $($scenario.Description)" -ForegroundColor Gray
+        Write-Message -Type Scenario "  $scenarioName"
+        Write-Message -Type Info "      $($scenario.Description)" -ForegroundColor Gray
     }
 
     Write-Message "Usage Examples:" -ForegroundColor Yellow

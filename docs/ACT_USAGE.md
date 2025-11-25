@@ -381,11 +381,11 @@ $bumpTests = @(
 
 # Run each test
 foreach ($test in $bumpTests) {
-    Write-Message -Type "Info" "Testing: $($test.Test)"
+    Write-Message -Type Info "Testing: $($test.Test)"
     .\setup-test-git-state.ps1 -Scenario $test.Scenario
     act workflow_dispatch -W .github/workflows/bump-version.yml -e "tests/bump-version/$($test.Test)"
     .\setup-test-git-state.ps1 -Scenario Reset
-    Write-Message -Type "Info" "Completed: $($test.Test)`n"
+    Write-Message -Type Info "Completed: $($test.Test)`n"
 }
 ```
 

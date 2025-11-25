@@ -1,9 +1,9 @@
 name: "Install Red-DiscordBot"
-description: "Downloads a Red-DiscordBot build artifact and installs it using uv."
+description: "Installs Red-DiscordBot from a previously built artifact when provided, or falls back to PyPI when no artifact is available."
 
 inputs:
   artifact_name:
-    description: "Optional artifact name to download. Default: red-discordbot-build"
+    description: "Artifact name passed to actions/download-artifact; when blank the installer skips the download step and installs the latest PyPI release instead."
     required: false
 
 runs:

@@ -1,12 +1,12 @@
 name: "Build Red-DiscordBot"
-description: "Clones Red-DiscordBot at optional commit, builds it using uv, and uploads the artifact."
+description: "Clones Red-DiscordBot (optionally at a specific commit), builds distributable wheels, and uploads them for downstream jobs."
 
 inputs:
   red_commit:
-    description: "Optional commit SHA for Red-DiscordBot. If omitted, main is used."
+    description: "Commit SHA to check out before building; leave empty to build the default branch head fetched via a shallow clone."
     required: false
   artifact_name:
-    description: "Optional artifact name. Default: red-discordbot-build"
+    description: "Name given to the uploaded artifact in the final step; defaults to 'red-discordbot-build' when not set."
     required: false
 
 runs:

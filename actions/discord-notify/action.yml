@@ -1,52 +1,52 @@
 name: 'Discord Notification'
-description: 'Send Discord notifications via webhook'
+description: 'Posts embed-style or plain-text Discord webhook messages with sensible defaults sourced from the current GitHub run.'
 
 inputs:
   webhook_url:
-    description: 'Discord webhook URL'
+    description: 'HTTPS Discord webhook endpoint the action POSTs to; must point to discord.com/discordapp and is always required.'
     required: true
   message_type:
-    description: "Type of message: 'embed' or 'message'"
+    description: "Controls the payload structure; defaults to 'embed', but set to 'message' to send plain text content."
     required: false
     default: 'embed'
   title:
-    description: 'Title for embed message'
+    description: 'Embed title text; ignored when message_type is set to message.'
     required: false
   description:
-    description: 'Description for embed message'
+    description: 'Embed body/description text appended under the title; ignored for plain messages.'
     required: false
   content:
-    description: 'Content for normal message'
+    description: 'Plain-text body sent when message_type is message.'
     required: false
   color:
-    description: 'Color for embed in decimal format (e.g., 5814783 for blue)'
+    description: 'Decimal color value applied to the embed sidebar; Discord falls back to its default gray when omitted.'
     required: false
   fields:
-    description: 'JSON array of fields for embed (e.g., ''[{"name":"Field1","value":"Value1","inline":true}]'')'
+    description: 'Literal JSON array string inserted into the embed fields collection (for example `[{"name":"Field","value":"Value","inline":true}]`).'
     required: false
   username:
-    description: 'Custom username for webhook (defaults to GitHub actor)'
+    description: 'Overrides the webhook display name; defaults to the triggering GitHub actor when blank.'
     required: false
   avatar_url:
-    description: 'Custom avatar URL for webhook (defaults to GitHub actor avatar)'
+    description: 'Sets a custom avatar image; defaults to the actor''s GitHub avatar URL.'
     required: false
   footer_text:
-    description: 'Custom footer text (defaults to repository and workflow name)'
+    description: 'Footer text rendered at the bottom of embeds; defaults to "<owner>/<repo> • <workflow>".'
     required: false
   footer_icon_url:
-    description: 'Footer icon URL'
+    description: 'Optional icon that appears next to the footer text; left unset otherwise.'
     required: false
   image_url:
-    description: 'Large image URL displayed in embed'
+    description: 'Displays a full-width image inside the embed when provided.'
     required: false
   thumbnail_url:
-    description: 'Thumbnail image URL displayed in top-right of embed'
+    description: 'Sets the small thumbnail shown in the embed''s upper-right corner.'
     required: false
   author_url:
-    description: 'URL for clickable author name'
+    description: 'Hyperlink applied to the embed author name (usually the GitHub actor).'
     required: false
   url:
-    description: 'URL for clickable embed title'
+    description: 'Destination URL applied to the embed title when set.'
     required: false
 
 runs:
