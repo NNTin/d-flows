@@ -5,61 +5,51 @@ $scriptDir = $PSScriptRoot
 $devDir = Split-Path -Parent $scriptDir
 $root = Split-Path -Parent $devDir
 
-function Get-ModuleDirectoriesRecursively {
-    param([string]$Root)
-
-    Get-ChildItem -Path $Root -Recurse -Directory | ForEach-Object {
-        $hasManifest = Get-ChildItem -Path $_.FullName -Filter '*.psd1' -File -ErrorAction Ignore
-        $hasModule = Get-ChildItem -Path $_.FullName -Filter '*.psm1' -File -ErrorAction Ignore
-
-        if ($hasManifest -or $hasModule) {
-            $_.FullName
-        }
-    }
-}
-
 function Remove-ModulesInPaths {
     [CmdletBinding(SupportsShouldProcess)]
     param([string[]]$ModulePaths)
 
-    $normalized = $ModulePaths | ForEach-Object {
-        (Resolve-Path $_).Path.TrimEnd('\')
+    $resolvedPaths = $ModulePaths | ForEach-Object {
+        (Resolve-Path $_ -ErrorAction Stop).Path.TrimEnd('\')
     }
 
-    foreach ($m in Get-Module) {
-        if (-not $m.ModuleBase) { continue }
-
-        $base = $m.ModuleBase.TrimEnd('\')
-
-        if ($normalized | Where-Object { $base.StartsWith($_, 'OrdinalIgnoreCase') }) {
-
-            if ($PSCmdlet.ShouldProcess($m.Name, "Remove loaded module")) {
-                Write-Host "Unloading module $($m.Name)" -ForegroundColor Yellow
-                Remove-Module -Name $m.Name -Force -ErrorAction SilentlyContinue
+    $modules = Get-Module | Where-Object { $_.ModuleBase }
+    foreach ($module in $modules) {
+        $basePath = $module.ModuleBase.TrimEnd('\')
+        if ($resolvedPaths | Where-Object { $basePath.StartsWith($_, 'OrdinalIgnoreCase') }) {
+            if ($PSCmdlet.ShouldProcess($module.Name, "Remove loaded module")) {
+                Write-Host "Unloading module $($module.Name)" -ForegroundColor Yellow
+                Remove-Module -Name $module.Name -Force -ErrorAction SilentlyContinue
             }
         }
     }
 }
 
-function Import-ModulesRecursively {
-    param([string[]]$Roots)
+function Add-ModulePath {
+    param([Parameter(Mandatory)][string]$Path)
 
-    foreach ($root in $Roots) {
-        $dirs = Get-ModuleDirectoriesRecursively -Root $root |
-        Sort-Object { $_.Split('\').Count }
-
-        foreach ($d in $dirs) {
-            $moduleName = Split-Path $d -Leaf
-            Write-Host "Importing module: $moduleName" -ForegroundColor Green
-            Import-Module $d -Force -ErrorAction Continue
-        }
+    $resolved = (Resolve-Path $Path -ErrorAction Stop).Path
+    $separator = [System.IO.Path]::PathSeparator
+    $currentPaths = $env:PSModulePath -split [System.IO.Path]::PathSeparator | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+    if (-not ($currentPaths | Where-Object { $_ -ieq $resolved })) {
+        $env:PSModulePath = "$resolved$separator$env:PSModulePath"
+        Write-Host "Added module path: $resolved" -ForegroundColor Cyan
     }
 }
 
 $projectModules = Join-Path $root 'scripts\Modules'
+$utilitiesModules = Join-Path $projectModules 'Utilities'
+$testsModules = Join-Path $projectModules 'Tests'
 
 Remove-ModulesInPaths -ModulePaths $projectModules
-Import-ModulesRecursively -ModulePaths $projectModules
+Add-ModulePath -Path $utilitiesModules
+Add-ModulePath -Path $testsModules
+
+Import-Module Colors -Force -ErrorAction Stop
+Import-Module Emojis -Force -ErrorAction Stop
+Import-Module MessageUtils -Force -ErrorAction Stop
+Import-Module RepositoryUtils -Force -ErrorAction Stop
+Import-Module ActionDocs -Force -ErrorAction Stop
 
 
 # --- Start d-flows Act Setup Verification ---
