@@ -156,6 +156,7 @@ function Invoke-AllActionDocs {
         Optional override passed through to Invoke-ActionDoc.
     #>
     [CmdletBinding()]
+    [OutputType([string[]])]
     param(
         [string]$ActionsRoot = "actions",
         [string]$DocsRoot = "docs/actions",
@@ -171,12 +172,10 @@ function Invoke-AllActionDocs {
         throw "Actions root not found at $resolvedActionsRoot"
     }
 
-    $resolvedDocsRoot = if ([System.IO.Path]::IsPathRooted($DocsRoot)) { $DocsRoot } else { Join-Path $repoRoot $DocsRoot }
-
     $actionFiles = Get-ChildItem -Path $resolvedActionsRoot -Filter 'action.yml' -File -Recurse
     if (-not $actionFiles) {
         Write-Message -Type Warning "No action.yml files found under $resolvedActionsRoot"
-        return @()
+        return [string[]]@()
     }
 
     $generatedDocs = @()
