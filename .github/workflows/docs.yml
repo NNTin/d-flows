@@ -19,8 +19,8 @@ on:
         required: false
 
 concurrency:
-  group: docs-${{ github.ref }}
-  cancel-in-progress: true
+  group: docs-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy-docs:
@@ -60,6 +60,9 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
+
+          # Refresh gh-pages before every deployment attempt to avoid non-fast-forward pushes
+          git fetch origin gh-pages:gh-pages || true
 
           target_input="${TARGET:-}"
           version_input="${VERSION:-}"
