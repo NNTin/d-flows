@@ -1,7 +1,41 @@
 # ActionDocs.psm1
 # Wraps the Python-based action documentation generator with repository-aware helpers.
 
-function Invoke-ActionDocs {
+function Get-ActionDocsRelativePath {
+    param (
+        [Parameter(Mandatory)]
+        [string]$BasePath,
+        [Parameter(Mandatory)]
+        [string]$TargetPath
+    )
+
+    $directorySeparator = [System.IO.Path]::DirectorySeparatorChar
+    $altSeparator = [System.IO.Path]::AltDirectorySeparatorChar
+    $trimCharacters = [char[]]@($directorySeparator, $altSeparator)
+    $normalizedBase = [System.IO.Path]::GetFullPath($BasePath).TrimEnd($trimCharacters)
+    $normalizedBase = "$normalizedBase$directorySeparator"
+    $normalizedTarget = [System.IO.Path]::GetFullPath($TargetPath)
+
+    $stringComparison = if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
+        [System.StringComparison]::OrdinalIgnoreCase
+    }
+    else {
+        [System.StringComparison]::Ordinal
+    }
+
+    if ($normalizedTarget.StartsWith($normalizedBase, $stringComparison)) {
+        $relativeSegment = $normalizedTarget.Substring($normalizedBase.Length)
+        $trimmed = $relativeSegment.TrimStart($trimCharacters)
+        if (-not $trimmed) {
+            return "."
+        }
+        return $trimmed
+    }
+
+    return $normalizedTarget
+}
+
+function Invoke-ActionDoc {
     <#
     .SYNOPSIS
         Generates Markdown documentation for a composite GitHub Action.
@@ -20,8 +54,8 @@ function Invoke-ActionDocs {
         Optional override for the Python executable (defaults to python3/python).
 
     .EXAMPLE
-        Invoke-ActionDocs -ActionPath "actions/discord-notify/action.yml" `
-                          -OutputPath "docs/actions/discord-notify.md"
+        Invoke-ActionDoc -ActionPath "actions/discord-notify/action.yml" `
+                         -OutputPath "docs/actions/discord-notify.md"
     #>
     [CmdletBinding()]
     param(
@@ -103,4 +137,64 @@ function Invoke-ActionDocs {
     return $resolvedOutputPath
 }
 
-Export-ModuleMember -Function Invoke-ActionDocs
+function Invoke-AllActionDocs {
+    <#
+    .SYNOPSIS
+        Generates documentation files for every action.yml under the actions directory.
+
+    .DESCRIPTION
+        Enumerates action directories, builds the corresponding docs/actions/<name>.md paths,
+        and invokes Invoke-ActionDoc for each action definition.
+
+    .PARAMETER ActionsRoot
+        Root directory that contains individual action folders (defaults to 'actions').
+
+    .PARAMETER DocsRoot
+        Directory that stores generated Markdown files (defaults to 'docs/actions').
+
+    .PARAMETER PythonExecutable
+        Optional override passed through to Invoke-ActionDoc.
+    #>
+    [CmdletBinding()]
+    param(
+        [string]$ActionsRoot = "actions",
+        [string]$DocsRoot = "docs/actions",
+        [string]$PythonExecutable
+    )
+
+    $repoRoot = Get-RepositoryRoot
+    Write-Message -Type Folder "Repository root detected at: $repoRoot"
+
+    $resolvedActionsRoot = if ([System.IO.Path]::IsPathRooted($ActionsRoot)) { $ActionsRoot } else { Join-Path $repoRoot $ActionsRoot }
+    if (-not (Test-Path -LiteralPath $resolvedActionsRoot)) {
+        Write-Message -Type Error "Unable to find actions root: $ActionsRoot"
+        throw "Actions root not found at $resolvedActionsRoot"
+    }
+
+    $resolvedDocsRoot = if ([System.IO.Path]::IsPathRooted($DocsRoot)) { $DocsRoot } else { Join-Path $repoRoot $DocsRoot }
+
+    $actionFiles = Get-ChildItem -Path $resolvedActionsRoot -Filter 'action.yml' -File -Recurse
+    if (-not $actionFiles) {
+        Write-Message -Type Warning "No action.yml files found under $resolvedActionsRoot"
+        return @()
+    }
+
+    $generatedDocs = @()
+    foreach ($actionFile in $actionFiles) {
+        $relativeActionPath = Get-ActionDocsRelativePath -BasePath $repoRoot -TargetPath $actionFile.FullName
+
+        $actionFolderRelative = Get-ActionDocsRelativePath -BasePath $resolvedActionsRoot -TargetPath $actionFile.Directory.FullName
+        if (-not $actionFolderRelative -or $actionFolderRelative -eq ".") {
+            $actionFolderRelative = [System.IO.Path]::GetFileNameWithoutExtension($actionFile.Name)
+        }
+
+        $docRelativePath = Join-Path $DocsRoot ("$actionFolderRelative.md")
+        Write-Message -Type Info "Generating docs for action: $relativeActionPath -> $docRelativePath"
+
+        $generatedDocs += Invoke-ActionDoc -ActionPath $relativeActionPath -OutputPath $docRelativePath -PythonExecutable $PythonExecutable
+    }
+
+    return $generatedDocs
+}
+
+Export-ModuleMember -Function Invoke-ActionDoc, Invoke-AllActionDocs

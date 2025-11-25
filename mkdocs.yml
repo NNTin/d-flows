@@ -38,9 +38,18 @@ nav:
   - Developer Guide: developer.md
   - MkDocs Usage: MKDOCS_USAGE.md
   - GitHub Actions:
-      - Overview: actions.md
-      - Discord:
-          - Discord Notify: actions/discord-notify.md
+    - Overview: actions.md
+    - Discord:
+      - Discord Notify: actions/discord-notify.md
+    - GitHub:
+      - Step Summary: actions/step-summary.md
+    - Red-DiscordBot:
+      - Build: actions/build-red-discordbot.md
+      - Install: actions/install-red-discordbot.md
+      - Setup: actions/setup-red-discordbot.md
+      - Test: actions/test-red-discordbot.md
+      - Test-Downloader: actions/test-red-discordbot-downloader.md
+
   # - Versioning Strategy: VERSIONING.md
   # - ACT Testing:
   #     - Setup Guide: ACT_SETUP_GUIDE.md

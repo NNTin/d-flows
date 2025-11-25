@@ -16,7 +16,7 @@
     # ──────────────────────────────
     # Export definitions
     # ──────────────────────────────
-    FunctionsToExport    = @('Invoke-ActionDocs')
+    FunctionsToExport    = @('Invoke-ActionDoc', 'Invoke-AllActionDocs')
 
     # ──────────────────────────────
     # PowerShell compatibility

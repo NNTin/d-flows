@@ -54,10 +54,14 @@ Prefer the PowerShell cmdlet when you already have the d-flows modules imported 
    Import-Module ".\scripts\Modules\Utilities\RepositoryUtils\RepositoryUtils.psd1"
    Import-Module ".\scripts\Modules\Utilities\Documentation\ActionDocs.psd1"
    ```
-2. Invoke the generator:
+2. Invoke the generator for a single action:
    ```powershell
-   Invoke-ActionDocs `
+   Invoke-ActionDoc `
      -ActionPath "actions/discord-notify/action.yml" `
      -OutputPath "docs/actions/discord-notify.md"
    ```
-3. The cmdlet auto-detects the repository root, logs progress with emojis, and surfaces errors if Python or the action file is missing. Use `-PythonExecutable` to target a custom interpreter if needed.
+3. Use `Invoke-AllActionDocs` to regenerate every action documentation file in one go:
+   ```powershell
+   Invoke-AllActionDocs
+   ```
+4. The cmdlets auto-detect the repository root, log progress with emojis, and surface errors if Python or the action file is missing. Use `-PythonExecutable` to target a custom interpreter if needed.
