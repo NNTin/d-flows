@@ -246,3 +246,120 @@ runs:
         echo "fork_repo=$FORK_REPO_SLUG" >> $GITHUB_OUTPUT
         
         echo "" >> $GITHUB_STEP_SUMMARY
+
+    - name: Branch Management and PR Detection
+      id: branch_management
+      shell: bash
+      run: |
+        set -euo pipefail
+        
+        echo "## Branch Management" >> $GITHUB_STEP_SUMMARY
+        
+        # Extract Source Repository Name
+        SOURCE_REPO_NAME=$(echo "$SOURCE_REPO_SLUG" | cut -d'/' -f2)
+        if [ -z "$SOURCE_REPO_NAME" ]; then
+          echo "❌ Error: Failed to extract source repository name" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        echo "SOURCE_REPO_NAME=$SOURCE_REPO_NAME" >> $GITHUB_ENV
+        echo "✅ Source repository name: \`$SOURCE_REPO_NAME\`" >> $GITHUB_STEP_SUMMARY
+        
+        # Construct Sync Branch Name
+        SYNC_BRANCH="chore/sync-$SOURCE_REPO_NAME"
+        echo "SYNC_BRANCH=$SYNC_BRANCH" >> $GITHUB_ENV
+        echo "🌿 Sync branch: \`$SYNC_BRANCH\`" >> $GITHUB_STEP_SUMMARY
+        
+        # Check for Existing Open PRs
+        PR_DATA=$(gh pr list --repo "$DEST_REPO_SLUG" --head "$FORK_REPO_SLUG:$SYNC_BRANCH" --state open --json number,url 2>/dev/null || echo "[]")
+        
+        if [ "$PR_DATA" != "[]" ] && [ -n "$PR_DATA" ]; then
+          EXISTING_PR_NUMBER=$(echo "$PR_DATA" | jq -r '.[0].number')
+          EXISTING_PR_URL=$(echo "$PR_DATA" | jq -r '.[0].url')
+          
+          if [ -n "$EXISTING_PR_NUMBER" ] && [ "$EXISTING_PR_NUMBER" != "null" ]; then
+            EXISTING_PR="true"
+            echo "EXISTING_PR=true" >> $GITHUB_ENV
+            echo "EXISTING_PR_NUMBER=$EXISTING_PR_NUMBER" >> $GITHUB_ENV
+            echo "EXISTING_PR_URL=$EXISTING_PR_URL" >> $GITHUB_ENV
+            echo "✅ Found existing open PR: #$EXISTING_PR_NUMBER ($EXISTING_PR_URL)" >> $GITHUB_STEP_SUMMARY
+          else
+            EXISTING_PR="false"
+            echo "EXISTING_PR=false" >> $GITHUB_ENV
+            echo "🔍 No existing PR found, will create new branch" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          EXISTING_PR="false"
+          echo "EXISTING_PR=false" >> $GITHUB_ENV
+          echo "🔍 No existing PR found, will create new branch" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Clone Destination Repository (Fork)
+        WORK_DIR=$(mktemp -d)
+        if [ -z "$WORK_DIR" ]; then
+          echo "❌ Error: Failed to create working directory" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        echo "WORK_DIR=$WORK_DIR" >> $GITHUB_ENV
+        
+        if ! git clone "$FORK_REPO_URL" "$WORK_DIR"; then
+          echo "❌ Error: Failed to clone fork repository" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        echo "📂 Cloned fork to: \`$WORK_DIR\`" >> $GITHUB_STEP_SUMMARY
+        
+        # Change to working directory
+        cd "$WORK_DIR"
+        
+        # Configure Git Remotes
+        git remote -v
+        
+        if ! git remote add upstream "$DEST_REPO_URL"; then
+          echo "❌ Error: Failed to add upstream remote" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        
+        if ! git fetch upstream; then
+          echo "❌ Error: Failed to fetch upstream branches" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        echo "✅ Configured remotes (origin=fork, upstream=destination)" >> $GITHUB_STEP_SUMMARY
+        
+        # Branch Checkout/Creation Logic
+        if [ "$EXISTING_PR" = "true" ]; then
+          # Fetch and checkout existing branch
+          if ! git fetch origin "$SYNC_BRANCH"; then
+            echo "❌ Error: Failed to fetch existing branch from origin" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          if ! git checkout "$SYNC_BRANCH"; then
+            echo "❌ Error: Failed to checkout existing branch" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "✅ Checked out existing branch: \`$SYNC_BRANCH\`" >> $GITHUB_STEP_SUMMARY
+        else
+          # Create fresh branch from upstream default
+          DEFAULT_BRANCH=$(git remote show upstream | grep 'HEAD branch' | cut -d' ' -f5)
+          
+          if [ -z "$DEFAULT_BRANCH" ]; then
+            echo "❌ Error: Failed to determine upstream default branch" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          if ! git checkout -b "$SYNC_BRANCH" "upstream/$DEFAULT_BRANCH"; then
+            echo "❌ Error: Failed to create fresh branch" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "✅ Created fresh branch: \`$SYNC_BRANCH\` from \`upstream/$DEFAULT_BRANCH\`" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Set Step Outputs
+        echo "sync_branch=$SYNC_BRANCH" >> $GITHUB_OUTPUT
+        echo "existing_pr=$EXISTING_PR" >> $GITHUB_OUTPUT
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch Status:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Branch: \`$SYNC_BRANCH\`" >> $GITHUB_STEP_SUMMARY
+        echo "- Existing PR: \`$EXISTING_PR\`" >> $GITHUB_STEP_SUMMARY
+        echo "- Working Directory: \`$WORK_DIR\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
