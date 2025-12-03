@@ -33,8 +33,8 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        echo "📦 Ensuring aiohttp is available for RPC client"
-        python3 -m pip install "aiohttp>=3.9,<3.10"
+        echo "📦 Ensuring aiohttp and jsonschema are available for RPC client"
+        python3 -m pip install "aiohttp>=3.9,<3.10" "jsonschema>=4.0"
 
     - name: Create downloader test repo and validate cogs
       shell: bash

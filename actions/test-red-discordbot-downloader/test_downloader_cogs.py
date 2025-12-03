@@ -8,11 +8,18 @@ import json
 import os
 import sys
 import time
+import urllib.request
 from pathlib import Path
 from typing import Iterable, List, Sequence
 
 import aiohttp
 import shutil
+from jsonschema import Draft7Validator, ValidationError
+
+try:
+    from jsonschema import RefResolver
+except ImportError:  # pragma: no cover - fallback for newer jsonschema versions
+    RefResolver = None  # type: ignore[assignment, misc]
 
 from redbot.cogs.downloader import errors as downloader_errors
 from redbot.cogs.downloader.repo_manager import Repo, RepoManager
@@ -25,6 +32,10 @@ CORE_LOAD_METHOD = "CORE__LOAD"
 CORE_UNLOAD_METHOD = "CORE__UNLOAD"
 RPC_WAIT_TIMEOUT = 30
 RPC_WAIT_INTERVAL = 0.5
+
+# Cache for downloaded schemas to avoid rate limits
+_SCHEMA_CACHE: dict[str, dict] = {}
+
 
 try:
     from aiohttp import ClientWSTimeout
@@ -269,6 +280,59 @@ def ensure_lib_paths() -> Path:
         init_path.write_text("", encoding="utf-8")
     return base
 
+def validate_info_json(info_json_path: Path) -> None:
+    """Validate info.json against its declared schema.
+    
+    Args:
+        info_json_path: Path to the info.json file to validate
+        
+    Raises:
+        RuntimeError: If validation fails or schema cannot be loaded
+    """
+    print(f"📋 Validating schema for {info_json_path}")
+    
+    try:
+        with info_json_path.open(encoding="utf-8") as fp:
+            data = json.load(fp)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"Failed to read {info_json_path}: {exc}") from exc
+    
+    schema_url = data.get("$schema")
+    if not schema_url:
+        print(f"⚠️  No $schema defined in {info_json_path.name}, skipping validation")
+        return
+    
+    # Check cache first to avoid re-downloading the same schema
+    if schema_url in _SCHEMA_CACHE:
+        print(f"📦 Using cached schema for {schema_url}")
+        schema = _SCHEMA_CACHE[schema_url]
+    else:
+        print(f"🔗 Fetching schema from {schema_url}")
+        try:
+            with urllib.request.urlopen(schema_url) as response:
+                schema = json.loads(response.read().decode())
+                _SCHEMA_CACHE[schema_url] = schema
+        except Exception as exc:
+            raise RuntimeError(f"Failed to fetch schema from {schema_url}: {exc}") from exc
+    
+    # Create a resolver so $ref inside the schema works (if available)
+    if RefResolver is not None:
+        resolver = RefResolver(base_uri=schema_url, referrer=schema)
+        validator = Draft7Validator(schema, resolver=resolver)
+    else:
+        validator = Draft7Validator(schema)
+    
+    try:
+        validator.validate(data)
+        print(f"✅ Schema validation passed for {info_json_path.name}")
+    except ValidationError as e:
+        error_path = ".".join(str(p) for p in e.path) if e.path else "root"
+        raise RuntimeError(
+            f"Schema validation failed for {info_json_path.name}\n"
+            f"  Error: {e.message}\n"
+            f"  At path: {error_path}"
+        ) from e
+
 
 async def install_cogs_from_repo(
     repo: Repo,
@@ -284,6 +348,14 @@ async def install_cogs_from_repo(
     installed: List[str] = []
     for name in expected_names:
         cog = available[name]
+        
+        # Validate info.json schema before installation
+        info_json_path = repo.folder_path / name / "info.json"
+        if info_json_path.exists():
+            validate_info_json(info_json_path)
+        else:
+            print(f"⚠️  No info.json found at {info_json_path}")
+        
         print(f"🧩 Installing cog {name} via downloader")
         target = install_path / name
         if target.exists():
