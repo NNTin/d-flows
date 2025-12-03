@@ -23,9 +23,35 @@ inputs:
     required: false
     default: 'false'
 
+outputs:
+  pr_url:
+    description: URL of the created pull request(s)
+    value: ${{ steps.create_pr.outputs.pr_url }}
+  pr_number:
+    description: Pull request number(s)
+    value: ${{ steps.create_pr.outputs.pr_number }}
+  fork_repo:
+    description: Fork repository in owner/repo format
+    value: ${{ steps.fork_detection.outputs.fork_repo }}
+  sync_branch:
+    description: Branch name used for syncing
+    value: ${{ steps.branch_management.outputs.sync_branch }}
+
 runs:
   using: "composite"
   steps:
+    - name: Initialize Step Summary
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "## 🔄 Cog Sync Action" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Source Repository:** \`${{ inputs.source_repo }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Destination Repository:** \`${{ inputs.destination_repo }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Cogs to Sync:** \`${{ inputs.cog_names }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Separate PRs:** \`${{ inputs.separate_prs }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
     - name: Configure Git Identity
       shell: bash
       run: |
@@ -46,7 +72,7 @@ runs:
         fi
         echo "✅ GitHub PAT provided" >> $GITHUB_STEP_SUMMARY
         
-        # Validate source_repo format
+        # Validate and normalize source_repo
         SOURCE_REPO="${{ inputs.source_repo }}"
         if [[ ! "$SOURCE_REPO" =~ ^https:// ]] && [[ ! "$SOURCE_REPO" =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]]; then
           echo "❌ Error: source_repo must be in format 'https://...' or 'owner/repo'" >> $GITHUB_STEP_SUMMARY
@@ -54,7 +80,26 @@ runs:
         fi
         echo "✅ Source repo format valid: \`$SOURCE_REPO\`" >> $GITHUB_STEP_SUMMARY
         
-        # Validate destination_repo format
+        # Normalize source repository URL
+        if [[ "$SOURCE_REPO" =~ ^https:// ]]; then
+          # Extract owner/repo from URL
+          if [[ "$SOURCE_REPO" =~ c\.csw\.im ]]; then
+            # Handle c.csw.im domain - convert to github.com
+            SOURCE_REPO_SLUG=$(echo "$SOURCE_REPO" | sed -E 's|https://c\.csw\.im/([^/]+)/([^/]+)(\.git)?/?$|\1/\2|')
+            SOURCE_REPO_URL="https://github.com/$SOURCE_REPO_SLUG"
+          else
+            SOURCE_REPO_URL="$SOURCE_REPO"
+            SOURCE_REPO_SLUG=$(echo "$SOURCE_REPO" | sed -E 's|https://[^/]+/([^/]+)/([^/]+)(\.git)?/?$|\1/\2|')
+          fi
+        else
+          # Input is owner/repo format
+          SOURCE_REPO_SLUG="$SOURCE_REPO"
+          SOURCE_REPO_URL="https://github.com/$SOURCE_REPO"
+        fi
+        echo "SOURCE_REPO_URL=$SOURCE_REPO_URL" >> $GITHUB_ENV
+        echo "SOURCE_REPO_SLUG=$SOURCE_REPO_SLUG" >> $GITHUB_ENV
+        
+        # Validate and normalize destination_repo
         DEST_REPO="${{ inputs.destination_repo }}"
         if [[ ! "$DEST_REPO" =~ ^https:// ]] && [[ ! "$DEST_REPO" =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]]; then
           echo "❌ Error: destination_repo must be in format 'https://...' or 'owner/repo'" >> $GITHUB_STEP_SUMMARY
@@ -62,15 +107,47 @@ runs:
         fi
         echo "✅ Destination repo format valid: \`$DEST_REPO\`" >> $GITHUB_STEP_SUMMARY
         
+        # Normalize destination repository URL
+        if [[ "$DEST_REPO" =~ ^https:// ]]; then
+          # Extract owner/repo from URL
+          if [[ "$DEST_REPO" =~ c\.csw\.im ]]; then
+            # Handle c.csw.im domain - convert to github.com
+            DEST_REPO_SLUG=$(echo "$DEST_REPO" | sed -E 's|https://c\.csw\.im/([^/]+)/([^/]+)(\.git)?/?$|\1/\2|')
+            DEST_REPO_URL="https://github.com/$DEST_REPO_SLUG"
+          else
+            DEST_REPO_URL="$DEST_REPO"
+            DEST_REPO_SLUG=$(echo "$DEST_REPO" | sed -E 's|https://[^/]+/([^/]+)/([^/]+)(\.git)?/?$|\1/\2|')
+          fi
+        else
+          # Input is owner/repo format
+          DEST_REPO_SLUG="$DEST_REPO"
+          DEST_REPO_URL="https://github.com/$DEST_REPO"
+        fi
+        echo "DEST_REPO_URL=$DEST_REPO_URL" >> $GITHUB_ENV
+        echo "DEST_REPO_SLUG=$DEST_REPO_SLUG" >> $GITHUB_ENV
+        
         # Validate cog_names
         if [ -z "${{ inputs.cog_names }}" ]; then
           echo "❌ Error: cog_names is required" >> $GITHUB_STEP_SUMMARY
           exit 1
         fi
         
-        # Parse cog names into array
+        # Parse and trim cog names into array
         IFS=',' read -ra COGS <<< "${{ inputs.cog_names }}"
-        echo "✅ Cogs to sync (${#COGS[@]}): \`${COGS[*]}\`" >> $GITHUB_STEP_SUMMARY
+        TRIMMED_COGS=()
+        for cog in "${COGS[@]}"; do
+          trimmed="$(echo "${cog}" | xargs || true)"
+          if [ -z "$trimmed" ]; then
+            echo "❌ Error: Empty cog name found after trimming" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          TRIMMED_COGS+=("$trimmed")
+        done
+        
+        # Store trimmed cogs as comma-separated string
+        COGS_LIST=$(IFS=','; echo "${TRIMMED_COGS[*]}")
+        echo "COGS_LIST=$COGS_LIST" >> $GITHUB_ENV
+        echo "✅ Cogs to sync (${#TRIMMED_COGS[@]}): \`${TRIMMED_COGS[*]}\`" >> $GITHUB_STEP_SUMMARY
         
         # Validate separate_prs
         SEPARATE_PRS="${{ inputs.separate_prs }}"
@@ -84,3 +161,29 @@ runs:
       run: |
         set -euo pipefail
         echo "GH_TOKEN=${{ inputs.github_pat }}" >> $GITHUB_ENV
+
+    - name: Verify GitHub CLI
+      shell: bash
+      run: |
+        set -euo pipefail
+        
+        echo "## GitHub CLI Verification" >> $GITHUB_STEP_SUMMARY
+        
+        # Check if gh command is available
+        if ! command -v gh &> /dev/null; then
+          echo "❌ Error: GitHub CLI (gh) is not installed" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        
+        # Verify gh version
+        GH_VERSION=$(gh --version | head -n 1)
+        echo "✅ GitHub CLI installed: \`$GH_VERSION\`" >> $GITHUB_STEP_SUMMARY
+        
+        # Check authentication status
+        if ! gh auth status &> /dev/null; then
+          echo "❌ Error: GitHub CLI authentication failed" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        
+        echo "✅ GitHub CLI authenticated successfully" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
