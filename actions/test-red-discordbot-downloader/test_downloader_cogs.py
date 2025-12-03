@@ -33,6 +33,10 @@ CORE_UNLOAD_METHOD = "CORE__UNLOAD"
 RPC_WAIT_TIMEOUT = 30
 RPC_WAIT_INTERVAL = 0.5
 
+# Cache for downloaded schemas to avoid rate limits
+_SCHEMA_CACHE: dict[str, dict] = {}
+
+
 try:
     from aiohttp import ClientWSTimeout
 except ImportError:  # pragma: no cover - fallback for older aiohttp
@@ -276,7 +280,6 @@ def ensure_lib_paths() -> Path:
         init_path.write_text("", encoding="utf-8")
     return base
 
-
 def validate_info_json(info_json_path: Path) -> None:
     """Validate info.json against its declared schema.
     
@@ -299,12 +302,18 @@ def validate_info_json(info_json_path: Path) -> None:
         print(f"⚠️  No $schema defined in {info_json_path.name}, skipping validation")
         return
     
-    print(f"🔗 Fetching schema from {schema_url}")
-    try:
-        with urllib.request.urlopen(schema_url) as response:
-            schema = json.loads(response.read().decode())
-    except Exception as exc:
-        raise RuntimeError(f"Failed to fetch schema from {schema_url}: {exc}") from exc
+    # Check cache first to avoid re-downloading the same schema
+    if schema_url in _SCHEMA_CACHE:
+        print(f"📦 Using cached schema for {schema_url}")
+        schema = _SCHEMA_CACHE[schema_url]
+    else:
+        print(f"🔗 Fetching schema from {schema_url}")
+        try:
+            with urllib.request.urlopen(schema_url) as response:
+                schema = json.loads(response.read().decode())
+                _SCHEMA_CACHE[schema_url] = schema
+        except Exception as exc:
+            raise RuntimeError(f"Failed to fetch schema from {schema_url}: {exc}") from exc
     
     # Create a resolver so $ref inside the schema works (if available)
     if RefResolver is not None:
