@@ -1,0 +1,86 @@
+name: Sync Cogs
+description: |
+  Synchronize Discord bot cogs from a source repository to a destination repository.
+  Creates a fork of the destination repository, copies specified cogs to a new branch,
+  and opens a pull request with the changes. Supports syncing multiple cogs either in
+  a single PR or separate PRs per cog.
+
+inputs:
+  github_pat:
+    description: GitHub Personal Access Token with repo permissions
+    required: true
+  source_repo:
+    description: Source GitHub repository (e.g. 'c.csw.im/cswimr/SeaCogs' or 'owner/repo')
+    required: true
+  destination_repo:
+    description: Destination GitHub repository (e.g. 'NNTin/d-cogs' or 'owner/repo')
+    required: true
+  cog_names:
+    description: Comma-separated list of cog names to sync (e.g. 'hotreload,anothercog')
+    required: true
+  separate_prs:
+    description: Create separate pull requests for each cog
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configure Git Identity
+      shell: bash
+      run: |
+        git config --global user.name "nntin-bot"
+        git config --global user.email "48604375+nntin-bot@users.noreply.github.com"
+
+    - name: Validate Inputs
+      shell: bash
+      run: |
+        set -euo pipefail
+        
+        echo "## Input Validation" >> $GITHUB_STEP_SUMMARY
+        
+        # Validate GitHub PAT
+        if [ -z "${{ inputs.github_pat }}" ]; then
+          echo "❌ Error: github_pat is required" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        echo "✅ GitHub PAT provided" >> $GITHUB_STEP_SUMMARY
+        
+        # Validate source_repo format
+        SOURCE_REPO="${{ inputs.source_repo }}"
+        if [[ ! "$SOURCE_REPO" =~ ^https:// ]] && [[ ! "$SOURCE_REPO" =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]]; then
+          echo "❌ Error: source_repo must be in format 'https://...' or 'owner/repo'" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        echo "✅ Source repo format valid: \`$SOURCE_REPO\`" >> $GITHUB_STEP_SUMMARY
+        
+        # Validate destination_repo format
+        DEST_REPO="${{ inputs.destination_repo }}"
+        if [[ ! "$DEST_REPO" =~ ^https:// ]] && [[ ! "$DEST_REPO" =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]]; then
+          echo "❌ Error: destination_repo must be in format 'https://...' or 'owner/repo'" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        echo "✅ Destination repo format valid: \`$DEST_REPO\`" >> $GITHUB_STEP_SUMMARY
+        
+        # Validate cog_names
+        if [ -z "${{ inputs.cog_names }}" ]; then
+          echo "❌ Error: cog_names is required" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        
+        # Parse cog names into array
+        IFS=',' read -ra COGS <<< "${{ inputs.cog_names }}"
+        echo "✅ Cogs to sync (${#COGS[@]}): \`${COGS[*]}\`" >> $GITHUB_STEP_SUMMARY
+        
+        # Validate separate_prs
+        SEPARATE_PRS="${{ inputs.separate_prs }}"
+        echo "✅ Separate PRs: \`$SEPARATE_PRS\`" >> $GITHUB_STEP_SUMMARY
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "All inputs validated successfully! 🎉" >> $GITHUB_STEP_SUMMARY
+
+    - name: Setup GitHub CLI
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "GH_TOKEN=${{ inputs.github_pat }}" >> $GITHUB_ENV
