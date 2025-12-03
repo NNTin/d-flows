@@ -187,3 +187,62 @@ runs:
         
         echo "✅ GitHub CLI authenticated successfully" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
+
+    - name: Fork Detection and Creation
+      id: fork_detection
+      shell: bash
+      run: |
+        set -euo pipefail
+        
+        echo "## Fork Management" >> $GITHUB_STEP_SUMMARY
+        
+        # Get Bot Username
+        BOT_USERNAME=$(gh api user --jq '.login')
+        if [ -z "$BOT_USERNAME" ]; then
+          echo "❌ Error: Failed to retrieve bot username" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
+        echo "BOT_USERNAME=$BOT_USERNAME" >> $GITHUB_ENV
+        echo "✅ Authenticated as: \`$BOT_USERNAME\`" >> $GITHUB_STEP_SUMMARY
+        
+        # Construct Fork Repository Slug
+        REPO_NAME=$(echo "$DEST_REPO_SLUG" | cut -d'/' -f2)
+        FORK_REPO_SLUG="$BOT_USERNAME/$REPO_NAME"
+        echo "FORK_REPO_SLUG=$FORK_REPO_SLUG" >> $GITHUB_ENV
+        
+        # Check Fork Existence
+        if gh repo view "$FORK_REPO_SLUG" --json name 2>/dev/null || true; then
+          FORK_EXISTS=$?
+        else
+          FORK_EXISTS=1
+        fi
+        
+        # Create Fork if Missing
+        if [ $FORK_EXISTS -ne 0 ]; then
+          echo "🔱 Fork not found, creating fork..." >> $GITHUB_STEP_SUMMARY
+          
+          if ! gh repo fork "$DEST_REPO_SLUG" --clone=false; then
+            echo "❌ Error: Failed to create fork" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          # Wait for GitHub API propagation
+          sleep 3
+          
+          # Verify fork creation
+          if ! gh repo view "$FORK_REPO_SLUG" &> /dev/null; then
+            echo "❌ Error: Fork creation verification failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          echo "✅ Fork created: \`$FORK_REPO_SLUG\`" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "✅ Fork already exists: \`$FORK_REPO_SLUG\`" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        # Store Fork Information
+        FORK_REPO_URL="https://github.com/$FORK_REPO_SLUG"
+        echo "FORK_REPO_URL=$FORK_REPO_URL" >> $GITHUB_ENV
+        echo "fork_repo=$FORK_REPO_SLUG" >> $GITHUB_OUTPUT
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
