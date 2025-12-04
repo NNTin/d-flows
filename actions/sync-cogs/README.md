@@ -1,24 +1,3 @@
-AI revision work:
-- [ ] Implement cog syncing and commit logic in sync-cogs action
-- [ ] Implement PR creation with single/multiple PR support in sync-cogs action
-- [ ] Implement workflow using the new GitHub Action in d-cogs (💀gonna be a nightmare testing without nektos/act)
-
-Bugs:
-- [ ] commit user configured as [nntin-bot](https://github.com/nntin-bot), would be better if this is customizable
-- [ ] c.csw.im is hardcoded, should not be
-- [ ] fork is always created, not possible for git repositories not living on GitHub
-  - [ ] relevant for destination repository, don't maintain a forgejo or gitea instance to test myself
-- [ ] TOKEN assumes a third party unrelated account (e.g. a github bot account)
-  - [ ] we should (??) support the owner account of the destination repository, but this opens a security risk, that's why the PoC was started with a third party github bot account
-
-To provide proper forgejo/gitea compatibility is not high on my todo list since I don't use it and it will require quite a bit of changes
-
-
-Create a final sequence diagram to verify behavior!
-
-
-
-
 ```mermaid
 sequenceDiagram
     autonumber
@@ -30,22 +9,23 @@ sequenceDiagram
 
     Scheduler ->> Workflow: Trigger workflow (twice daily)
 
-    Workflow ->> Source: Check for updates in aiuser/ and aimage/
-    Source -->> Workflow: New updates? (compare commit SHAs)
+    Workflow ->> Dest: Checkout destination repository
+    Workflow ->> Workflow: git config user.name = "nntin-bot"
+    Workflow ->> Workflow: git config user.email = "48604375+nntin-bot@users.noreply.github.com"
 
-    alt No updates
+    Workflow ->> Dest: Delete aiuser/ and aimage/
+    Workflow ->> Source: Copy aiuser/ and aimage/ from source repo
+    Workflow ->> Dest: Check git diff
+
+    alt No changes
         Workflow -->> Scheduler: Workflow ends
-    else Updates exist
-        Workflow ->> Dest: Checkout destination repository
-        Workflow ->> Workflow: git config user.name = "nntin-bot"
-        Workflow ->> Workflow: git config user.email = "nntin-bot@users.noreply.github.com"
-
-        Workflow ->> Source: Fetch updated aiuser/ and aimage/
-        Workflow ->> Dest: Copy updated folders into destination repo
+    else Changes exist
         Workflow ->> Dest: Commit changes (authored as nntin-bot)
         Workflow ->> Dest: Create or update Pull Request
     end
 
     Workflow -->> Scheduler: Workflow complete
-
 ```
+
+In d-flows/actions/sync-cogs/action.yml the source repo can be configured with source_repo. Here it is @bz-cogs.  
+In d-flows/actions/sync-cogs/action.yml cog_names can be configured. Here it is aiuser and aiimage, see qbz-cogs/aiuser and @bz-cogs/aimage
