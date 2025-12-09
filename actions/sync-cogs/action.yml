@@ -230,7 +230,7 @@ runs:
       run: |
         set -euo pipefail
 
-        if git diff --quiet; then
+        if [[ -z "$(git status --porcelain=v1)" ]]; then
           echo "No changes detected after sync; skipping pull request."
           echo "has_changes=false" >> "$GITHUB_OUTPUT"
         else
