@@ -63,7 +63,6 @@ runs:
       run: |
         set -euo pipefail
 
-        echo "[debug] Raw cog_names input: '${RAW_COG_NAMES}'"
         if [[ -z "${RAW_COG_NAMES// }" ]]; then
           echo "❌ cog_names input is required" >&2
           exit 1
@@ -104,11 +103,6 @@ runs:
           echo "EOF"
         } >> "$GITHUB_OUTPUT"
 
-        echo "[debug] prep outputs file ($GITHUB_OUTPUT):"
-        cat "$GITHUB_OUTPUT"
-        echo "[debug] prep env file ($GITHUB_ENV):"
-        cat "$GITHUB_ENV"
-
         echo "parsed_cogs=${COG_ARRAY[*]}" >> "$GITHUB_OUTPUT"
         echo "base_branch=$BASE_BRANCH" >> "$GITHUB_OUTPUT"
         echo "sync_branch=$SYNC_BRANCH" >> "$GITHUB_OUTPUT"
@@ -119,7 +113,6 @@ runs:
         BASE_BRANCH: ${{ env.BASE_BRANCH }}
       run: |
         set -euo pipefail
-        echo "[debug] Ensuring destination base branch is present: $BASE_BRANCH"
         git checkout "$BASE_BRANCH"
 
     - name: Checkout source repository (sparse)
@@ -189,17 +182,6 @@ runs:
         echo "[debug] Checking out source ref: $CHECKOUT_REF"
         git checkout "$CHECKOUT_REF"
 
-        echo "[debug] Source repository root contents:"
-        ls -la
-        for TARGET in $SPARSE_LIST; do
-          if [[ -d "$TARGET" ]]; then
-            echo "[debug] Listing $TARGET:"
-            ls -la "$TARGET"
-          else
-            echo "[debug] Path $TARGET not found after checkout"
-          fi
-        done
-
         echo "SOURCE_REMOTE_DISPLAY=$SANITIZED_REMOTE" >> "$GITHUB_ENV"
 
     - name: Capture source commit metadata
@@ -233,10 +215,6 @@ runs:
       run: |
         set -euo pipefail
 
-        echo "[debug] Parsed cog list: $COG_LIST"
-        echo "[debug] Source directory contents (root):"
-        ls -la "$SOURCE_DIR"
-
         if [[ -z "$COG_LIST" ]]; then
           echo "❌ Parsed cog list is empty; aborting." >&2
           exit 1
@@ -253,9 +231,6 @@ runs:
           rm -rf "$COG"
 
           if [[ ! -d "$SOURCE_DIR/$COG" ]]; then
-            echo "[debug] Expected path '$SOURCE_DIR/$COG' missing"
-            echo "[debug] Available top-level entries in source:"
-            ls -la "$SOURCE_DIR"
             echo "❌ Cog '$COG' not found in source repository" >&2
             exit 1
           fi
