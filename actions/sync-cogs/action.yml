@@ -284,17 +284,22 @@ runs:
         set -euo pipefail
 
         echo "[debug] Checking for existing remote branch: $SYNC_BRANCH"
+        set +e
         git ls-remote --exit-code --heads origin "$SYNC_BRANCH" >/dev/null 2>&1
         STATUS=$?
+        set -e
         if [[ $STATUS -eq 0 ]]; then
           echo "[debug] Branch '$SYNC_BRANCH' already exists on origin"
           echo "branch_exists=true" >> "$GITHUB_OUTPUT"
-        elif [[ $STATUS -eq 2 ]]; then
-          echo "[debug] Branch '$SYNC_BRANCH' not found on origin"
-          echo "branch_exists=false" >> "$GITHUB_OUTPUT"
         else
-          echo "[warn] Unable to verify branch existence (git ls-remote exit $STATUS); assuming it exists to avoid duplicate PRs."
-          echo "branch_exists=true" >> "$GITHUB_OUTPUT"
+          # git ls-remote exits 2 when branch is missing; other non-zero codes mean transient issues.
+          if [[ $STATUS -eq 2 ]]; then
+            echo "[debug] Branch '$SYNC_BRANCH' not found on origin"
+            echo "branch_exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "[warn] Unable to verify branch existence (git ls-remote exit $STATUS); assuming it exists to avoid duplicate PRs."
+            echo "branch_exists=true" >> "$GITHUB_OUTPUT"
+          fi
         fi
 
     - name: Check for changes
