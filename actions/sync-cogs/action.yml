@@ -275,6 +275,28 @@ runs:
           rm -rf "$SOURCE_DIR"
         fi
 
+    - name: Check if sync branch exists on remote
+      id: branch_check
+      shell: bash
+      env:
+        SYNC_BRANCH: ${{ env.SYNC_BRANCH }}
+      run: |
+        set -euo pipefail
+
+        echo "[debug] Checking for existing remote branch: $SYNC_BRANCH"
+        git ls-remote --exit-code --heads origin "$SYNC_BRANCH" >/dev/null 2>&1
+        STATUS=$?
+        if [[ $STATUS -eq 0 ]]; then
+          echo "[debug] Branch '$SYNC_BRANCH' already exists on origin"
+          echo "branch_exists=true" >> "$GITHUB_OUTPUT"
+        elif [[ $STATUS -eq 2 ]]; then
+          echo "[debug] Branch '$SYNC_BRANCH' not found on origin"
+          echo "branch_exists=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "[warn] Unable to verify branch existence (git ls-remote exit $STATUS); assuming it exists to avoid duplicate PRs."
+          echo "branch_exists=true" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Check for changes
       id: changes
       shell: bash
@@ -290,7 +312,7 @@ runs:
         fi
 
     - name: Create or update pull request
-      if: steps.changes.outputs.has_changes == 'true'
+      if: steps.changes.outputs.has_changes == 'true' && steps.branch_check.outputs.branch_exists != 'true'
       uses: peter-evans/create-pull-request@v7
       with:
         token: ${{ inputs.token }}
