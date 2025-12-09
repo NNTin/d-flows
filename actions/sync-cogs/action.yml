@@ -303,3 +303,24 @@ runs:
         base: ${{ env.BASE_BRANCH }}
         author: "nntin-bot <48604375+nntin-bot@users.noreply.github.com>"
         committer: "nntin-bot <48604375+nntin-bot@users.noreply.github.com>"
+        
+    - name: Create commit on existing sync branch
+      if: steps.changes.outputs.has_changes == 'true' && steps.branch_check.outputs.branch_exists == 'true'
+      shell: bash
+      env:
+        SYNC_BRANCH: ${{ env.SYNC_BRANCH }}
+        COMMIT_MESSAGE: ${{ env.SYNC_COMMIT_MESSAGE }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+
+        echo "[debug] Checking out existing sync branch: $SYNC_BRANCH"
+        git checkout "$SYNC_BRANCH"
+
+        echo "[debug] Creating new commit on branch '$SYNC_BRANCH'"
+        git add .
+        git commit -m "$COMMIT_MESSAGE"
+
+        echo "[debug] Pushing changes to $SYNC_BRANCH"
+        git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
+        git push origin "$SYNC_BRANCH"
