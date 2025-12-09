@@ -264,6 +264,17 @@ runs:
           cp -R "$SOURCE_DIR/$COG" "$(dirname "$COG")"/
         done
 
+    - name: Remove source checkout
+      shell: bash
+      env:
+        SOURCE_DIR: ${{ github.workspace }}/source-repo
+      run: |
+        set -euo pipefail
+        if [[ -d "$SOURCE_DIR" ]]; then
+          echo "[debug] Removing source directory to avoid untracked files: $SOURCE_DIR"
+          rm -rf "$SOURCE_DIR"
+        fi
+
     - name: Check for changes
       id: changes
       shell: bash
