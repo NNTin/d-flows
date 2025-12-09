@@ -63,6 +63,7 @@ runs:
       run: |
         set -euo pipefail
 
+        echo "[debug] Raw cog_names input: '${RAW_COG_NAMES}'"
         if [[ -z "${RAW_COG_NAMES// }" ]]; then
           echo "❌ cog_names input is required" >&2
           exit 1
@@ -101,6 +102,11 @@ runs:
           printf '%s\n' "${COG_ARRAY[@]}"
           echo "EOF"
         } >> "$GITHUB_OUTPUT"
+
+        echo "[debug] prep outputs file ($GITHUB_OUTPUT):"
+        cat "$GITHUB_OUTPUT"
+        echo "[debug] prep env file ($GITHUB_ENV):"
+        cat "$GITHUB_ENV"
 
         echo "parsed_cogs=${COG_ARRAY[*]}" >> "$GITHUB_OUTPUT"
         echo "base_branch=$BASE_BRANCH" >> "$GITHUB_OUTPUT"
@@ -154,8 +160,13 @@ runs:
         git clone --no-checkout --filter=blob:none --sparse "$AUTH_REMOTE" source-repo
 
         cd source-repo
+        echo "[debug] SPARSE_LIST raw value: '${SPARSE_LIST}'"
         echo "[debug] Enabling sparse checkout for:"
-        printf '  - %s\n' $SPARSE_LIST
+        if [[ -z "${SPARSE_LIST// }" ]]; then
+          echo "[debug] SPARSE_LIST is empty; this will clone root only"
+        else
+          printf '  - %s\n' $SPARSE_LIST
+        fi
         git sparse-checkout init --cone
         printf '%s\n' "$SPARSE_LIST" | git sparse-checkout set --stdin
 
