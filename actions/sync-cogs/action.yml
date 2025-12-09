@@ -1,0 +1,334 @@
+name: "Sync Cogs"
+description: "Synchronizes selected cogs from a source repository into a destination repository and opens/updates a pull request when changes are detected."
+
+inputs:
+  token:
+    description: "Token with access to both source and destination repositories (for example, secrets.GITHUB_TOKEN)."
+    required: true
+  source_repo:
+    description: "Source repository to copy from; accepts owner/repo or a full HTTPS git URL."
+    required: true
+  source_branch:
+    description: "Branch or ref in the source repository; defaults to its default branch when omitted."
+    required: false
+  destination_repo:
+    description: "Destination GitHub repository (owner/repo); defaults to the current repository."
+    required: false
+  destination_branch:
+    description: "Branch to use as the pull request base; defaults to the current ref or repository default branch."
+    required: false
+  cog_names:
+    description: "Comma or whitespace separated list of cog directories to sync (for example, 'aiuser aimage')."
+    required: true
+  pr_branch:
+    description: "Branch name used for the sync pull request; reused on subsequent runs."
+    required: false
+    default: "automation/sync-cogs"
+  pr_title:
+    description: "Pull request title."
+    required: false
+    default: "chore: sync cogs from source"
+  pr_body:
+    description: "Pull request body text."
+    required: false
+    default: |
+      Updates tracked cogs from the source repository.
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout destination repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ inputs.token }}
+        repository: ${{ inputs.destination_repo || github.repository }}
+        ref: ${{ inputs.destination_branch || github.ref_name || github.ref }}
+        fetch-depth: 0
+
+    - name: Configure git user
+      shell: bash
+      run: |
+        git config user.name "nntin-bot"
+        git config user.email "48604375+nntin-bot@users.noreply.github.com"
+
+    - name: Prepare sync metadata
+      id: prep
+      shell: bash
+      env:
+        RAW_COG_NAMES: ${{ inputs.cog_names }}
+        PR_BRANCH_INPUT: ${{ inputs.pr_branch }}
+        DESTINATION_BRANCH: ${{ inputs.destination_branch }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        CURRENT_REF: ${{ github.ref_name }}
+      run: |
+        set -euo pipefail
+
+        if [[ -z "${RAW_COG_NAMES// }" ]]; then
+          echo "❌ cog_names input is required" >&2
+          exit 1
+        fi
+
+        # Parse cog names (comma or whitespace separated) while preserving order
+        mapfile -t COG_ARRAY < <(printf '%s\n' "$RAW_COG_NAMES" | tr ',\n' ' ' | xargs -n1 | sed '/^$/d')
+
+        if [[ ${#COG_ARRAY[@]} -eq 0 ]]; then
+          echo "❌ No cog names could be parsed from cog_names input" >&2
+          exit 1
+        fi
+
+        BASE_BRANCH="$DESTINATION_BRANCH"
+        if [[ -z "$BASE_BRANCH" ]]; then
+          BASE_BRANCH="$CURRENT_REF"
+        fi
+        if [[ -z "$BASE_BRANCH" ]]; then
+          BASE_BRANCH="$DEFAULT_BRANCH"
+        fi
+        if [[ -z "$BASE_BRANCH" ]]; then
+          BASE_BRANCH="main"
+        fi
+
+        SYNC_BRANCH="$PR_BRANCH_INPUT"
+        if [[ -z "$SYNC_BRANCH" ]]; then
+          SYNC_BRANCH="automation/sync-cogs"
+        fi
+
+        echo "COG_LIST=${COG_ARRAY[*]}" >> "$GITHUB_ENV"
+        echo "BASE_BRANCH=$BASE_BRANCH" >> "$GITHUB_ENV"
+        echo "SYNC_BRANCH=$SYNC_BRANCH" >> "$GITHUB_ENV"
+
+        # Emit outputs in the legacy ::set-output format (no quoted EOF) for compatibility with act
+        {
+          echo "sparse<<EOF"
+          printf '%s\n' "${COG_ARRAY[@]}"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+
+        echo "parsed_cogs=${COG_ARRAY[*]}" >> "$GITHUB_OUTPUT"
+        echo "base_branch=$BASE_BRANCH" >> "$GITHUB_OUTPUT"
+        echo "sync_branch=$SYNC_BRANCH" >> "$GITHUB_OUTPUT"
+
+    - name: Ensure base branch checked out
+      shell: bash
+      env:
+        BASE_BRANCH: ${{ env.BASE_BRANCH }}
+      run: |
+        set -euo pipefail
+        git checkout "$BASE_BRANCH"
+
+    - name: Checkout source repository (sparse)
+      shell: bash
+      env:
+        SOURCE_REPO_INPUT: ${{ inputs.source_repo }}
+        SOURCE_BRANCH: ${{ inputs.source_branch }}
+        SPARSE_LIST: ${{ steps.prep.outputs.sparse }}
+        TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+
+        # act has been flaky with multiline outputs; fall back to env value
+        if [[ -z "${SPARSE_LIST// }" && -n "${COG_LIST:-}" ]]; then
+          echo "[debug] SPARSE_LIST empty from outputs; falling back to COG_LIST env"
+          SPARSE_LIST="$COG_LIST"
+        fi
+
+        if [[ -z "${SOURCE_REPO_INPUT// }" ]]; then
+          echo "❌ source_repo input is required" >&2
+          exit 1
+        fi
+
+        REMOTE_URL="$SOURCE_REPO_INPUT"
+        SANITIZED_REMOTE="$REMOTE_URL"
+
+        # If owner/repo was provided, build a GitHub HTTPS URL
+        if [[ "$REMOTE_URL" != *"://"* ]]; then
+          REMOTE_URL="https://github.com/${REMOTE_URL}.git"
+          SANITIZED_REMOTE="$REMOTE_URL"
+        fi
+
+        # Inject token for HTTPS remotes (without leaking it)
+        AUTH_REMOTE="$REMOTE_URL"
+        if [[ "$REMOTE_URL" =~ ^https:// ]]; then
+          HOST_AND_PATH="${REMOTE_URL#https://}"
+          if [[ "$HOST_AND_PATH" != *@* ]]; then
+            AUTH_REMOTE="https://${TOKEN}@${HOST_AND_PATH}"
+          fi
+          # Strip any embedded credentials for display
+          SANITIZED_REMOTE="${REMOTE_URL/https:\/\/[^@]*@/https:\/\/}"
+        fi
+
+        echo "Cloning source repository: $SANITIZED_REMOTE"
+        git clone --no-checkout --filter=blob:none --sparse "$AUTH_REMOTE" source-repo
+
+        cd source-repo
+        echo "[debug] SPARSE_LIST raw value: '${SPARSE_LIST}'"
+        echo "[debug] Enabling sparse checkout for:"
+        if [[ -z "${SPARSE_LIST// }" ]]; then
+          echo "[debug] SPARSE_LIST is empty; this will clone root only"
+        else
+          printf '  - %s\n' $SPARSE_LIST
+        fi
+        git sparse-checkout init --cone
+        printf '%s\n' "$SPARSE_LIST" | git sparse-checkout set --stdin
+
+        DEFAULT_SRC_BRANCH="$(git remote show origin 2>/dev/null | sed -n 's@HEAD branch: @@p' || true)"
+        CHECKOUT_REF="$SOURCE_BRANCH"
+        if [[ -z "$CHECKOUT_REF" ]]; then
+          CHECKOUT_REF="$DEFAULT_SRC_BRANCH"
+        fi
+        if [[ -z "$CHECKOUT_REF" ]]; then
+          CHECKOUT_REF="HEAD"
+        fi
+
+        echo "[debug] Checking out source ref: $CHECKOUT_REF"
+        git checkout "$CHECKOUT_REF"
+
+        echo "SOURCE_REMOTE_DISPLAY=$SANITIZED_REMOTE" >> "$GITHUB_ENV"
+
+    - name: Capture source commit metadata
+      shell: bash
+      env:
+        SOURCE_DIR: ${{ github.workspace }}/source-repo
+        SOURCE_REMOTE_DISPLAY: ${{ env.SOURCE_REMOTE_DISPLAY }}
+      run: |
+        set -euo pipefail
+
+        if [[ ! -d "$SOURCE_DIR/.git" ]]; then
+          echo "❌ Source repository not initialized at $SOURCE_DIR" >&2
+          exit 1
+        fi
+
+        SOURCE_SHA=$(git -C "$SOURCE_DIR" rev-parse HEAD)
+        SOURCE_URL="$SOURCE_REMOTE_DISPLAY"
+        COMMIT_MSG="chore: sync cogs from ${SOURCE_URL} @ ${SOURCE_SHA}"
+
+        echo "SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_ENV"
+        echo "SOURCE_URL=$SOURCE_URL" >> "$GITHUB_ENV"
+        echo "SYNC_COMMIT_MESSAGE=$COMMIT_MSG" >> "$GITHUB_ENV"
+        echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+        echo "source_url=$SOURCE_URL" >> "$GITHUB_OUTPUT"
+
+    - name: Check if sync branch exists on remote
+      id: branch_check
+      shell: bash
+      env:
+        SYNC_BRANCH: ${{ env.SYNC_BRANCH }}
+      run: |
+        set -euo pipefail
+
+        echo "[debug] Checking for existing remote branch: $SYNC_BRANCH"
+        set +e
+        git ls-remote --exit-code --heads origin "$SYNC_BRANCH" >/dev/null 2>&1
+        STATUS=$?
+        set -e
+        if [[ $STATUS -eq 0 ]]; then
+          echo "[debug] Branch '$SYNC_BRANCH' already exists on origin"
+          echo "branch_exists=true" >> "$GITHUB_OUTPUT"
+        else
+          # git ls-remote exits 2 when branch is missing; other non-zero codes mean transient issues.
+          if [[ $STATUS -eq 2 ]]; then
+            echo "[debug] Branch '$SYNC_BRANCH' not found on origin"
+            echo "branch_exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "[warn] Unable to verify branch existence (git ls-remote exit $STATUS); assuming it exists to avoid duplicate PRs."
+            echo "branch_exists=true" >> "$GITHUB_OUTPUT"
+          fi
+        fi
+        
+    - name: Checkout existing sync branch if it exists
+      if: steps.branch_check.outputs.branch_exists == 'true'
+      shell: bash
+      env:
+        SYNC_BRANCH: ${{ env.SYNC_BRANCH }}
+      run: |
+        set -euo pipefail
+
+        echo "[debug] Checking out existing sync branch: $SYNC_BRANCH"
+        git checkout "$SYNC_BRANCH"
+
+    - name: Sync cog directories
+      shell: bash
+      env:
+        COG_LIST: ${{ env.COG_LIST }}
+        SOURCE_DIR: ${{ github.workspace }}/source-repo
+      run: |
+        set -euo pipefail
+
+        if [[ -z "$COG_LIST" ]]; then
+          echo "❌ Parsed cog list is empty; aborting." >&2
+          exit 1
+        fi
+
+        if [[ ! -d "$SOURCE_DIR" ]]; then
+          echo "❌ Source repository not found at $SOURCE_DIR" >&2
+          exit 1
+        fi
+
+        for COG in $COG_LIST; do
+          echo "🔄 Syncing '$COG'"
+
+          rm -rf "$COG"
+
+          if [[ ! -d "$SOURCE_DIR/$COG" ]]; then
+            echo "❌ Cog '$COG' not found in source repository" >&2
+            exit 1
+          fi
+
+          mkdir -p "$(dirname "$COG")"
+          cp -R "$SOURCE_DIR/$COG" "$(dirname "$COG")"/
+        done
+
+    - name: Remove source checkout
+      shell: bash
+      env:
+        SOURCE_DIR: ${{ github.workspace }}/source-repo
+      run: |
+        set -euo pipefail
+        if [[ -d "$SOURCE_DIR" ]]; then
+          echo "[debug] Removing source directory to avoid untracked files: $SOURCE_DIR"
+          rm -rf "$SOURCE_DIR"
+        fi
+
+    - name: Check for changes
+      id: changes
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        if [[ -z "$(git status --porcelain=v1)" ]]; then
+          echo "No changes detected after sync; skipping pull request."
+          echo "has_changes=false" >> "$GITHUB_OUTPUT"
+        else
+          git status -sb
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Create or update pull request
+      if: steps.changes.outputs.has_changes == 'true' && steps.branch_check.outputs.branch_exists != 'true'
+      uses: peter-evans/create-pull-request@v7
+      with:
+        token: ${{ inputs.token }}
+        commit-message: ${{ env.SYNC_COMMIT_MESSAGE }}
+        title: ${{ inputs.pr_title }}
+        body: ${{ inputs.pr_body }}
+        branch: ${{ env.SYNC_BRANCH }}
+        base: ${{ env.BASE_BRANCH }}
+        author: "nntin-bot <48604375+nntin-bot@users.noreply.github.com>"
+        committer: "nntin-bot <48604375+nntin-bot@users.noreply.github.com>"
+        
+    - name: Create commit on existing sync branch
+      if: steps.changes.outputs.has_changes == 'true' && steps.branch_check.outputs.branch_exists == 'true'
+      shell: bash
+      env:
+        SYNC_BRANCH: ${{ env.SYNC_BRANCH }}
+        COMMIT_MESSAGE: ${{ env.SYNC_COMMIT_MESSAGE }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+
+        echo "[debug] Creating new commit on branch '$SYNC_BRANCH'"
+        git add .
+        git commit -m "$COMMIT_MESSAGE"
+
+        echo "[debug] Pushing changes to $SYNC_BRANCH"
+        git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
+        git push origin "$SYNC_BRANCH"
