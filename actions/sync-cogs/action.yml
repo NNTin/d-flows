@@ -97,8 +97,9 @@ runs:
         echo "BASE_BRANCH=$BASE_BRANCH" >> "$GITHUB_ENV"
         echo "SYNC_BRANCH=$SYNC_BRANCH" >> "$GITHUB_ENV"
 
+        # Emit outputs in the legacy ::set-output format (no quoted EOF) for compatibility with act
         {
-          echo "sparse<<'EOF'"
+          echo "sparse<<EOF"
           printf '%s\n' "${COG_ARRAY[@]}"
           echo "EOF"
         } >> "$GITHUB_OUTPUT"
@@ -130,6 +131,12 @@ runs:
         TOKEN: ${{ inputs.token }}
       run: |
         set -euo pipefail
+
+        # act has been flaky with multiline outputs; fall back to env value
+        if [[ -z "${SPARSE_LIST// }" && -n "${COG_LIST:-}" ]]; then
+          echo "[debug] SPARSE_LIST empty from outputs; falling back to COG_LIST env"
+          SPARSE_LIST="$COG_LIST"
+        fi
 
         if [[ -z "${SOURCE_REPO_INPUT// }" ]]; then
           echo "❌ source_repo input is required" >&2
