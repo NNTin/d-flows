@@ -112,6 +112,7 @@ runs:
         BASE_BRANCH: ${{ env.BASE_BRANCH }}
       run: |
         set -euo pipefail
+        echo "[debug] Ensuring destination base branch is present: $BASE_BRANCH"
         git checkout "$BASE_BRANCH"
 
     - name: Checkout source repository (sparse)
@@ -153,6 +154,8 @@ runs:
         git clone --no-checkout --filter=blob:none --sparse "$AUTH_REMOTE" source-repo
 
         cd source-repo
+        echo "[debug] Enabling sparse checkout for:"
+        printf '  - %s\n' $SPARSE_LIST
         git sparse-checkout init --cone
         printf '%s\n' "$SPARSE_LIST" | git sparse-checkout set --stdin
 
@@ -165,7 +168,19 @@ runs:
           CHECKOUT_REF="HEAD"
         fi
 
+        echo "[debug] Checking out source ref: $CHECKOUT_REF"
         git checkout "$CHECKOUT_REF"
+
+        echo "[debug] Source repository root contents:"
+        ls -la
+        for TARGET in $SPARSE_LIST; do
+          if [[ -d "$TARGET" ]]; then
+            echo "[debug] Listing $TARGET:"
+            ls -la "$TARGET"
+          else
+            echo "[debug] Path $TARGET not found after checkout"
+          fi
+        done
 
         echo "SOURCE_REMOTE_DISPLAY=$SANITIZED_REMOTE" >> "$GITHUB_ENV"
 
@@ -200,6 +215,10 @@ runs:
       run: |
         set -euo pipefail
 
+        echo "[debug] Parsed cog list: $COG_LIST"
+        echo "[debug] Source directory contents (root):"
+        ls -la "$SOURCE_DIR"
+
         if [[ -z "$COG_LIST" ]]; then
           echo "❌ Parsed cog list is empty; aborting." >&2
           exit 1
@@ -216,6 +235,9 @@ runs:
           rm -rf "$COG"
 
           if [[ ! -d "$SOURCE_DIR/$COG" ]]; then
+            echo "[debug] Expected path '$SOURCE_DIR/$COG' missing"
+            echo "[debug] Available top-level entries in source:"
+            ls -la "$SOURCE_DIR"
             echo "❌ Cog '$COG' not found in source repository" >&2
             exit 1
           fi
